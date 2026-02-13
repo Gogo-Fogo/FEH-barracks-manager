@@ -24,8 +24,12 @@ cookies.json
 
 # --- Data outputs (local vault artifacts) ---
 db/units/
+db/unit_assets/
+db/quotes/
+db/unit_assets_manifest/fandom/
 db_test/
 game8_*.json
+tmp_weapon_icon_lookup.json
 db/failed_maintenance_units.json
 db/failed_build_parser_units.json
 
@@ -40,6 +44,7 @@ db/failed_build_parser_units.json
 !package.json
 !package-lock.json
 !db/index.json
+!db/unit_assets_manifest/shared_icons.json
 !app/
 !scraper/
 !context/
