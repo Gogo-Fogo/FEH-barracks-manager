@@ -1,4 +1,8 @@
 {
+  "_meta": {
+    "identity_source": "game8",
+    "cross_source_guardrail": "Keep Game8 hero identity fields stable; store Fandom identifiers only in Fandom manifests/quote files."
+  },
   "name": "Hero Name - Title",
   "url": "https://game8.co/games/fire-emblem-heroes/archives/000000",
   "tier": "9.0",
@@ -18,5 +22,12 @@
     "sacred_seal": "Skill Name",
     "attuned": "Skill Name or -"
   },
-  "ivs": "Asset/Flaw recommendation text block from source table"
+  "ivs": "Asset/Flaw recommendation text block from source table",
+  "assets_ref": "unit_assets_manifest/hero_name___title.json",
+  "assets_fandom_ref": {
+    "fullbody_manifest": "unit_assets_manifest/fandom/fullbody_manifest.json",
+    "headshots_manifest": "unit_assets_manifest/fandom/headshots_manifest.json",
+    "quotes_manifest": "unit_assets_manifest/fandom/quotes_manifest.json"
+  },
+  "quotes_ref": "quotes/fandom/hero_name___title.json"
 }

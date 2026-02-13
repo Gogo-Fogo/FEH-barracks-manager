@@ -26,7 +26,7 @@ cookies.json
 db/units/
 db/unit_assets/
 db/quotes/
-db/unit_assets_manifest/fandom/
+db/unit_assets_manifest/
 db_test/
 game8_*.json
 tmp_weapon_icon_lookup.json
@@ -44,7 +44,6 @@ db/failed_build_parser_units.json
 !package.json
 !package-lock.json
 !db/index.json
-!db/unit_assets_manifest/shared_icons.json
 !app/
 !scraper/
 !context/

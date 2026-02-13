@@ -36,3 +36,82 @@
   - Researcher: deep enrichment
 - Use container-focused scrolling on tier list container.
 - Keep Windows Chrome user agent and protocol timeout (180000ms+) for deep runs.
+
+## Asset Data Conventions (Token-Efficient)
+- Keep text/metadata retrieval separate from binary images.
+- Primary AI retrieval target should remain:
+  - `db/units/*.json`
+- If image metadata is needed, read only lightweight manifests:
+  - `db/unit_assets_manifest/*.json`
+- Store binary assets under source/type folders:
+  - `db/unit_assets/fandom/fullbody/<unit_slug>/`
+  - `db/unit_assets/fandom/headshots/<unit_slug>/`
+  - `db/quotes/fandom/<unit_slug>.json`
+- Do not put large image URL arrays directly into `raw_text_data`.
+- In each unit JSON, reference assets via:
+  - `assets_ref: "unit_assets_manifest/<unit_slug>.json"`
+
+## Cross-Source Naming Guardrail (Game8 vs Fandom)
+- Treat Game8 and Fandom as separate truth domains.
+- Unit identity key is always Game8-derived:
+  - `game8_name`
+  - `game8_slug` (safe slug from unit name)
+- Fandom identifiers are stored only as source metadata fields:
+  - `fandom_base_name`
+  - `fandom_file_title`
+  - `fandom_quote_page`
+- Every Fandom manifest item must include:
+  - `source: "fandom"`
+  - source-local path under `/fandom/`.
+- Never overwrite `db/units/*.json` naming with Fandom names.
+- If no confident cross-source match exists, log to `missing_mapping` and skip.
+
+## Fandom Full-Body Test Script
+- Script:
+  - `node scraper/fandom_fullbody_downloader.js`
+- Purpose:
+  - Downloads original (non-scaled) Fandom full-body state art:
+    - portrait (`Face`), attack (`BtlFace`), special (`BtlFace C`), damage (`BtlFace D`)
+
+## Fandom Bulk Pull (Run In This Order)
+1. Full-body art:
+   - `node scraper/fandom_fullbody_downloader.js`
+2. Headshots:
+   - `node scraper/fandom_headshot_downloader.js`
+3. Quotes:
+   - `node scraper/fandom_quotes_downloader.js`
+
+Expected outputs:
+- `db/unit_assets/fandom/fullbody/<unit_slug>/`
+- `db/unit_assets/fandom/headshots/<unit_slug>/`
+- `db/quotes/fandom/<unit_slug>.json`
+- `db/unit_assets_manifest/fandom/fullbody_manifest.json`
+- `db/unit_assets_manifest/fandom/headshots_manifest.json`
+- `db/unit_assets_manifest/fandom/quotes_manifest.json`
+
+Post-run verification:
+- `node -e "const fs=require('fs');const p=['fullbody','headshots','quotes'];for(const d of p){const m=JSON.parse(fs.readFileSync('g:/Workspace/MyTools/FEH-barracks-manager/db/unit_assets_manifest/fandom/'+d+'_manifest.json','utf8'));const bad=(m.items||[]).filter(i=>i.source!=='fandom'||!(i.local_path||'').includes('/fandom/'));console.log(d,'items=',m.items.length,'missing=',(m.missing_mapping||[]).length,'bad=',bad.length);}"`
+
+Interpretation:
+- `bad=0` means source/path isolation is intact.
+- non-zero `missing_mapping` means unresolved Game8→Fandom name mapping entries were skipped intentionally (safe behavior).
+
+## Fandom Shared Assets Script
+- Script:
+  - `node scraper/fandom_shared_assets_downloader.js`
+- Purpose:
+  - Builds shared/general icon library and manifest for reusable FEH UI assets.
+- Current buckets:
+  - `db/unit_assets/fandom/shared/move/`
+  - `db/unit_assets/fandom/shared/rarity/`
+  - `db/unit_assets/fandom/shared/weapon_misc/`
+- Manifest:
+  - `db/unit_assets_manifest/shared_icons.json`
+
+## Pre-Push Checklist
+1. Run `git status` and confirm only intended source/config files are staged.
+2. Confirm `db/units/` and failure logs are not staged.
+3. Keep commit messages concise and maintenance-focused.
+4. If needed, run focused validation before push:
+   - `node scraper/Maintenance_Updater.js`
+   - `node scraper/build_parser.js --only=<unit_file>.json`
