@@ -1,0 +1,22 @@
+{
+  "name": "Hero Name - Title",
+  "url": "https://game8.co/games/fire-emblem-heroes/archives/000000",
+  "tier": "9.0",
+  "img_url": "https://img.game8.co/example.png/show",
+  "weapon": "Sword",
+  "move": "Infantry",
+  "tag": "New Hero",
+  "raw_text_data": "Sanitized unit article text (scripts/ads removed).",
+  "recommended_build": {
+    "weapon": "Skill Name",
+    "assist": "Skill Name",
+    "special": "Skill Name",
+    "emblem": "Skill Name or -",
+    "passive_a": "Skill Name",
+    "passive_b": "Skill Name",
+    "passive_c": "Skill Name",
+    "sacred_seal": "Skill Name",
+    "attuned": "Skill Name or -"
+  },
+  "ivs": "Asset/Flaw recommendation text block from source table"
+}

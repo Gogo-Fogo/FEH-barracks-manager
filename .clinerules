@@ -1,0 +1,20 @@
+# FEH Barracks Manager - Project Rules
+
+## Project Architecture
+- This is a two-part scraping pipeline: 
+  1. Scout (Maintenance_Updater.js): Scans the master list and updates the index.
+  2. Researcher (build_parser.js): Performs deep scrapes on individual unit pages.
+- NEVER consolidate these into one script. They must remain separate to manage IP rate limits and failures.
+
+## Scraping Logic
+- Container Focus: The Game8 Tier List uses a lazy-loading container. Always target 'div[class*="style-module__cardView"]' for scrolling and clicking.
+- Scrolling: Use programmatic container scrolling (scrollTop) rather than window scrolling or keyboard PageDown.
+- User Agent: Always mask as a standard Windows Chrome browser.
+- Timeouts: Use a protocolTimeout of at least 180000ms for deep scraping.
+
+## Data Schema
+- index.json: Master list with [name, url, tier, weapon, move].
+- units/[hero_name].json: Detailed info including:
+    - raw_text_data: Sanitized text dump (no scripts/ads) for AI training.
+    - recommended_build: Structured JSON object of skills.
+    - ivs: Asset/Flaw recommendations.
