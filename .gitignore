@@ -1,0 +1,47 @@
+# --- Dependencies ---
+node_modules/
+dist/
+
+# --- OS / IDE ---
+.vs/
+Thumbs.db
+.DS_Store
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Environment / local secrets ---
+.env
+.env.*
+!.env.example
+auth.json
+cookies.json
+.session.json
+
+# --- Data outputs (local vault artifacts) ---
+db/units/
+db_test/
+game8_*.json
+db/failed_maintenance_units.json
+db/failed_build_parser_units.json
+
+# --- AI/editor local artifacts ---
+.clinerules.local
+.clinedata/
+.clinehistory/
+.cursor/
+.cursorrules
+
+# --- Keep these tracked project assets ---
+!package.json
+!package-lock.json
+!db/index.json
+!app/
+!scraper/
+!context/
+!README.md
+!.clinerules
