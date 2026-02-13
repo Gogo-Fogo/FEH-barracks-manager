@@ -1,7 +1,9 @@
 {
   "_meta": {
     "identity_source": "game8",
-    "cross_source_guardrail": "Keep Game8 hero identity fields stable; store Fandom identifiers only in Fandom manifests/quote files."
+    "cross_source_guardrail": "Keep Game8 hero identity fields stable; store Fandom identifiers only in Fandom manifests/quote files.",
+    "app_sync_strategy": "Use Supabase for auth and synced lightweight metadata (profiles, barracks, teams, notes, favorites).",
+    "asset_storage_strategy": "Do not store heavy local PNG archives in Supabase during free-tier phase; keep URL pointers in metadata and preserve local archive as canonical backup."
   },
   "name": "Hero Name - Title",
   "url": "https://game8.co/games/fire-emblem-heroes/archives/000000",

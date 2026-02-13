@@ -1,5 +1,12 @@
 # FEH Vault Workflow
 
+## App Product Direction (Current)
+- Shared app mode is **cloud-synced metadata**:
+  - Supabase auth + synced user data (`barracks`, `teams`, `notes`, `favorites`, profile settings)
+- Heavy art assets are **not** stored in Supabase for now (free-tier cost control).
+- App should consume image pointers (`img_url` / manifest references) while preserving local scraped archive as canonical backup.
+- Packaged local desktop mode remains a fallback path, but not primary for current milestone.
+
 ## Normal Maintenance Run
 1. Run Scout:
    - `node scraper/Maintenance_Updater.js`
@@ -36,6 +43,13 @@
   - Researcher: deep enrichment
 - Use container-focused scrolling on tier list container.
 - Keep Windows Chrome user agent and protocol timeout (180000ms+) for deep runs.
+
+## App Data Guardrails (Supabase)
+- Store only lightweight synced data in Supabase:
+  - user profiles, barracks entries, team comps, notes, favorites
+  - hero metadata (name/weapon/move/tier/url pointers)
+- Do **not** upload large local PNG archives into Supabase Storage under current free-tier strategy.
+- Keep row-level security strict by `auth.uid()` for all user-owned tables.
 
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.

@@ -5,6 +5,12 @@ Last updated: 2026-02-13
 ## Goal
 Build a shared FEH Barracks app that is accessible to you and your friend, with safe data boundaries between Game8 unit data and Fandom assets.
 
+## Agreed Direction (2026-02-13)
+- [x] Keep **Supabase** for auth + synced user metadata (profiles, barracks, teams, settings).
+- [x] Keep heavy art assets **out of Supabase storage** for now (cost control).
+- [x] Use metadata + URL pointers for image delivery while preserving local scraped archive.
+- [ ] Re-evaluate packaged local desktop build later if cloud sync is no longer desired.
+
 ---
 
 ## Phase 0 - Product Decisions
@@ -34,17 +40,17 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ## Phase 3 - Data Model (Global + User)
 - [x] Create global tables for heroes/build metadata (read-only to normal users).
 - [~] Create user tables:
-  - `user_barracks`
-  - `user_favorites`
-  - `user_notes`
-  - `user_teams` (optional v1.1)
+  - [x] `user_barracks`
+  - [ ] `user_favorites`
+  - [ ] `user_notes`
+  - [ ] `user_teams` (optional v1.1)
 - [x] Index common query fields (name slug, weapon, move, tier).
 
 ## Phase 4 - Data Ingestion
 - [~] Define importer from:
-  - `db/index.json`
-  - `db/units/*.json`
-  - `db/unit_assets_manifest/*`
+  - [x] `db/index.json`
+  - [ ] `db/units/*.json`
+  - [ ] `db/unit_assets_manifest/*`
 - [x] Preserve source boundaries:
   - Game8 identity fields remain canonical
   - Fandom fields remain source metadata only
@@ -52,16 +58,18 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 
 ## Phase 5 - Core Screens
 - [x] Login / Signup pages
-- [ ] Hero list with filters (weapon/move/tier)
+- [x] Hero list with filters (weapon/move/tier)
 - [ ] Hero detail page
 - [x] My Barracks page (add/remove/edit entries)
 - [ ] Notes + favorites UX
+- [ ] Team builder UX (create/save/edit team comps)
 
 ## Phase 6 - Ops / Deployment
 - [ ] Deploy web app to Vercel.
 - [ ] Configure Supabase production project.
 - [ ] Add scheduled data refresh job (daily/weekly).
 - [ ] Add backup/export policy.
+- [ ] Add budget guardrails for Supabase free tier (alerts/usage checks).
 
 ## Phase 7 - Quality & Security
 - [ ] Add API validation and error boundaries.
@@ -75,4 +83,5 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [ ] Run Supabase SQL: `app/supabase/schema.sql`
 - [ ] Fill `app/.env.local` (Supabase URL, anon key, service role key)
 - [ ] Run hero import: `npm --prefix app run import:heroes`
-- [ ] Implement Hero browser screen with filters and link it to barracks flow
+- [ ] Add `user_favorites`, `user_notes`, `user_teams` tables + RLS policies
+- [ ] Build team builder screen and save/load team presets
