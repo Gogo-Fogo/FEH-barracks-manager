@@ -8,11 +8,11 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ---
 
 ## Phase 0 - Product Decisions
-- [ ] Confirm stack for v1:
+- [x] Confirm stack for v1:
   - Frontend: Next.js
   - Backend/Auth/DB: Supabase
   - Hosting: Vercel + Supabase
-- [ ] Define v1 scope (must-have only):
+- [x] Define v1 scope (must-have only):
   - Auth (signup/login/logout)
   - Hero browser/search
   - Personal barracks CRUD
@@ -20,41 +20,41 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [ ] Decide if v1 needs invite-only access or open signup.
 
 ## Phase 1 - Project Setup
-- [ ] Create app scaffold under `app/` (or `web/` if preferred).
-- [ ] Add environment config template (`.env.example`) for Supabase keys.
-- [ ] Add baseline UI shell + protected route guard.
-- [ ] Add lint/format/test scripts.
+- [x] Create app scaffold under `app/` (or `web/` if preferred).
+- [x] Add environment config template (`.env.example`) for Supabase keys.
+- [x] Add baseline UI shell + protected route guard.
+- [x] Add lint/format/test scripts.
 
 ## Phase 2 - Auth and User Model
-- [ ] Implement email/password auth flow.
+- [x] Implement email/password auth flow.
 - [ ] Add password reset flow.
-- [ ] Create profile table linked to auth user id.
-- [ ] Enforce RLS for user-owned tables.
+- [x] Create profile table linked to auth user id.
+- [x] Enforce RLS for user-owned tables.
 
 ## Phase 3 - Data Model (Global + User)
-- [ ] Create global tables for heroes/build metadata (read-only to normal users).
-- [ ] Create user tables:
+- [x] Create global tables for heroes/build metadata (read-only to normal users).
+- [~] Create user tables:
   - `user_barracks`
   - `user_favorites`
   - `user_notes`
   - `user_teams` (optional v1.1)
-- [ ] Index common query fields (name slug, weapon, move, tier).
+- [x] Index common query fields (name slug, weapon, move, tier).
 
 ## Phase 4 - Data Ingestion
-- [ ] Define importer from:
+- [~] Define importer from:
   - `db/index.json`
   - `db/units/*.json`
   - `db/unit_assets_manifest/*`
-- [ ] Preserve source boundaries:
+- [x] Preserve source boundaries:
   - Game8 identity fields remain canonical
   - Fandom fields remain source metadata only
-- [ ] Add upsert script for repeatable syncs.
+- [x] Add upsert script for repeatable syncs.
 
 ## Phase 5 - Core Screens
-- [ ] Login / Signup pages
+- [x] Login / Signup pages
 - [ ] Hero list with filters (weapon/move/tier)
 - [ ] Hero detail page
-- [ ] My Barracks page (add/remove/edit entries)
+- [x] My Barracks page (add/remove/edit entries)
 - [ ] Notes + favorites UX
 
 ## Phase 6 - Ops / Deployment
@@ -72,4 +72,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ---
 
 ## Immediate Next Step
-- [ ] Start with **Phase 1 scaffold + Phase 2 auth baseline** in this repo.
+- [ ] Run Supabase SQL: `app/supabase/schema.sql`
+- [ ] Fill `app/.env.local` (Supabase URL, anon key, service role key)
+- [ ] Run hero import: `npm --prefix app run import:heroes`
+- [ ] Implement Hero browser screen with filters and link it to barracks flow

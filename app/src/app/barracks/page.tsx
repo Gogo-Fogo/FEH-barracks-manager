@@ -48,7 +48,15 @@ export default async function BarracksPage() {
         </header>
 
         <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-          <h2 className="text-lg font-semibold">Add hero to barracks</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Add hero to barracks</h2>
+            <Link
+              href="/heroes"
+              className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+            >
+              Open hero browser
+            </Link>
+          </div>
 
           {!heroes?.length ? (
             <p className="mt-3 text-sm text-zinc-300">
