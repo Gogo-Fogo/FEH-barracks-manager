@@ -18,3 +18,9 @@
     - raw_text_data: Sanitized text dump (no scripts/ads) for AI training.
     - recommended_build: Structured JSON object of skills.
     - ivs: Asset/Flaw recommendations.
+
+## Repo Hygiene & Version Control
+- Keep generated/local data out of commits (respect `.gitignore`, especially `db/units/` and failure logs).
+- Keep project policy files tracked (`.clinerules`, `context/`, `scraper/`, `db/index.json`).
+- Use neutral commit/PR wording focused on maintenance and data sync reliability.
+- Before commit, run `git status` and verify no local artifacts or sensitive/session files are staged.
