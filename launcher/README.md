@@ -97,6 +97,11 @@ Included payload:
 
 Then upload/replace `feh-assets-bundle.zip` in the GitHub release after CI publishes.
 
+If GitHub UI won’t let you delete/replace existing assets, upload the same file as:
+- `feh-assets-full-bundle.zip`
+
+Launcher prefers `feh-assets-full-bundle.zip` when present, then falls back to `feh-assets-bundle.zip`.
+
 Optional override source (advanced only):
 
 ```powershell

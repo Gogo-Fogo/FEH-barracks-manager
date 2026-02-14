@@ -14,6 +14,7 @@ let runtimeGithubToken = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKE
 
 const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
+const FULL_ASSETS_ZIP_NAME = "feh-assets-full-bundle.zip";
 
 const LAUNCHER_BASE_DIR = process.pkg
   ? path.dirname(process.execPath)
@@ -238,15 +239,15 @@ async function installOrUpdateFromRelease(release) {
   console.log("Extracting app bundle...");
   await extractZip(appZipPath, INSTALL_ROOT);
 
-  const assetsAsset = findAsset(release, ASSETS_ZIP_NAME);
+  const assetsAsset = findAsset(release, FULL_ASSETS_ZIP_NAME) || findAsset(release, ASSETS_ZIP_NAME);
   if (assetsAsset) {
     const assetsZipPath = path.join(tempDir, ASSETS_ZIP_NAME);
-    console.log(`Downloading ${ASSETS_ZIP_NAME}...`);
+    console.log(`Downloading ${assetsAsset.name}...`);
     await downloadFile(assetsAsset.browser_download_url, assetsZipPath);
     console.log("Extracting assets bundle...");
     await extractZip(assetsZipPath, INSTALL_ROOT);
   } else {
-    console.log(`No ${ASSETS_ZIP_NAME} in release. Keeping existing local assets.`);
+    console.log(`No ${FULL_ASSETS_ZIP_NAME} or ${ASSETS_ZIP_NAME} in release. Keeping existing local assets.`);
   }
 
   if (!fs.existsSync(path.join(APP_PATH, "package.json"))) {
