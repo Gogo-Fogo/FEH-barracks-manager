@@ -233,9 +233,19 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           <div className="mt-8 border-t border-zinc-800 pt-5">
             <h3 className="text-lg font-semibold">Favorites</h3>
             {!favorites?.length ? (
-              <p className="mt-2 text-sm text-zinc-300">No favorites yet. Use ☆ Favorite in Hero Browser.</p>
+              <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+                <p>No favorites yet. Use ☆ Favorite in Hero Browser.</p>
+                <Link
+                  href="/heroes"
+                  className="mt-2 inline-block rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                >
+                  Browse heroes
+                </Link>
+              </div>
             ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <>
+                <p className="mt-2 text-xs text-zinc-400">{favorites.length} favorite(s) synced to your account.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
                 {(heroes || [])
                   .filter((h) => favoriteSet.has(h.hero_slug))
                   .map((h) => (
@@ -297,7 +307,8 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                       </form>
                     </div>
                   ))}
-              </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -318,6 +329,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 rows={3}
                 className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
               />
+              <input
+                name="hero_slug"
+                placeholder="Optional hero slug link (e.g. alear___gifted_dragons)"
+                list="barracks-slug-suggestions"
+                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+              />
               <button
                 type="submit"
                 className="w-fit rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
@@ -327,6 +344,11 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             </form>
 
             <div className="mt-3 space-y-2">
+              {!notes?.length ? (
+                <p className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+                  No notes yet. Add your first note above.
+                </p>
+              ) : null}
               {(notes || []).map((note) => (
                 <form key={note.id} action={updateUserNote} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
                   <input type="hidden" name="id" value={note.id} readOnly />
@@ -355,6 +377,15 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                       Delete
                     </button>
                   </div>
+                  <p className="mt-2 text-[11px] text-zinc-500">
+                    {note.hero_slug ? (
+                      <>
+                        Hero: <Link href={`/heroes/${note.hero_slug}`} className="text-zinc-400 hover:text-zinc-200">{note.hero_slug}</Link>
+                        {" • "}
+                      </>
+                    ) : null}
+                    Updated: {note.updated_at ? new Date(note.updated_at).toLocaleString() : "-"}
+                  </p>
                 </form>
               ))}
             </div>
@@ -364,6 +395,9 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             <h3 className="text-lg font-semibold">Team Builder</h3>
             <p className="mt-1 text-xs text-zinc-400">
               Type hero slugs with suggestions from your barracks (or paste comma list).
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Duplicate slots are automatically de-duplicated and at least one hero is required.
             </p>
 
             <datalist id="barracks-slug-suggestions">

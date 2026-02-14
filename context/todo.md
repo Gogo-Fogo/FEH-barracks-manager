@@ -1,6 +1,6 @@
 # FEH Barracks App - TODO Roadmap
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 ## Goal
 Build a shared FEH Barracks app that is accessible to you and your friend, with safe data boundaries between Game8 unit data and Fandom assets.
@@ -33,17 +33,20 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 
 ## Phase 2 - Auth and User Model
 - [x] Implement email/password auth flow.
-- [ ] Add password reset flow.
+- [x] Add password reset flow.
 - [x] Create profile table linked to auth user id.
 - [x] Enforce RLS for user-owned tables.
 
 ## Phase 3 - Data Model (Global + User)
 - [x] Create global tables for heroes/build metadata (read-only to normal users).
-- [~] Create user tables:
+- [x] Create user tables:
   - [x] `user_barracks`
-  - [ ] `user_favorites`
-  - [ ] `user_notes`
-  - [ ] `user_teams` (optional v1.1)
+  - [x] `user_favorites`
+  - [x] `user_notes`
+  - [x] `user_teams` (optional v1.1)
+- [x] Add user preference tables for visual sync:
+  - [x] `user_hero_preferences`
+  - [x] `user_aether_resort_preferences`
 - [x] Index common query fields (name slug, weapon, move, tier).
 
 ## Phase 4 - Data Ingestion
@@ -59,10 +62,11 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ## Phase 5 - Core Screens
 - [x] Login / Signup pages
 - [x] Hero list with filters (weapon/move/tier)
-- [ ] Hero detail page
+- [x] Hero detail page
 - [x] My Barracks page (add/remove/edit entries)
-- [ ] Notes + favorites UX
-- [ ] Team builder UX (create/save/edit team comps)
+- [~] Notes + favorites UX
+- [~] Team builder UX (create/save/edit team comps)
+- [x] Aether Resort prototype page with account/local persistence fallback
 
 ## Phase 6 - Ops / Deployment
 - [ ] Deploy web app to Vercel.
@@ -81,7 +85,10 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 
 ## Immediate Next Step
 - [ ] Run Supabase SQL: `app/supabase/schema.sql`
-- [ ] Fill `app/.env.local` (Supabase URL, anon key, service role key)
-- [ ] Run hero import: `npm --prefix app run import:heroes`
-- [ ] Add `user_favorites`, `user_notes`, `user_teams` tables + RLS policies
-- [ ] Build team builder screen and save/load team presets
+- [x] Fill `app/.env.local` (Supabase URL, anon key, service role key)
+- [ ] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
+- [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
+- [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker)
+- [x] Polish Notes/Favorites UX (empty states, quick actions, consistency with heroes page)
+- [x] Implement password reset flow
+- [x] Prep deployment checklist (Vercel + Supabase prod + scheduled refresh)

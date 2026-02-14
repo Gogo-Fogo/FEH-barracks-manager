@@ -8,6 +8,7 @@ type Mode = "login" | "signup";
 
 export function AuthForm() {
   const [mode, setMode] = useState<Mode>("login");
+  const [resetMode, setResetMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -26,6 +27,22 @@ export function AuthForm() {
 
     try {
       const supabase = createClient();
+
+      if (resetMode) {
+        const redirectTo = `${window.location.origin}/reset-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo,
+        });
+
+        if (error) {
+          setMessage(error.message);
+          return;
+        }
+
+        setMessage("Password reset email sent. Check your inbox.");
+        setResetMode(false);
+        return;
+      }
 
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
@@ -89,7 +106,7 @@ export function AuthForm() {
         <input
           id="password"
           type="password"
-          required
+          required={!resetMode}
           minLength={6}
           autoComplete={mode === "login" ? "current-password" : "new-password"}
           value={password}
@@ -105,17 +122,28 @@ export function AuthForm() {
         disabled={pending}
         className="w-full rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400 disabled:opacity-60"
       >
-        {pending ? "Working..." : title}
+        {pending ? "Working..." : resetMode ? "Send reset email" : title}
       </button>
 
       <button
         type="button"
-        onClick={() => setMode(mode === "login" ? "signup" : "login")}
+        onClick={() => {
+          setResetMode(false);
+          setMode(mode === "login" ? "signup" : "login");
+        }}
         className="w-full rounded-lg border border-zinc-700 px-4 py-2 text-zinc-300 hover:bg-zinc-800"
       >
         {mode === "login"
           ? "Need an account? Switch to sign up"
           : "Already have an account? Switch to sign in"}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setResetMode((v) => !v)}
+        className="w-full rounded-lg border border-zinc-700 px-4 py-2 text-zinc-300 hover:bg-zinc-800"
+      >
+        {resetMode ? "Back to login/signup" : "Forgot password?"}
       </button>
     </form>
   );
