@@ -25,6 +25,7 @@ const TOKEN_PATH = path.join(INSTALL_ROOT, "launcher-token.txt");
 const APP_PATH = path.join(INSTALL_ROOT, "app");
 const ENV_LOCAL_PATH = path.join(APP_PATH, ".env.local");
 const ENV_EXAMPLE_PATH = path.join(APP_PATH, ".env.example");
+const START_SCRIPT_PATH = path.join(INSTALL_ROOT, "Start-FEH-Barracks.bat");
 
 function ensureDirSync(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -197,6 +198,17 @@ async function writeMeta(meta) {
   await fsp.writeFile(META_PATH, JSON.stringify(meta, null, 2), "utf8");
 }
 
+async function ensureStartScript() {
+  const script = [
+    "@echo off",
+    `cd /d \"${APP_PATH}\"`,
+    "npm run dev",
+    "",
+  ].join("\r\n");
+
+  await fsp.writeFile(START_SCRIPT_PATH, script, "utf8");
+}
+
 async function fetchLatestRelease() {
   const url = `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`;
   return getJson(url);
@@ -253,6 +265,7 @@ async function installOrUpdateFromRelease(release) {
   });
 
   await fsp.rm(tempDir, { recursive: true, force: true });
+  await ensureStartScript();
   console.log(`\nInstall/Update complete. Installed release: ${release.tag_name}`);
 }
 
@@ -285,6 +298,7 @@ async function launchApp() {
 
   console.log("\nStarting FEH Barracks app (local)...");
   console.log("App URL: http://localhost:3000");
+  runCommand("cmd", ["/c", "start", "", "http://localhost:3000"], APP_PATH).catch(() => {});
   await runCommand("npm", ["run", "dev"], APP_PATH);
   return "started";
 }
