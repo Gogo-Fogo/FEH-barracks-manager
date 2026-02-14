@@ -265,7 +265,7 @@ async function installOrUpdate() {
 async function launchApp() {
   if (!fs.existsSync(path.join(APP_PATH, "package.json"))) {
     console.log("App is not installed yet. Run Install/Update first.");
-    return;
+    return "not-installed";
   }
 
   if (!fs.existsSync(ENV_LOCAL_PATH)) {
@@ -274,17 +274,19 @@ async function launchApp() {
       console.log("\nCreated app/.env.local from .env.example");
       console.log("Please fill Supabase values in:");
       console.log(`  ${ENV_LOCAL_PATH}`);
-      return;
+      await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
+      return "needs-env";
     }
 
     console.log("Missing .env.local (and no .env.example found).");
     console.log(`Create this file before launch: ${ENV_LOCAL_PATH}`);
-    return;
+    return "needs-env";
   }
 
   console.log("\nStarting FEH Barracks app (local)...");
   console.log("App URL: http://localhost:3000");
   await runCommand("npm", ["run", "dev"], APP_PATH);
+  return "started";
 }
 
 async function showStatus() {
@@ -319,7 +321,18 @@ async function autoUpdateAndLaunch() {
     console.log(`Already up to date (${meta?.lastReleaseTag || release.tag_name}).`);
   }
 
-  await launchApp();
+  return launchApp();
+}
+
+async function pauseBeforeExitIfPackaged(message) {
+  if (!process.pkg) return;
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    await rl.question(`\n${message}\nPress Enter to close launcher...`);
+  } finally {
+    rl.close();
+  }
 }
 
 async function runInteractiveMenu() {
@@ -367,7 +380,10 @@ async function main() {
   }
 
   try {
-    await autoUpdateAndLaunch();
+    const launchState = await autoUpdateAndLaunch();
+    if (launchState !== "started") {
+      await pauseBeforeExitIfPackaged("Setup step completed, but app was not started yet.");
+    }
   } catch (err) {
     console.error(`\nAuto mode failed: ${err.message}`);
     if (/releases\/latest/i.test(String(err.message)) && /404/i.test(String(err.message))) {
@@ -390,6 +406,7 @@ async function main() {
     }
     console.log("Switching to interactive menu...");
     await runInteractiveMenu();
+    await pauseBeforeExitIfPackaged("Launcher menu exited.");
   }
 }
 
