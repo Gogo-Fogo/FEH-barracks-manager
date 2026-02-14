@@ -5,6 +5,7 @@ const puppeteer = require('puppeteer');
 const DB_FOLDER = path.join(__dirname, '../db');
 const OUTPUT_FILE = path.join(DB_FOLDER, 'banner_pull_guides.json');
 const SEED_FILE = path.join(DB_FOLDER, 'banner_pull_seed_urls.json');
+const DISCOVERED_FILE = path.join(DB_FOLDER, 'banner_pull_discovered_urls.json');
 
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 1200;
@@ -18,6 +19,7 @@ const DISCOVER_FROM_ARG = process.argv.find((arg) => arg.startsWith('--discover-
 const DISCOVER_FROM_URL = DISCOVER_FROM_ARG ? DISCOVER_FROM_ARG.replace('--discover-from=', '').trim() : '';
 const MAX_URLS_ARG = process.argv.find((arg) => arg.startsWith('--max='));
 const MAX_URLS = MAX_URLS_ARG ? Number.parseInt(MAX_URLS_ARG.replace('--max=', '').trim(), 10) : null;
+const DISCOVER_ONLY = process.argv.includes('--discover-only');
 
 if (!fs.existsSync(DB_FOLDER)) fs.mkdirSync(DB_FOLDER, { recursive: true });
 
@@ -82,13 +84,39 @@ async function discoverBannerUrls(page, sourceUrl) {
     const links = Array.from(document.querySelectorAll('a[href*="/games/fire-emblem-heroes/archives/"]'));
     const clean = (v) => (v || '').replace(/\s+/g, ' ').trim();
 
-    const candidates = links
+    const contentRoot =
+      document.querySelector('.archive-style-wrapper') ||
+      document.querySelector('.p-entry__body') ||
+      document.querySelector('.l-mainContents') ||
+      document.body;
+
+    const archiveSectionLinks = [];
+    const headings = Array.from(contentRoot.querySelectorAll('h2, h3'));
+    const archiveHeading = headings.find((h) => /summoning\s*event\s*archive/i.test(clean(h.textContent || '')));
+    if (archiveHeading) {
+      let n = archiveHeading.nextElementSibling;
+      while (n && !/^H[23]$/.test(n.tagName)) {
+        const localLinks = Array.from(n.querySelectorAll('a[href*="/games/fire-emblem-heroes/archives/"]'));
+        for (const a of localLinks) {
+          archiveSectionLinks.push({ href: a.href, text: clean(a.textContent || '') });
+        }
+        n = n.nextElementSibling;
+      }
+    }
+
+    const candidates = [...links.map((a) => ({ href: a.href, text: clean(a.textContent || '') })), ...archiveSectionLinks]
       .map((a) => ({
         href: a.href,
-        text: clean(a.textContent || ''),
+        text: clean(a.text || ''),
       }))
       .filter((row) => row.href && /\/archives\/\d+/.test(row.href))
-      .filter((row) => /pull|summon|banner|who should you/i.test(row.text));
+      .filter((row) => {
+        const t = row.text.toLowerCase();
+        return (
+          /pull|summon|banner|who should you/i.test(t) ||
+          /revival|focus|new heroes|special heroes|mythic heroes|legendary heroes|emblem heroes|hero fest|free summon/i.test(t)
+        );
+      });
 
     const unique = [];
     const seen = new Set();
@@ -211,9 +239,31 @@ async function main() {
       );
       discoveredUrls.push(...found);
       console.log(`   Found ${found.length} candidate banner links.`);
+
+      if (DISCOVER_ONLY) {
+        fs.writeFileSync(
+          DISCOVERED_FILE,
+          JSON.stringify(
+            {
+              source_url: DISCOVER_FROM_URL,
+              discovered_at: new Date().toISOString(),
+              count: found.length,
+              urls: found,
+            },
+            null,
+            2
+          )
+        );
+        console.log(`   Saved discovered URLs: ${DISCOVERED_FILE}`);
+      }
     } catch (error) {
       console.log(`   ❌ Discovery failed: ${error.message}`);
     }
+  }
+
+  if (DISCOVER_ONLY) {
+    await browser.close();
+    return;
   }
 
   const urls = Array.from(new Set([...staticUrls, ...discoveredUrls]));

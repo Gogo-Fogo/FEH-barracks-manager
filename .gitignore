@@ -33,6 +33,7 @@ tmp_weapon_icon_lookup.json
 db/failed_maintenance_units.json
 db/failed_build_parser_units.json
 db/banner_pull_guides.json
+db/banner_pull_discovered_urls.json
 
 # --- AI/editor local artifacts ---
 .clinerules.local
