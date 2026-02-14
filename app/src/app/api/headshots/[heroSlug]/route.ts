@@ -2,6 +2,16 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
+function normalizeSlug(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .toLowerCase()
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
 function inferContentType(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".webp") return "image/webp";
@@ -12,10 +22,38 @@ function inferContentType(filePath: string) {
 }
 
 async function findHeadshotFile(heroSlug: string) {
-  const candidateDirs = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "headshots", heroSlug),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "headshots", heroSlug),
+  const roots = [
+    path.join(process.cwd(), "db", "unit_assets", "fandom", "headshots"),
+    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "headshots"),
   ];
+
+  const candidateDirs = new Set<string>();
+  const baseToken = heroSlug.split("___")[0]?.toLowerCase() || "";
+  const normalizedTarget = normalizeSlug(heroSlug);
+
+  for (const root of roots) {
+    candidateDirs.add(path.join(root, heroSlug));
+
+    try {
+      const dirs = (await fs.readdir(root, { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
+
+      const normalizedMatch = dirs.find((dirName) => normalizeSlug(dirName) === normalizedTarget);
+      if (normalizedMatch) {
+        candidateDirs.add(path.join(root, normalizedMatch));
+      }
+
+      if (baseToken) {
+        const basePrefixMatches = dirs.filter((dirName) => dirName.toLowerCase().startsWith(`${baseToken}___`));
+        for (const match of basePrefixMatches) {
+          candidateDirs.add(path.join(root, match));
+        }
+      }
+    } catch {
+      // continue
+    }
+  }
 
   const preferred = [
     `fandom_${heroSlug}_headshot.webp`,
@@ -47,6 +85,22 @@ async function findHeadshotFile(heroSlug: string) {
   return null;
 }
 
+function placeholderSvg(heroSlug: string) {
+  const label = heroSlug
+    .split("___")
+    .map((part) => part.replace(/_/g, " "))
+    .join(" • ")
+    .slice(0, 40);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#111827"/>
+  <circle cx="128" cy="96" r="44" fill="#374151"/>
+  <rect x="56" y="156" width="144" height="64" rx="24" fill="#374151"/>
+  <text x="128" y="242" text-anchor="middle" fill="#9ca3af" font-family="Arial, sans-serif" font-size="12">${label}</text>
+</svg>`;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ heroSlug: string }> }
@@ -56,7 +110,13 @@ export async function GET(
     const filePath = await findHeadshotFile(heroSlug);
 
     if (!filePath) {
-      return new NextResponse("Not found", { status: 404 });
+      return new NextResponse(placeholderSvg(heroSlug), {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
     }
 
     const data = await fs.readFile(filePath);

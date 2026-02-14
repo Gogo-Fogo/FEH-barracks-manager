@@ -143,7 +143,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
                   <img
                     src={`/api/headshots/${hero.hero_slug}`}
                     alt={`${hero.name} headshot`}
-                    className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                    className="h-12 w-12 rounded-full border border-zinc-700 object-cover"
                     loading="lazy"
                   />
                   <div>
