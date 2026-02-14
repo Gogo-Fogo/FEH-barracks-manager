@@ -7,11 +7,14 @@ name: Build Launcher Distribution Release
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    env:
+      DISTRO_REPO: ${{ vars.FEH_DISTRO_REPO }}
+      DISTRO_REPO_TOKEN: ${{ secrets.DISTRO_REPO_TOKEN }}
 
     steps:
       - name: Checkout
@@ -46,11 +49,32 @@ jobs:
           cd ../assets
           zip -r ../../feh-assets-bundle.zip db
 
-      - name: Attach release assets
+      - name: Validate release target token requirements
+        if: env.DISTRO_REPO != '' && env.DISTRO_REPO != github.repository && env.DISTRO_REPO_TOKEN == ''
+        run: |
+          echo "::error::DISTRO_REPO_TOKEN secret is required when FEH_DISTRO_REPO targets a different repository."
+          exit 1
+
+      - name: Attach release assets (same repo fallback)
+        if: env.DISTRO_REPO == '' || env.DISTRO_REPO == github.repository
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.DISTRO_REPO_TOKEN }}
-          repository: ${{ vars.FEH_DISTRO_REPO }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: |
+            dist/FEH-Barracks-Launcher.exe
+            feh-app-bundle.zip
+            feh-assets-bundle.zip
+          generate_release_notes: true
+
+      - name: Attach release assets (distribution repo)
+        if: env.DISTRO_REPO != '' && env.DISTRO_REPO != github.repository && env.DISTRO_REPO_TOKEN != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ env.DISTRO_REPO_TOKEN }}
+          repository: ${{ env.DISTRO_REPO }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           files: |
