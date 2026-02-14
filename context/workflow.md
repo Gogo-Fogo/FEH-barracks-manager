@@ -29,6 +29,34 @@
 4. Validate on live URL (auth + core CRUD flows).
 5. For safer releases, prefer branch-based preview deploys before merging to `main`.
 
+## Manual Weekly Data Refresh Protocol (Recommended)
+Use this when you want controlled, human-reviewed updates instead of fully automated scraping.
+
+1. Refresh source data locally (Scout -> Researcher):
+   - `node scraper/Maintenance_Updater.js`
+   - `node scraper/build_parser.js`
+2. Review failures and fix/retry if needed:
+   - `db/failed_maintenance_units.json`
+   - `db/failed_build_parser_units.json`
+3. (Optional, when asset refresh is desired) run Fandom pulls in order:
+   - `node scraper/fandom_fullbody_downloader.js`
+   - `node scraper/fandom_headshot_downloader.js`
+   - `node scraper/fandom_quotes_downloader.js`
+4. Validate Fandom source/path isolation:
+   - `node -e "const fs=require('fs');const p=['fullbody','headshots','quotes'];for(const d of p){const m=JSON.parse(fs.readFileSync('g:/Workspace/MyTools/FEH-barracks-manager/db/unit_assets_manifest/fandom/'+d+'_manifest.json','utf8'));const bad=(m.items||[]).filter(i=>i.source!=='fandom'||!(i.local_path||'').includes('/fandom/'));console.log(d,'items=',m.items.length,'missing=',(m.missing_mapping||[]).length,'bad=',bad.length);}"`
+5. Sync app catalog to Supabase:
+   - `npm --prefix app run import:heroes`
+6. Smoke test hosted app (Vercel):
+   - heroes list/detail, auth, barracks CRUD, preferences
+7. Repo hygiene before push:
+   - `git status`
+   - ensure generated/local artifacts (especially `db/units/` and failure logs) are not unintentionally staged
+8. Commit + push only intentional maintenance changes.
+
+Notes:
+- This protocol updates shared hero/catalog data; it does not modify user-owned profile/barracks data.
+- Keep Game8 identity canonical; never rename unit identity from Fandom labels.
+
 ## Normal Maintenance Run
 1. Run Scout:
    - `node scraper/Maintenance_Updater.js`
