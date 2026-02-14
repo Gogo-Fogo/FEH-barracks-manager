@@ -39,7 +39,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
 
   let query = supabase
     .from("heroes")
-    .select("hero_slug,name,weapon,move,tier,img_url")
+    .select("hero_slug,name,weapon,move,tier")
     .order("name", { ascending: true })
     .limit(200);
 
@@ -140,17 +140,9 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
               >
                 <div>
-                  <div className="flex items-center gap-2">
-                    {hero.img_url ? (
-                      <img
-                        src={hero.img_url}
-                        alt={hero.name}
-                        className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
-                        loading="lazy"
-                      />
-                    ) : null}
-                    <p className="font-medium">{hero.name}</p>
-                  </div>
+                  <Link href={`/heroes/${hero.hero_slug}`} className="font-medium hover:text-indigo-300">
+                    {hero.name}
+                  </Link>
                   <p className="text-xs text-zinc-400">
                     {hero.weapon || "-"} • {hero.move || "-"}
                     {hero.tier != null ? ` • T${hero.tier}` : ""}
