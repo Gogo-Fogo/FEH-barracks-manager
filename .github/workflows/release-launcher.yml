@@ -34,7 +34,6 @@ jobs:
       - name: Prepare release bundles
         run: |
           mkdir -p release_build/app
-          mkdir -p release_build/assets
 
           rsync -a \
             --exclude node_modules \
@@ -42,12 +41,20 @@ jobs:
             --exclude .env.local \
             app/ release_build/app/app/
 
-          cp -R db release_build/assets/db
-
           cd release_build/app
           zip -r ../../feh-app-bundle.zip app
-          cd ../assets
+
+      - name: Prepare minimal assets bundle from repo-tracked data
+        run: |
+          mkdir -p release_build/assets/db
+          cp db/index.json release_build/assets/db/index.json
+          cd release_build/assets
           zip -r ../../feh-assets-bundle.zip db
+
+      - name: Release note for local full assets bundle
+        run: |
+          echo "Built feh-assets-bundle.zip from repo-tracked data only." >> RELEASE_NOTES.txt
+          echo "For full local art assets, run: npm run build:local-assets-bundle on maintainer machine and upload replacement asset zip." >> RELEASE_NOTES.txt
 
       - name: Validate release target token requirements
         if: env.DISTRO_REPO != '' && env.DISTRO_REPO != github.repository && env.DISTRO_REPO_TOKEN == ''

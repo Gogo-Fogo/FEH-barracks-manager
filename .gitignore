@@ -1,6 +1,8 @@
 # --- Dependencies ---
 node_modules/
 dist/
+release_local/
+feh-assets-bundle.zip
 
 # --- OS / IDE ---
 .vs/

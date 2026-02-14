@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "download:game8-mini": "node scraper/game8_mini_sprite_downloader.js",
     "scrape:banner-guides": "node scraper/game8_banner_pull_scraper.js",
-    "scrape:fandom-rarities": "node scraper/fandom_rarity_updater.js"
+    "scrape:fandom-rarities": "node scraper/fandom_rarity_updater.js",
+    "build:local-assets-bundle": "node scripts/build-local-assets-bundle.js"
   },
   "keywords": [],
   "author": "",

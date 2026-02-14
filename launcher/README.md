@@ -74,6 +74,29 @@ That means no extra distro-repo setup is required.
 
 To publish a new launcher/app bundle release, just push a tag (`v*`) and the workflow uploads assets.
 
+## Full Local Assets Bundle (maintainer machine)
+
+Because heavy scraped assets are intentionally `.gitignore`d, CI can only build a minimal assets zip from tracked files.
+
+To publish a full assets bundle for launcher users:
+
+```powershell
+npm run build:local-assets-bundle
+```
+
+This creates:
+- `feh-assets-bundle.zip` (at repo root)
+
+Included payload:
+- `db/index.json`
+- `db/units/`
+- `db/unit_assets/`
+- `db/unit_assets_manifest/`
+- `db/quotes/`
+- optional: `db/banner_pull_seed_urls.json`, `db/banner_pull_guides.json`
+
+Then upload/replace `feh-assets-bundle.zip` in the GitHub release after CI publishes.
+
 Optional override source (advanced only):
 
 ```powershell
