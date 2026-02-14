@@ -36,6 +36,42 @@ create table if not exists public.user_barracks (
 create index if not exists user_barracks_user_idx on public.user_barracks (user_id);
 create index if not exists user_barracks_hero_idx on public.user_barracks (hero_slug);
 
+-- Per-user favorites
+create table if not exists public.user_favorites (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  hero_slug text not null references public.heroes(hero_slug) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, hero_slug)
+);
+
+create index if not exists user_favorites_user_idx on public.user_favorites (user_id);
+
+-- Per-user standalone notes
+create table if not exists public.user_notes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  hero_slug text references public.heroes(hero_slug) on delete set null,
+  title text not null,
+  content text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists user_notes_user_idx on public.user_notes (user_id);
+
+-- Per-user team presets
+create table if not exists public.user_teams (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  description text,
+  slots jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists user_teams_user_idx on public.user_teams (user_id);
+
 -- Optional profile table for display settings
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -46,6 +82,9 @@ create table if not exists public.profiles (
 
 alter table public.heroes enable row level security;
 alter table public.user_barracks enable row level security;
+alter table public.user_favorites enable row level security;
+alter table public.user_notes enable row level security;
+alter table public.user_teams enable row level security;
 alter table public.profiles enable row level security;
 
 -- heroes: readable by authenticated users, write via service role/import script only
@@ -78,6 +117,77 @@ create policy "user_barracks_update_own"
 drop policy if exists "user_barracks_delete_own" on public.user_barracks;
 create policy "user_barracks_delete_own"
   on public.user_barracks for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- user_favorites: users can only manage their own rows
+drop policy if exists "user_favorites_select_own" on public.user_favorites;
+create policy "user_favorites_select_own"
+  on public.user_favorites for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_favorites_insert_own" on public.user_favorites;
+create policy "user_favorites_insert_own"
+  on public.user_favorites for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_favorites_delete_own" on public.user_favorites;
+create policy "user_favorites_delete_own"
+  on public.user_favorites for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- user_notes: users can only manage their own rows
+drop policy if exists "user_notes_select_own" on public.user_notes;
+create policy "user_notes_select_own"
+  on public.user_notes for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_notes_insert_own" on public.user_notes;
+create policy "user_notes_insert_own"
+  on public.user_notes for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_notes_update_own" on public.user_notes;
+create policy "user_notes_update_own"
+  on public.user_notes for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_notes_delete_own" on public.user_notes;
+create policy "user_notes_delete_own"
+  on public.user_notes for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- user_teams: users can only manage their own rows
+drop policy if exists "user_teams_select_own" on public.user_teams;
+create policy "user_teams_select_own"
+  on public.user_teams for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_teams_insert_own" on public.user_teams;
+create policy "user_teams_insert_own"
+  on public.user_teams for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_teams_update_own" on public.user_teams;
+create policy "user_teams_update_own"
+  on public.user_teams for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_teams_delete_own" on public.user_teams;
+create policy "user_teams_delete_own"
+  on public.user_teams for delete
   to authenticated
   using (auth.uid() = user_id);
 
