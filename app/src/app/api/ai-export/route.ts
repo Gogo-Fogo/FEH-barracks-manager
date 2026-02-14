@@ -71,6 +71,28 @@ export async function GET(request: Request) {
       .limit(30),
   ]);
 
+  const heroSlugs = (barracks || []).map((b) => b.hero_slug).filter(Boolean);
+  const heroMetaBySlug = new Map<
+    string,
+    { tier: number | null; weapon: string | null; move: string | null; tag: string | null }
+  >();
+
+  if (heroSlugs.length) {
+    const { data: heroMetaRows } = await supabase
+      .from("heroes")
+      .select("hero_slug,tier,weapon,move,tag")
+      .in("hero_slug", heroSlugs);
+
+    for (const row of heroMetaRows || []) {
+      heroMetaBySlug.set(row.hero_slug, {
+        tier: row.tier,
+        weapon: row.weapon,
+        move: row.move,
+        tag: row.tag,
+      });
+    }
+  }
+
   const lines: string[] = [];
   const now = new Date().toISOString();
 
@@ -84,6 +106,21 @@ export async function GET(request: Request) {
   lines.push(`- Barracks heroes: ${(barracks || []).length}`);
   lines.push(`- Team presets: ${(teams || []).length}`);
   lines.push(`- Notes included: ${(notes || []).length}`);
+  lines.push("");
+
+  lines.push("## AI Assistant Instructions");
+  lines.push("- This file is an account-context export for FEH planning.");
+  lines.push("- Prioritize recommendations using ONLY heroes owned in this file unless user explicitly asks for wishlist/summon targets.");
+  lines.push("- Use team presets + barracks + notes together to infer playstyle and gaps.");
+  lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, and available merges matter.");
+  lines.push("- If user asks summon advice for a specific banner, first identify banner units from user input (or ask for banner roster) and compare against owned roster + roles.");
+  lines.push("- If banner roster is not provided in this export, ask follow-up for banner unit list before final recommendation.");
+  lines.push("- Keep advice concise: top 1-3 summon priorities, why, and what role gap each fills.");
+  lines.push("");
+
+  lines.push("## Limitations");
+  lines.push("- This export does NOT include all live Game8 banner pages by default.");
+  lines.push("- It includes owned-hero guide context and account state for token-efficient analysis.");
   lines.push("");
 
   lines.push("## Teams");
@@ -106,6 +143,10 @@ export async function GET(request: Request) {
   } else {
     for (const entry of barracks || []) {
       lines.push(`- ${entry.hero_name} (${entry.hero_slug})`);
+      const meta = heroMetaBySlug.get(entry.hero_slug);
+      lines.push(`  - Tier: ${meta?.tier ?? "-"}`);
+      lines.push(`  - Class: ${meta?.weapon || "-"} / ${meta?.move || "-"}`);
+      lines.push(`  - Tag: ${meta?.tag || "-"}`);
       lines.push(`  - Merges: ${entry.merges ?? 0}`);
       if (entry.notes) lines.push(`  - Player Notes: ${sanitizeText(entry.notes)}`);
       lines.push(`  - Updated: ${entry.updated_at || "-"}`);
