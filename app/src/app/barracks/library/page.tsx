@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -51,6 +53,31 @@ function toNum(value: string | undefined) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+async function loadLocalRarityBySlug() {
+  const candidates = [
+    path.join(process.cwd(), "db", "index.json"),
+    path.join(process.cwd(), "..", "db", "index.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const rows = JSON.parse(raw) as Array<{ name?: string; rarity?: string | null }>;
+      const map = new Map<string, string | null>();
+      for (const row of rows) {
+        if (!row?.name) continue;
+        const slug = String(row.name).replace(/[^a-z0-9]/gi, "_").toLowerCase();
+        map.set(slug, row.rarity ?? null);
+      }
+      return map;
+    } catch {
+      // continue
+    }
+  }
+
+  return new Map<string, string | null>();
+}
+
 export default async function BarracksLibraryPage({ searchParams }: LibraryPageProps) {
   if (!isSupabaseConfigured()) {
     redirect("/login");
@@ -85,6 +112,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
 
   const heroSlugs = (barracks || []).map((b) => b.hero_slug);
   const heroMetaBySlug = new Map<string, HeroMeta>();
+  const localRarityBySlug = await loadLocalRarityBySlug();
 
   if (heroSlugs.length) {
     const metaResult = await supabase
@@ -102,7 +130,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
 
       metaRows = (fallback.data || []).map((row) => ({
         hero_slug: row.hero_slug,
-        rarity: null,
+        rarity: localRarityBySlug.get(row.hero_slug) ?? null,
         weapon: row.weapon,
         move: row.move,
         tier: row.tier,
@@ -111,7 +139,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
     } else {
       metaRows = (metaResult.data || []).map((row) => ({
         hero_slug: row.hero_slug,
-        rarity: row.rarity,
+        rarity: row.rarity ?? localRarityBySlug.get(row.hero_slug) ?? null,
         weapon: row.weapon,
         move: row.move,
         tier: row.tier,

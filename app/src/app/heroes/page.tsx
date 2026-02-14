@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +18,36 @@ type HeroesPageProps = {
     tone?: string;
   }>;
 };
+
+function safeSlug(name: string) {
+  return String(name || "")
+    .replace(/[^a-z0-9]/gi, "_")
+    .toLowerCase();
+}
+
+async function loadLocalRarityBySlug() {
+  const candidates = [
+    path.join(process.cwd(), "db", "index.json"),
+    path.join(process.cwd(), "..", "db", "index.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const rows = JSON.parse(raw) as Array<{ name?: string; rarity?: string | null }>;
+      const map = new Map<string, string | null>();
+      for (const row of rows) {
+        if (!row?.name) continue;
+        map.set(safeSlug(row.name), row.rarity ?? null);
+      }
+      return map;
+    } catch {
+      // continue
+    }
+  }
+
+  return new Map<string, string | null>();
+}
 
 export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   if (!isSupabaseConfigured()) {
@@ -39,6 +71,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   }
 
   const currentPath = `/heroes?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&move=${encodeURIComponent(move)}`;
+  const localRarityBySlug = await loadLocalRarityBySlug();
 
   const buildHeroesQueryWithRarity = () => {
     let query = supabase
@@ -81,7 +114,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     heroRows = (fallback.data || []).map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
-      rarity: null,
+      rarity: localRarityBySlug.get(h.hero_slug) ?? null,
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,
@@ -90,7 +123,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     heroRows = (heroesResult.data || []).map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
-      rarity: h.rarity,
+      rarity: h.rarity ?? localRarityBySlug.get(h.hero_slug) ?? null,
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,

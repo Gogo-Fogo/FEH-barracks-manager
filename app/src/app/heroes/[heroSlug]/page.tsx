@@ -233,6 +233,31 @@ async function loadUnitBackgroundOptions() {
   return [] as string[];
 }
 
+async function loadLocalRarityBySlug(heroSlug: string) {
+  const candidates = [
+    path.join(process.cwd(), "db", "index.json"),
+    path.join(process.cwd(), "..", "db", "index.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const rows = JSON.parse(raw) as Array<{ name?: string; rarity?: string | null }>;
+      const bySlug = new Map<string, string | null>();
+      for (const row of rows) {
+        if (!row?.name) continue;
+        const slug = String(row.name).replace(/[^a-z0-9]/gi, "_").toLowerCase();
+        bySlug.set(slug, row.rarity ?? null);
+      }
+      return bySlug.get(heroSlug) ?? null;
+    } catch {
+      // continue
+    }
+  }
+
+  return null;
+}
+
 export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   if (!isSupabaseConfigured()) {
     redirect("/login");
@@ -240,6 +265,7 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
 
   const { heroSlug } = await params;
   const unitFile = await loadUnitFile(heroSlug);
+  const localRarity = await loadLocalRarityBySlug(heroSlug);
 
   const supabase = await createClient();
   const {
@@ -275,6 +301,10 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
           source_url: null,
         }
       : null);
+
+  if (hero && !hero.rarity) {
+    hero.rarity = localRarity;
+  }
 
   if (!hero) {
     notFound();

@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
@@ -17,6 +19,31 @@ import {
   updateBarracksEntry,
   updateUserTeam,
 } from "./actions";
+
+async function loadLocalRarityBySlug() {
+  const candidates = [
+    path.join(process.cwd(), "db", "index.json"),
+    path.join(process.cwd(), "..", "db", "index.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const rows = JSON.parse(raw) as Array<{ name?: string; rarity?: string | null }>;
+      const map = new Map<string, string | null>();
+      for (const row of rows) {
+        if (!row?.name) continue;
+        const slug = String(row.name).replace(/[^a-z0-9]/gi, "_").toLowerCase();
+        map.set(slug, row.rarity ?? null);
+      }
+      return map;
+    } catch {
+      // continue
+    }
+  }
+
+  return new Map<string, string | null>();
+}
 
 type BarracksPageProps = {
   searchParams: Promise<{
@@ -58,6 +85,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .limit(3000);
 
   const heroesResult = await fetchHeroesWithRarity();
+  const localRarityBySlug = await loadLocalRarityBySlug();
   let heroRows: Array<{
     hero_slug: string;
     name: string;
@@ -72,7 +100,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     heroRows = (fallback.data || []).map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
-      rarity: null,
+      rarity: localRarityBySlug.get(h.hero_slug) ?? null,
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,
@@ -81,7 +109,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     heroRows = (heroesResult.data || []).map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
-      rarity: h.rarity,
+      rarity: h.rarity ?? localRarityBySlug.get(h.hero_slug) ?? null,
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,

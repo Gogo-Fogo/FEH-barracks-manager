@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { addToBarracks, toggleFavorite } from "@/app/barracks/actions";
-import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
+import { moveIconName, rarityIconNames, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 
 type HeroRow = {
   hero_slug: string;
@@ -52,13 +52,14 @@ export function HeroesListClient({ heroesList, favoriteSlugs, currentPath }: Her
                 {hero.name}
               </p>
               <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                {rarityIconName(hero.rarity) ? (
+                {rarityIconNames(hero.rarity).map((iconName) => (
                   <img
-                    src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIconName(hero.rarity) || "")}`}
+                    key={`${hero.hero_slug}-${iconName}`}
+                    src={`/api/shared-icons/rarity?name=${encodeURIComponent(iconName)}`}
                     alt={`${hero.rarity || "Rarity"} icon`}
                     className="h-4 w-4 rounded-sm"
                   />
-                ) : null}
+                ))}
                 <span>{rarityStarsText(hero.rarity)}</span>
                 {weaponIconName(hero.weapon) ? (
                   <img
