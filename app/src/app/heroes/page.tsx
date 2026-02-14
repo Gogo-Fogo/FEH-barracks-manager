@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import { addToBarracks, toggleFavorite } from "@/app/barracks/actions";
+import { HeroesListClient } from "@/components/heroes-list-client";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type HeroesPageProps = {
   searchParams: Promise<{
@@ -40,7 +43,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   let query = supabase
     .from("heroes")
     .select("hero_slug,name,weapon,move,tier")
-    .order("name", { ascending: true })
+    .order("hero_slug", { ascending: true })
     .limit(200);
 
   if (q) query = query.ilike("name", `%${q}%`);
@@ -54,9 +57,21 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
   ]);
 
-  const weaponOptions = Array.from(new Set((weapons || []).map((r) => r.weapon))).sort();
-  const moveOptions = Array.from(new Set((moves || []).map((r) => r.move))).sort();
-  const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
+  const weaponOptions = Array.from(
+    new Set((weapons || []).map((r) => r.weapon).filter((value): value is string => Boolean(value?.trim())))
+  ).sort((a, b) => a.localeCompare(b));
+  const moveOptions = Array.from(
+    new Set((moves || []).map((r) => r.move).filter((value): value is string => Boolean(value?.trim())))
+  ).sort((a, b) => a.localeCompare(b));
+  const dedupedHeroes = Array.from(
+    new Map((heroes || []).map((hero) => [hero.hero_slug, hero])).values()
+  );
+  const heroesList = dedupedHeroes.sort((a, b) => {
+    if (a.hero_slug < b.hero_slug) return -1;
+    if (a.hero_slug > b.hero_slug) return 1;
+    return 0;
+  });
+  const favoriteSlugs = (favorites || []).map((f) => f.hero_slug);
 
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
@@ -128,60 +143,9 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
           </button>
         </form>
 
-        <section className="mt-6 space-y-2">
-          {!heroes?.length ? (
-            <p className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
-              No heroes found for current filters.
-            </p>
-          ) : (
-            heroes.map((hero) => (
-              <div
-                key={hero.hero_slug}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <img
-                    src={`/api/headshots/${hero.hero_slug}`}
-                    alt={`${hero.name} headshot`}
-                    className="h-12 w-12 rounded-lg border border-zinc-700 object-cover"
-                    loading="lazy"
-                  />
-                  <div>
-                  <Link href={`/heroes/${hero.hero_slug}`} className="font-medium hover:text-indigo-300">
-                    {hero.name}
-                  </Link>
-                  <p className="text-xs text-zinc-400">
-                    {hero.weapon || "-"} • {hero.move || "-"}
-                    {hero.tier != null ? ` • T${hero.tier}` : ""}
-                  </p>
-                  </div>
-                </div>
-
-                <form action={addToBarracks}>
-                  <input type="hidden" name="hero_slug" value={hero.hero_slug} readOnly />
-                  <input type="hidden" name="redirect_to" value={currentPath} readOnly />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
-                  >
-                    Add to barracks
-                  </button>
-                </form>
-
-                <form action={toggleFavorite}>
-                  <input type="hidden" name="hero_slug" value={hero.hero_slug} readOnly />
-                  <input type="hidden" name="redirect_to" value={currentPath} readOnly />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-950"
-                  >
-                    {favoriteSet.has(hero.hero_slug) ? "★ Favorited" : "☆ Favorite"}
-                  </button>
-                </form>
-              </div>
-            ))
-          )}
-        </section>
+        <div className="mt-6 space-y-2">
+          <HeroesListClient heroesList={heroesList} favoriteSlugs={favoriteSlugs} currentPath={currentPath} />
+        </div>
       </main>
     </div>
   );

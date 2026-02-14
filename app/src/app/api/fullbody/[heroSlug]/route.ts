@@ -98,7 +98,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ hero
       status: 200,
       headers: {
         "Content-Type": "image/svg+xml",
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     });
   }

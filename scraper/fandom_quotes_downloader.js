@@ -25,13 +25,24 @@ function safeSlug(name) {
 }
 
 function normalizeKey(text) {
+  const transliterated = String(text || '')
+    .replace(/[ðÐ]/g, 'd')
+    .replace(/[þÞ]/g, 'th')
+    .replace(/[æÆ]/g, 'ae')
+    .replace(/[œŒ]/g, 'oe')
+    .replace(/[øØ]/g, 'o')
+    .replace(/[łŁ]/g, 'l')
+    .replace(/[’'`]/g, '');
+
   return text
+    ? transliterated
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
-    .replace(/\s+/g, ' ');
+    .replace(/\s+/g, ' ')
+    : '';
 }
 
 function apiGetJson(url) {

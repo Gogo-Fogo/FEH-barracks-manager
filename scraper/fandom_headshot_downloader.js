@@ -25,13 +25,42 @@ function safeSlug(name) {
 }
 
 function normalizeKey(text) {
+  const transliterated = String(text || '')
+    .replace(/[ðÐ]/g, 'd')
+    .replace(/[þÞ]/g, 'th')
+    .replace(/[æÆ]/g, 'ae')
+    .replace(/[œŒ]/g, 'oe')
+    .replace(/[øØ]/g, 'o')
+    .replace(/[łŁ]/g, 'l')
+    .replace(/[’'`]/g, '');
+
   return text
+    ? transliterated
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
-    .replace(/\s+/g, ' ');
+    .replace(/\s+/g, ' ')
+    : '';
+}
+
+function buildLookupKeys(text) {
+  const keys = new Set();
+  const push = (value) => {
+    const key = normalizeKey(value);
+    if (key) keys.add(key);
+  };
+
+  push(text);
+
+  const noParens = String(text || '').replace(/\([^)]*\)/g, ' ');
+  push(noParens);
+
+  const noGenderTokens = noParens.replace(/\b(female|male|f|m)\b/gi, ' ');
+  push(noGenderTokens);
+
+  return [...keys];
 }
 
 function clearDir(dirPath) {
@@ -151,7 +180,9 @@ async function main() {
 
   for (const hero of selected) {
     const game8Slug = safeSlug(hero.name);
-    const fandomBase = baseByKey.get(normalizeKey(hero.name));
+    const fandomBase = buildLookupKeys(hero.name)
+      .map((key) => baseByKey.get(key))
+      .find(Boolean);
     if (!fandomBase) {
       manifest.missing_mapping.push({ game8_name: hero.name, game8_slug: game8Slug });
       console.log(`MISS map: ${hero.name}`);
