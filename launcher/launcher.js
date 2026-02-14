@@ -10,7 +10,7 @@ const AdmZip = require("adm-zip");
 
 const OWNER = "Gogo-Fogo";
 const REPO = "FEH-barracks-manager";
-const GITHUB_TOKEN = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKEN || "";
+let runtimeGithubToken = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKEN || "";
 
 const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
@@ -21,6 +21,7 @@ const LAUNCHER_BASE_DIR = process.pkg
 
 const INSTALL_ROOT = path.join(LAUNCHER_BASE_DIR, "FEH-Barracks-Manager");
 const META_PATH = path.join(INSTALL_ROOT, "launcher-meta.json");
+const TOKEN_PATH = path.join(INSTALL_ROOT, "launcher-token.txt");
 const APP_PATH = path.join(INSTALL_ROOT, "app");
 const ENV_LOCAL_PATH = path.join(APP_PATH, ".env.local");
 const ENV_EXAMPLE_PATH = path.join(APP_PATH, ".env.example");
@@ -33,8 +34,39 @@ function githubHeaders(accept) {
   return {
     "User-Agent": "FEH-Barracks-Launcher",
     Accept: accept,
-    ...(GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {}),
+    ...(runtimeGithubToken ? { Authorization: `Bearer ${runtimeGithubToken}` } : {}),
   };
+}
+
+function setRuntimeToken(token) {
+  runtimeGithubToken = String(token || "").trim();
+}
+
+async function readSavedToken() {
+  try {
+    const raw = await fsp.readFile(TOKEN_PATH, "utf8");
+    return String(raw || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+async function saveToken(token) {
+  const value = String(token || "").trim();
+  if (!value) return;
+  ensureDirSync(INSTALL_ROOT);
+  await fsp.writeFile(TOKEN_PATH, value, "utf8");
+}
+
+async function promptForToken() {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    console.log("\nThis repository appears private to GitHub API.");
+    const answer = await rl.question("Paste FEH_GITHUB_TOKEN (or press Enter to skip): ");
+    return String(answer || "").trim();
+  } finally {
+    rl.close();
+  }
 }
 
 function getJson(url) {
@@ -305,6 +337,11 @@ async function runInteractiveMenu() {
 async function main() {
   ensureDirSync(INSTALL_ROOT);
 
+  if (!runtimeGithubToken) {
+    const savedToken = await readSavedToken();
+    if (savedToken) setRuntimeToken(savedToken);
+  }
+
   const args = new Set(process.argv.slice(2));
   const forceMenu = args.has("--advanced") || args.has("--menu");
 
@@ -319,6 +356,20 @@ async function main() {
     console.error(`\nAuto mode failed: ${err.message}`);
     if (/releases\/latest/i.test(String(err.message)) && /404/i.test(String(err.message))) {
       console.log("Hint: either no GitHub Release is published yet, or the repo is private.");
+      if (!runtimeGithubToken) {
+        const provided = await promptForToken();
+        if (provided) {
+          setRuntimeToken(provided);
+          await saveToken(provided);
+          console.log("Token saved. Retrying auto mode...");
+          try {
+            await autoUpdateAndLaunch();
+            return;
+          } catch (retryErr) {
+            console.error(`Retry failed: ${retryErr.message}`);
+          }
+        }
+      }
       console.log("If private, run launcher with FEH_GITHUB_TOKEN set to a PAT that has repo read access.");
     }
     console.log("Switching to interactive menu...");
