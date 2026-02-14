@@ -69,9 +69,9 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [x] Aether Resort prototype page with account/local persistence fallback
 
 ## Phase 6 - Ops / Deployment
-- [ ] Deploy web app to Vercel.
+- [x] Deploy web app to Vercel.
 - [ ] Configure Supabase production project.
-- [ ] Add scheduled data refresh job (daily/weekly).
+- [~] Add scheduled data refresh job (daily/weekly).
 - [ ] Add backup/export policy.
 - [ ] Add budget guardrails for Supabase free tier (alerts/usage checks).
 
@@ -84,11 +84,14 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ---
 
 ## Immediate Next Step
-- [ ] Run Supabase SQL: `app/supabase/schema.sql`
+- [ ] Run Supabase SQL: `app/supabase/schema.sql` (on dedicated production Supabase project if splitting envs)
 - [x] Fill `app/.env.local` (Supabase URL, anon key, service role key)
 - [ ] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
+- [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 - [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
 - [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker)
 - [x] Polish Notes/Favorites UX (empty states, quick actions, consistency with heroes page)
 - [x] Implement password reset flow
 - [x] Prep deployment checklist (Vercel + Supabase prod + scheduled refresh)
+- [x] Configure Supabase Auth URL settings for deployed Vercel domain (site URL + reset/login redirects)
+- [x] Add weekly GitHub Actions workflow file for hero import (`.github/workflows/weekly-hero-import.yml`)

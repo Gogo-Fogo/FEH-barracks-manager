@@ -7,6 +7,28 @@
 - App should consume image pointers (`img_url` / manifest references) while preserving local scraped archive as canonical backup.
 - Packaged local desktop mode remains a fallback path, but not primary for current milestone.
 
+## Deployment/Usage Mode (Current)
+- Production app is now deployed on Vercel (Next.js app root: `app/`).
+- Friends should use the deployed Vercel URL for normal usage.
+- `main` branch is the production source of truth:
+  - push to `main` -> Vercel auto-builds -> production updates after successful deploy.
+- Local `npm --prefix app run dev` is now for development/testing only, not required for normal app usage.
+
+## Supabase Auth URL Configuration (Hosted)
+- In Supabase Auth URL settings, `Site URL` must match active deployed Vercel domain.
+- Allowed redirect URLs should include at minimum:
+  - `<vercel-domain>/reset-password`
+  - `<vercel-domain>/login`
+- If the deployed domain changes (new Vercel alias/custom domain), update Site URL + redirects immediately.
+
+## Recommended Dev Flow (Post-Deploy)
+1. Develop/test locally:
+   - `npm --prefix app run dev`
+2. Commit and push changes.
+3. Let Vercel deploy automatically from GitHub.
+4. Validate on live URL (auth + core CRUD flows).
+5. For safer releases, prefer branch-based preview deploys before merging to `main`.
+
 ## Normal Maintenance Run
 1. Run Scout:
    - `node scraper/Maintenance_Updater.js`
