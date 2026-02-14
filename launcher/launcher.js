@@ -210,6 +210,17 @@ async function ensureStartScript() {
   await fsp.writeFile(START_SCRIPT_PATH, script, "utf8");
 }
 
+async function ensureEnvLocalTemplate() {
+  const template = [
+    "NEXT_PUBLIC_SUPABASE_URL=",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
+    "SUPABASE_SERVICE_ROLE_KEY=",
+    "",
+  ].join("\r\n");
+
+  await fsp.writeFile(ENV_LOCAL_PATH, template, "utf8");
+}
+
 async function fetchLatestRelease() {
   const url = `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`;
   return getJson(url);
@@ -292,8 +303,11 @@ async function launchApp() {
       return "needs-env";
     }
 
-    console.log("Missing .env.local (and no .env.example found).");
-    console.log(`Create this file before launch: ${ENV_LOCAL_PATH}`);
+    await ensureEnvLocalTemplate();
+    console.log("\nCreated app/.env.local template (no .env.example found in bundle).");
+    console.log("Please fill Supabase values in:");
+    console.log(`  ${ENV_LOCAL_PATH}`);
+    await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
     return "needs-env";
   }
 
