@@ -100,6 +100,18 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Add hero to barracks</h2>
             <div className="flex flex-wrap gap-2">
+              <a
+                href="/api/ai-export"
+                className="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-300 hover:bg-emerald-950"
+              >
+                Export AI Context (.md)
+              </a>
+              <a
+                href="/api/ai-export?mode=full"
+                className="rounded-md border border-emerald-900 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-950/60"
+              >
+                Export AI Context (full guides)
+              </a>
               <Link
                 href="/aether-resort"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
