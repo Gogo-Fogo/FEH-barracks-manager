@@ -139,7 +139,14 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
                 key={hero.hero_slug}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
               >
-                <div>
+                <div className="flex items-center gap-2">
+                  <img
+                    src={`/api/headshots/${hero.hero_slug}`}
+                    alt={`${hero.name} headshot`}
+                    className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                    loading="lazy"
+                  />
+                  <div>
                   <Link href={`/heroes/${hero.hero_slug}`} className="font-medium hover:text-indigo-300">
                     {hero.name}
                   </Link>
@@ -147,6 +154,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
                     {hero.weapon || "-"} • {hero.move || "-"}
                     {hero.tier != null ? ` • T${hero.tier}` : ""}
                   </p>
+                  </div>
                 </div>
 
                 <form action={addToBarracks}>

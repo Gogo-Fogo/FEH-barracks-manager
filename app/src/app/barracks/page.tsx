@@ -159,9 +159,17 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     <input type="hidden" name="id" value={entry.id} readOnly />
                     <input type="hidden" name="redirect_to" value="/barracks" readOnly />
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Link href={`/heroes/${entry.hero_slug}`} className="font-medium hover:text-indigo-300">
-                        {entry.hero_name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={`/api/headshots/${entry.hero_slug}`}
+                          alt={`${entry.hero_name} headshot`}
+                          className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                          loading="lazy"
+                        />
+                        <Link href={`/heroes/${entry.hero_slug}`} className="font-medium hover:text-indigo-300">
+                          {entry.hero_name}
+                        </Link>
+                      </div>
                       <button
                         type="submit"
                         formAction={removeBarracksEntry}
@@ -238,6 +246,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         type="submit"
                         className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
                       >
+                        <img
+                          src={`/api/headshots/${h.hero_slug}`}
+                          alt={`${h.name} headshot`}
+                          className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                          loading="lazy"
+                        />
                         ★ {h.name}
                       </button>
                     </form>
@@ -253,6 +267,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         type="submit"
                         className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
                       >
+                        <img
+                          src={`/api/headshots/${f.hero_slug}`}
+                          alt={`${(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug} headshot`}
+                          className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                          loading="lazy"
+                        />
                         ★ {(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug}
                       </button>
                     </form>
