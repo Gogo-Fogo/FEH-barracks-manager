@@ -87,24 +87,39 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const heroMetaBySlug = new Map<string, HeroMeta>();
 
   if (heroSlugs.length) {
-    let metaResult = await supabase
+    const metaResult = await supabase
       .from("heroes")
       .select("hero_slug,rarity,weapon,move,tier,tag")
       .in("hero_slug", heroSlugs);
 
-    if (metaResult.error && metaResult.error.message.includes("rarity")) {
+    let metaRows: HeroMeta[] = [];
+
+    if (metaResult.error?.message.includes("rarity")) {
       const fallback = await supabase
         .from("heroes")
         .select("hero_slug,weapon,move,tier,tag")
         .in("hero_slug", heroSlugs);
 
-      metaResult = {
-        ...fallback,
-        data: (fallback.data || []).map((row) => ({ ...row, rarity: null })),
-      } as typeof metaResult;
+      metaRows = (fallback.data || []).map((row) => ({
+        hero_slug: row.hero_slug,
+        rarity: null,
+        weapon: row.weapon,
+        move: row.move,
+        tier: row.tier,
+        tag: row.tag,
+      }));
+    } else {
+      metaRows = (metaResult.data || []).map((row) => ({
+        hero_slug: row.hero_slug,
+        rarity: row.rarity,
+        weapon: row.weapon,
+        move: row.move,
+        tier: row.tier,
+        tag: row.tag,
+      }));
     }
 
-    for (const row of metaResult.data || []) {
+    for (const row of metaRows) {
       heroMetaBySlug.set(row.hero_slug, row);
     }
   }

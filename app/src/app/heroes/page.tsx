@@ -40,10 +40,10 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
 
   const currentPath = `/heroes?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&move=${encodeURIComponent(move)}`;
 
-  const buildHeroesQuery = (withRarity: boolean) => {
+  const buildHeroesQueryWithRarity = () => {
     let query = supabase
       .from("heroes")
-      .select(withRarity ? "hero_slug,name,rarity,weapon,move,tier" : "hero_slug,name,weapon,move,tier")
+      .select("hero_slug,name,rarity,weapon,move,tier")
       .order("hero_slug", { ascending: true })
       .limit(200);
 
@@ -53,13 +53,48 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     return query;
   };
 
-  let heroesResult = await buildHeroesQuery(true);
-  if (heroesResult.error && heroesResult.error.message.includes("rarity")) {
-    const fallback = await buildHeroesQuery(false);
-    heroesResult = {
-      ...fallback,
-      data: (fallback.data || []).map((h) => ({ ...h, rarity: null })),
-    } as typeof heroesResult;
+  const buildHeroesQueryWithoutRarity = () => {
+    let query = supabase
+      .from("heroes")
+      .select("hero_slug,name,weapon,move,tier")
+      .order("hero_slug", { ascending: true })
+      .limit(200);
+
+    if (q) query = query.ilike("name", `%${q}%`);
+    if (weapon) query = query.eq("weapon", weapon);
+    if (move) query = query.eq("move", move);
+    return query;
+  };
+
+  const heroesResult = await buildHeroesQueryWithRarity();
+  let heroRows: Array<{
+    hero_slug: string;
+    name: string;
+    rarity: string | null;
+    weapon: string | null;
+    move: string | null;
+    tier: number | null;
+  }> = [];
+
+  if (heroesResult.error?.message.includes("rarity")) {
+    const fallback = await buildHeroesQueryWithoutRarity();
+    heroRows = (fallback.data || []).map((h) => ({
+      hero_slug: h.hero_slug,
+      name: h.name,
+      rarity: null,
+      weapon: h.weapon,
+      move: h.move,
+      tier: h.tier,
+    }));
+  } else {
+    heroRows = (heroesResult.data || []).map((h) => ({
+      hero_slug: h.hero_slug,
+      name: h.name,
+      rarity: h.rarity,
+      weapon: h.weapon,
+      move: h.move,
+      tier: h.tier,
+    }));
   }
 
   const [{ data: weapons }, { data: moves }, { data: favorites }] = await Promise.all([
@@ -75,7 +110,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     new Set((moves || []).map((r) => r.move).filter((value): value is string => Boolean(value?.trim())))
   ).sort((a, b) => a.localeCompare(b));
   const dedupedHeroes = Array.from(
-    new Map((heroesResult.data || []).map((hero) => [hero.hero_slug, hero])).values()
+    new Map(heroRows.map((hero) => [hero.hero_slug, hero])).values()
   );
   const heroesList = dedupedHeroes.sort((a, b) => {
     if (a.hero_slug < b.hero_slug) return -1;

@@ -43,20 +43,49 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     redirect("/login");
   }
 
-  const fetchHeroes = async (withRarity: boolean) =>
+  const fetchHeroesWithRarity = async () =>
     supabase
       .from("heroes")
-      .select(withRarity ? "hero_slug,name,rarity,weapon,move,tier" : "hero_slug,name,weapon,move,tier")
+      .select("hero_slug,name,rarity,weapon,move,tier")
       .order("name", { ascending: true })
       .limit(3000);
 
-  let heroesResult = await fetchHeroes(true);
-  if (heroesResult.error && heroesResult.error.message.includes("rarity")) {
-    const fallback = await fetchHeroes(false);
-    heroesResult = {
-      ...fallback,
-      data: (fallback.data || []).map((h) => ({ ...h, rarity: null })),
-    } as typeof heroesResult;
+  const fetchHeroesWithoutRarity = async () =>
+    supabase
+      .from("heroes")
+      .select("hero_slug,name,weapon,move,tier")
+      .order("name", { ascending: true })
+      .limit(3000);
+
+  const heroesResult = await fetchHeroesWithRarity();
+  let heroRows: Array<{
+    hero_slug: string;
+    name: string;
+    rarity: string | null;
+    weapon: string | null;
+    move: string | null;
+    tier: number | null;
+  }> = [];
+
+  if (heroesResult.error?.message.includes("rarity")) {
+    const fallback = await fetchHeroesWithoutRarity();
+    heroRows = (fallback.data || []).map((h) => ({
+      hero_slug: h.hero_slug,
+      name: h.name,
+      rarity: null,
+      weapon: h.weapon,
+      move: h.move,
+      tier: h.tier,
+    }));
+  } else {
+    heroRows = (heroesResult.data || []).map((h) => ({
+      hero_slug: h.hero_slug,
+      name: h.name,
+      rarity: h.rarity,
+      weapon: h.weapon,
+      move: h.move,
+      tier: h.tier,
+    }));
   }
 
   const [{ data: barracks }, { data: favorites }, { data: notes }, { data: teams }] = await Promise.all([
@@ -83,14 +112,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .limit(20),
   ]);
 
-  const heroes = (heroesResult.data || []) as Array<{
-    hero_slug: string;
-    name: string;
-    rarity: string | null;
-    weapon: string | null;
-    move: string | null;
-    tier: number | null;
-  }>;
+  const heroes = heroRows;
 
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
