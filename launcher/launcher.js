@@ -15,7 +15,11 @@ const REPO = "FEH-barracks-manager";
 const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
 
-const INSTALL_ROOT = path.join(os.homedir(), "FEH-Barracks-Manager");
+const LAUNCHER_BASE_DIR = process.pkg
+  ? path.dirname(process.execPath)
+  : path.resolve(__dirname, "..");
+
+const INSTALL_ROOT = path.join(LAUNCHER_BASE_DIR, "FEH-Barracks-Manager");
 const META_PATH = path.join(INSTALL_ROOT, "launcher-meta.json");
 const APP_PATH = path.join(INSTALL_ROOT, "app");
 const ENV_LOCAL_PATH = path.join(APP_PATH, ".env.local");

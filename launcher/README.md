@@ -4,7 +4,8 @@ This launcher installs/updates a local runnable copy of FEH Barracks Manager fro
 
 ## What it does
 
-- Creates install folder at: `C:\Users\<you>\FEH-Barracks-Manager`
+- Creates install folder **next to the launcher EXE**:
+  - `<folder-containing-exe>/FEH-Barracks-Manager`
 - Downloads latest release bundles from:
   - `feh-app-bundle.zip` (required)
   - `feh-assets-bundle.zip` (optional, for heavy local assets)
