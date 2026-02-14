@@ -64,39 +64,22 @@ FEH-Barracks-Launcher.exe --menu
 
 This opens the old interactive menu (Install/Update, Launch, Status, Exit).
 
-## Distribution-Only Repo (Recommended)
+## Default Update Source (Simple Mode)
 
-For true one-click friend install while keeping your source repo private:
-
-1. Keep your main code repo private (`FEH-barracks-manager`).
-2. Create a separate **public** repo (example: `FEH-barracks-manager-distribution`).
-3. Releases in that public distro repo should contain:
-   - `FEH-Barracks-Launcher.exe`
-   - `feh-app-bundle.zip`
-   - `feh-assets-bundle.zip`
-
-Launcher defaults are now set to this distro pattern:
+Launcher now defaults to this repo's releases:
 - owner: `Gogo-Fogo`
-- repo: `FEH-barracks-manager-distribution`
+- repo: `FEH-barracks-manager`
 
-Optional overrides:
+That means no extra distro-repo setup is required.
+
+To publish a new launcher/app bundle release, just push a tag (`v*`) and the workflow uploads assets.
+
+Optional override source (advanced only):
 
 ```powershell
 $env:FEH_RELEASE_OWNER = "your-owner"
-$env:FEH_RELEASE_REPO = "your-distro-repo"
+$env:FEH_RELEASE_REPO = "your-repo"
 ```
-
-## GitHub Actions Setup (in private source repo)
-
-Set these in your private repo settings:
-
-- **Actions Variable** `FEH_DISTRO_REPO`
-  - format: `owner/repo`
-  - example: `Gogo-Fogo/FEH-barracks-manager-distribution`
-- **Actions Secret** `DISTRO_REPO_TOKEN`
-  - PAT with permission to create releases/upload assets in distro repo.
-
-Then push a tag (`v*`) in private repo; workflow will build assets and publish release to distro repo.
 
 ## Notes
 
