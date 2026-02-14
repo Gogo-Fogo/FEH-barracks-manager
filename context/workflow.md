@@ -53,6 +53,16 @@ Use this when you want controlled, human-reviewed updates instead of fully autom
    - ensure generated/local artifacts (especially `db/units/` and failure logs) are not unintentionally staged
 8. Commit + push only intentional maintenance changes.
 
+9. Refresh banner pull-guide data (for summon recommendation context):
+   - `npm run scrape:banner-guides`
+   - seed URLs live in `db/banner_pull_seed_urls.json`
+   - output file: `db/banner_pull_guides.json` (local generated file)
+
+10. Export account AI context when needed:
+   - Compact: `/api/ai-export`
+   - Full guides: `/api/ai-export?mode=full`
+   - Export now includes banner pull-guide sections when `db/banner_pull_guides.json` exists.
+
 Notes:
 - This protocol updates shared hero/catalog data; it does not modify user-owned profile/barracks data.
 - Keep Game8 identity canonical; never rename unit identity from Fandom labels.

@@ -10,6 +10,25 @@ type UnitFile = {
   recommended_build?: Record<string, string>;
 };
 
+type BannerPullGuide = {
+  id?: string;
+  url?: string;
+  title?: string;
+  scraped_at?: string;
+  guide_sections?: Array<{ heading?: string; content?: string }>;
+  recommendations?: Array<{
+    hero_name?: string;
+    hero_slug_guess?: string;
+    tier?: string;
+    pull_recommendation?: string;
+    notes?: string;
+  }>;
+};
+
+type BannerPullGuidesFile = {
+  items?: BannerPullGuide[];
+};
+
 const DEFAULT_RAW_TEXT_LIMIT = 6000;
 
 function sanitizeText(value: string | null | undefined) {
@@ -37,6 +56,35 @@ async function readUnitFile(heroSlug: string): Promise<UnitFile | null> {
 function trimForExport(text: string, limit: number) {
   if (text.length <= limit) return text;
   return `${text.slice(0, limit)} …[truncated]`;
+}
+
+function normalizeSlug(value: string) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .toLowerCase()
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+async function loadBannerPullGuides(): Promise<BannerPullGuide[]> {
+  const candidates = [
+    path.join(process.cwd(), "db", "banner_pull_guides.json"),
+    path.join(process.cwd(), "..", "db", "banner_pull_guides.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const parsed = JSON.parse(raw) as BannerPullGuidesFile;
+      return Array.isArray(parsed.items) ? parsed.items : [];
+    } catch {
+      // continue
+    }
+  }
+
+  return [];
 }
 
 export async function GET(request: Request) {
@@ -95,6 +143,12 @@ export async function GET(request: Request) {
 
   const lines: string[] = [];
   const now = new Date().toISOString();
+  const bannerGuides = await loadBannerPullGuides();
+
+  const barracksBySlug = new Map<string, { hero_slug: string; hero_name: string }>();
+  for (const b of barracks || []) {
+    barracksBySlug.set(normalizeSlug(b.hero_slug), { hero_slug: b.hero_slug, hero_name: b.hero_name });
+  }
 
   lines.push("# FEH Barracks AI Context Export");
   lines.push(`Generated: ${now}`);
@@ -106,6 +160,7 @@ export async function GET(request: Request) {
   lines.push(`- Barracks heroes: ${(barracks || []).length}`);
   lines.push(`- Team presets: ${(teams || []).length}`);
   lines.push(`- Notes included: ${(notes || []).length}`);
+  lines.push(`- Banner pull guides loaded: ${bannerGuides.length}`);
   lines.push("");
 
   lines.push("## AI Assistant Instructions");
@@ -203,6 +258,82 @@ export async function GET(request: Request) {
         );
       } else {
         lines.push("- Raw Guide Text: (missing)");
+      }
+
+      lines.push("");
+    }
+  }
+
+  lines.push("## Banner Pull Guidance (Game8)");
+  if (!bannerGuides.length) {
+    lines.push("- No banner pull-guide data found. Run `node scraper/game8_banner_pull_scraper.js` first.");
+  } else {
+    for (const guide of bannerGuides) {
+      lines.push(`### ${guide.title || guide.id || "Banner Guide"}`);
+      if (guide.url) lines.push(`- URL: ${guide.url}`);
+      if (guide.scraped_at) lines.push(`- Scraped: ${guide.scraped_at}`);
+
+      const sections = (guide.guide_sections || []).slice(0, 3);
+      if (sections.length) {
+        lines.push("- Guide Summary:");
+        for (const section of sections) {
+          lines.push(`  - ${sanitizeText(section.heading || "Section")}: ${trimForExport(sanitizeText(section.content), 280)}`);
+        }
+      }
+
+      const recs = guide.recommendations || [];
+      if (!recs.length) {
+        lines.push("- Recommendations: none parsed.");
+        lines.push("");
+        continue;
+      }
+
+      const matchedOwned: Array<{ rec: NonNullable<BannerPullGuide["recommendations"]>[number]; owned: { hero_slug: string; hero_name: string } }> = [];
+      const others = [];
+
+      for (const rec of recs) {
+        const recSlug = normalizeSlug(rec.hero_slug_guess || "");
+        const recName = sanitizeText(rec.hero_name).toLowerCase();
+        const direct = recSlug ? barracksBySlug.get(recSlug) : null;
+
+        let owned = direct;
+        if (!owned && recSlug.includes("_")) {
+          const base = recSlug.split("_")[0];
+          owned = Array.from(barracksBySlug.entries())
+            .find(([slug]) => slug.startsWith(`${base}_`))
+            ?.[1];
+        }
+        if (!owned && recName) {
+          const nameMatch = Array.from(barracksBySlug.values()).find((b) =>
+            sanitizeText(b.hero_name).toLowerCase().includes(recName) || recName.includes(sanitizeText(b.hero_name).toLowerCase())
+          );
+          owned = nameMatch || undefined;
+        }
+
+        if (owned) {
+          matchedOwned.push({ rec, owned });
+        } else {
+          others.push(rec);
+        }
+      }
+
+      lines.push(`- Featured units parsed: ${recs.length}`);
+      lines.push(`- Owned featured units: ${matchedOwned.length}`);
+
+      if (matchedOwned.length) {
+        lines.push("- Owned banner targets:");
+        for (const item of matchedOwned.slice(0, 12)) {
+          lines.push(
+            `  - ${item.owned.hero_name} (${item.owned.hero_slug}) | Banner Tier: ${item.rec.tier || "-"} | Pull: ${item.rec.pull_recommendation || "-"}`
+          );
+        }
+      }
+
+      if (others.length) {
+        lines.push("- Not owned (top parsed):");
+        for (const rec of others.slice(0, 10)) {
+          lines.push(`  - ${rec.hero_name || rec.hero_slug_guess || "Unknown"} | Banner Tier: ${rec.tier || "-"} | Pull: ${rec.pull_recommendation || "-"}`);
+        }
       }
 
       lines.push("");

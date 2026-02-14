@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "download:game8-mini": "node scraper/game8_mini_sprite_downloader.js"
+    "download:game8-mini": "node scraper/game8_mini_sprite_downloader.js",
+    "scrape:banner-guides": "node scraper/game8_banner_pull_scraper.js"
   },
   "keywords": [],
   "author": "",
