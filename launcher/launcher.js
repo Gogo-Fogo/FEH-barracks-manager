@@ -109,7 +109,7 @@ function getJson(url) {
   });
 }
 
-function downloadFile(url, outPath) {
+function downloadFile(url, outPath, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     ensureDirSync(path.dirname(outPath));
 
@@ -119,7 +119,23 @@ function downloadFile(url, outPath) {
         headers: githubHeaders("application/octet-stream"),
       },
       (res) => {
-        if (!res.statusCode || res.statusCode >= 400) {
+        const status = res.statusCode || 0;
+
+        if (status >= 300 && status < 400 && res.headers.location) {
+          if (redirectCount >= 10) {
+            reject(new Error(`Too many redirects downloading ${url}`));
+            return;
+          }
+
+          const redirectedUrl = new URL(res.headers.location, url).toString();
+          res.resume();
+          downloadFile(redirectedUrl, outPath, redirectCount + 1)
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
+
+        if (!status || status >= 400) {
           let rawErr = "";
           res.on("data", (chunk) => (rawErr += chunk));
           res.on("end", () => {
@@ -130,7 +146,7 @@ function downloadFile(url, outPath) {
             } catch {
               // ignore parse errors
             }
-            reject(new Error(`HTTP ${res.statusCode} downloading ${url}${detail}`));
+            reject(new Error(`HTTP ${status} downloading ${url}${detail}`));
           });
           return;
         }
