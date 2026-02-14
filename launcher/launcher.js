@@ -10,6 +10,7 @@ const AdmZip = require("adm-zip");
 
 const OWNER = "Gogo-Fogo";
 const REPO = "FEH-barracks-manager";
+const GITHUB_TOKEN = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKEN || "";
 
 const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
@@ -28,20 +29,35 @@ function ensureDirSync(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+function githubHeaders(accept) {
+  return {
+    "User-Agent": "FEH-Barracks-Launcher",
+    Accept: accept,
+    ...(GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {}),
+  };
+}
+
 function getJson(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(
       url,
       {
-        headers: {
-          "User-Agent": "FEH-Barracks-Launcher",
-          Accept: "application/vnd.github+json",
-        },
+        headers: githubHeaders("application/vnd.github+json"),
       },
       (res) => {
         if (!res.statusCode || res.statusCode >= 400) {
-          reject(new Error(`HTTP ${res.statusCode} on ${url}`));
-          res.resume();
+          let rawErr = "";
+          res.on("data", (chunk) => (rawErr += chunk));
+          res.on("end", () => {
+            let detail = "";
+            try {
+              const parsed = JSON.parse(rawErr);
+              detail = parsed?.message ? ` (${parsed.message})` : "";
+            } catch {
+              // ignore parse errors
+            }
+            reject(new Error(`HTTP ${res.statusCode} on ${url}${detail}`));
+          });
           return;
         }
 
@@ -68,15 +84,22 @@ function downloadFile(url, outPath) {
     const req = https.get(
       url,
       {
-        headers: {
-          "User-Agent": "FEH-Barracks-Launcher",
-          Accept: "application/octet-stream",
-        },
+        headers: githubHeaders("application/octet-stream"),
       },
       (res) => {
         if (!res.statusCode || res.statusCode >= 400) {
-          reject(new Error(`HTTP ${res.statusCode} downloading ${url}`));
-          res.resume();
+          let rawErr = "";
+          res.on("data", (chunk) => (rawErr += chunk));
+          res.on("end", () => {
+            let detail = "";
+            try {
+              const parsed = JSON.parse(rawErr);
+              detail = parsed?.message ? ` (${parsed.message})` : "";
+            } catch {
+              // ignore parse errors
+            }
+            reject(new Error(`HTTP ${res.statusCode} downloading ${url}${detail}`));
+          });
           return;
         }
 
@@ -294,6 +317,10 @@ async function main() {
     await autoUpdateAndLaunch();
   } catch (err) {
     console.error(`\nAuto mode failed: ${err.message}`);
+    if (/releases\/latest/i.test(String(err.message)) && /404/i.test(String(err.message))) {
+      console.log("Hint: either no GitHub Release is published yet, or the repo is private.");
+      console.log("If private, run launcher with FEH_GITHUB_TOKEN set to a PAT that has repo read access.");
+    }
     console.log("Switching to interactive menu...");
     await runInteractiveMenu();
   }

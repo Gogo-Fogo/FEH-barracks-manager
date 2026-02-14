@@ -64,6 +64,20 @@ FEH-Barracks-Launcher.exe --menu
 
 This opens the old interactive menu (Install/Update, Launch, Status, Exit).
 
+## Private Repository Note
+
+If your GitHub repo is private, launcher API calls require a token.
+
+- Set environment variable before running launcher:
+
+```powershell
+$env:FEH_GITHUB_TOKEN = "<github_pat_with_repo_read_access>"
+./FEH-Barracks-Launcher.exe
+```
+
+- Token scopes should allow reading repo metadata/releases for this repository.
+- For easiest friend onboarding, make the repository public (then no token is required).
+
 ## Notes
 
 - This is Windows-first v1 launcher.
