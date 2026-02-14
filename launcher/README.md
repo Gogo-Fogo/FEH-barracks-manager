@@ -37,14 +37,32 @@ Output:
 
 - `dist/FEH-Barracks-Launcher.exe`
 
-## User Flow
+## User Flow (Default)
 
 1. Run `FEH-Barracks-Launcher.exe`
-2. Choose `1) Install / Update from GitHub Release`
-3. Choose `2) Launch app locally`
-4. Open `http://localhost:3000`
+2. Launcher automatically:
+   - checks latest GitHub release,
+   - installs/updates if needed,
+   - launches app locally.
+3. Open `http://localhost:3000`
 
-On first launch, if `.env.local` is missing, launcher copies from `.env.example` and asks user to fill Supabase values.
+If `.env.local` is missing, launcher copies from `.env.example` and asks user to fill Supabase values first.
+
+## Advanced Menu (Optional)
+
+For manual control / troubleshooting, run launcher with:
+
+```powershell
+FEH-Barracks-Launcher.exe --advanced
+```
+
+or
+
+```powershell
+FEH-Barracks-Launcher.exe --menu
+```
+
+This opens the old interactive menu (Install/Update, Launch, Status, Exit).
 
 ## Notes
 

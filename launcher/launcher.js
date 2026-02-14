@@ -3,7 +3,6 @@
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
-const os = require("node:os");
 const https = require("node:https");
 const { spawn } = require("node:child_process");
 const readline = require("node:readline/promises");
@@ -136,9 +135,7 @@ function findAsset(release, name) {
   return (release.assets || []).find((a) => a.name === name) || null;
 }
 
-async function installOrUpdate() {
-  console.log("\nChecking latest release...");
-  const release = await fetchLatestRelease();
+async function installOrUpdateFromRelease(release) {
   const appAsset = findAsset(release, APP_ZIP_NAME);
 
   if (!appAsset) {
@@ -188,6 +185,12 @@ async function installOrUpdate() {
   console.log(`\nInstall/Update complete. Installed release: ${release.tag_name}`);
 }
 
+async function installOrUpdate() {
+  console.log("\nChecking latest release...");
+  const release = await fetchLatestRelease();
+  await installOrUpdateFromRelease(release);
+}
+
 async function launchApp() {
   if (!fs.existsSync(path.join(APP_PATH, "package.json"))) {
     console.log("App is not installed yet. Run Install/Update first.");
@@ -226,9 +229,29 @@ async function showStatus() {
   }
 }
 
-async function main() {
-  ensureDirSync(INSTALL_ROOT);
+async function autoUpdateAndLaunch() {
+  console.log("\nFEH Barracks Launcher (auto mode)");
+  console.log("Checking install state and latest release...");
 
+  const [meta, release] = await Promise.all([readMeta(), fetchLatestRelease()]);
+  const installed = fs.existsSync(path.join(APP_PATH, "package.json"));
+  const needsInstall = !installed;
+  const needsUpdate = !needsInstall && meta?.lastReleaseTag !== release.tag_name;
+
+  if (needsInstall) {
+    console.log("No local install found. Installing now...");
+    await installOrUpdateFromRelease(release);
+  } else if (needsUpdate) {
+    console.log(`Update found (${meta?.lastReleaseTag || "unknown"} -> ${release.tag_name}). Updating now...`);
+    await installOrUpdateFromRelease(release);
+  } else {
+    console.log(`Already up to date (${meta?.lastReleaseTag || release.tag_name}).`);
+  }
+
+  await launchApp();
+}
+
+async function runInteractiveMenu() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
     while (true) {
@@ -253,6 +276,26 @@ async function main() {
     }
   } finally {
     rl.close();
+  }
+}
+
+async function main() {
+  ensureDirSync(INSTALL_ROOT);
+
+  const args = new Set(process.argv.slice(2));
+  const forceMenu = args.has("--advanced") || args.has("--menu");
+
+  if (forceMenu) {
+    await runInteractiveMenu();
+    return;
+  }
+
+  try {
+    await autoUpdateAndLaunch();
+  } catch (err) {
+    console.error(`\nAuto mode failed: ${err.message}`);
+    console.log("Switching to interactive menu...");
+    await runInteractiveMenu();
   }
 }
 
