@@ -14,6 +14,11 @@ const URL_ARGS = process.argv
   .map((arg) => arg.replace('--url=', '').trim())
   .filter(Boolean);
 
+const DISCOVER_FROM_ARG = process.argv.find((arg) => arg.startsWith('--discover-from='));
+const DISCOVER_FROM_URL = DISCOVER_FROM_ARG ? DISCOVER_FROM_ARG.replace('--discover-from=', '').trim() : '';
+const MAX_URLS_ARG = process.argv.find((arg) => arg.startsWith('--max='));
+const MAX_URLS = MAX_URLS_ARG ? Number.parseInt(MAX_URLS_ARG.replace('--max=', '').trim(), 10) : null;
+
 if (!fs.existsSync(DB_FOLDER)) fs.mkdirSync(DB_FOLDER, { recursive: true });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -68,6 +73,33 @@ function loadSeedUrls() {
 
   for (const url of URL_ARGS) set.add(url);
   return Array.from(set);
+}
+
+async function discoverBannerUrls(page, sourceUrl) {
+  await page.goto(sourceUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+  return page.evaluate(() => {
+    const links = Array.from(document.querySelectorAll('a[href*="/games/fire-emblem-heroes/archives/"]'));
+    const clean = (v) => (v || '').replace(/\s+/g, ' ').trim();
+
+    const candidates = links
+      .map((a) => ({
+        href: a.href,
+        text: clean(a.textContent || ''),
+      }))
+      .filter((row) => row.href && /\/archives\/\d+/.test(row.href))
+      .filter((row) => /pull|summon|banner|who should you/i.test(row.text));
+
+    const unique = [];
+    const seen = new Set();
+    for (const row of candidates) {
+      if (seen.has(row.href)) continue;
+      seen.add(row.href);
+      unique.push(row.href);
+    }
+
+    return unique;
+  });
 }
 
 async function scrapeBannerPage(page, url) {
@@ -156,14 +188,7 @@ async function scrapeBannerPage(page, url) {
 }
 
 async function main() {
-  const urls = loadSeedUrls();
-  if (!urls.length) {
-    console.log('⚠️ No banner URLs provided.');
-    console.log(`Add URLs to ${SEED_FILE} or pass --url=<game8-banner-url>.`);
-    return;
-  }
-
-  console.log(`🎯 [BANNER SCOUT] Scraping ${urls.length} pull-guide pages...`);
+  const staticUrls = loadSeedUrls();
   const browser = await puppeteer.launch({
     headless: false,
     defaultViewport: null,
@@ -176,13 +201,40 @@ async function main() {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   );
 
+  const discoveredUrls = [];
+  if (DISCOVER_FROM_URL) {
+    try {
+      console.log(`🔎 Discovering banner links from: ${DISCOVER_FROM_URL}`);
+      const found = await retryWithBackoff(
+        async () => discoverBannerUrls(page, DISCOVER_FROM_URL),
+        'Banner URL discovery'
+      );
+      discoveredUrls.push(...found);
+      console.log(`   Found ${found.length} candidate banner links.`);
+    } catch (error) {
+      console.log(`   ❌ Discovery failed: ${error.message}`);
+    }
+  }
+
+  const urls = Array.from(new Set([...staticUrls, ...discoveredUrls]));
+  const finalUrls = Number.isFinite(MAX_URLS) && MAX_URLS > 0 ? urls.slice(0, MAX_URLS) : urls;
+
+  if (!finalUrls.length) {
+    console.log('⚠️ No banner URLs provided.');
+    console.log(`Add URLs to ${SEED_FILE}, pass --url=<game8-banner-url>, or use --discover-from=<hub-url>.`);
+    await browser.close();
+    return;
+  }
+
+  console.log(`🎯 [BANNER SCOUT] Scraping ${finalUrls.length} pull-guide pages...`);
+
   const items = [];
   const failed = [];
 
   try {
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      console.log(`[${i + 1}/${urls.length}] ${url}`);
+    for (let i = 0; i < finalUrls.length; i++) {
+      const url = finalUrls[i];
+      console.log(`[${i + 1}/${finalUrls.length}] ${url}`);
 
       try {
         const parsed = await retryWithBackoff(
