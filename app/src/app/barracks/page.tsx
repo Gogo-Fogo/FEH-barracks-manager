@@ -99,12 +99,20 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Add hero to barracks</h2>
-            <Link
-              href="/heroes"
-              className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
-            >
-              Open hero browser
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/aether-resort"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Open Aether Resort
+              </Link>
+              <Link
+                href="/heroes"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Open hero browser
+              </Link>
+            </div>
           </div>
 
           {!heroes?.length ? (
