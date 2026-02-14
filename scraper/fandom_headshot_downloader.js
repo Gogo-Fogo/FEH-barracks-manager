@@ -24,6 +24,11 @@ function safeSlug(name) {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 }
 
+function toDbRelativePath(absPath) {
+  const rel = path.relative(DB_ROOT, absPath).replace(/\\/g, '/');
+  return `db/${rel}`;
+}
+
 function normalizeKey(text) {
   const transliterated = String(text || '')
     .replace(/[ðÐ]/g, 'd')
@@ -220,7 +225,7 @@ async function main() {
       width: resolved.info.width,
       height: resolved.info.height,
       source_url: resolved.info.url,
-      local_path: outPath.replace(/\\/g, '/'),
+      local_path: toDbRelativePath(outPath),
     });
 
     console.log(`${hero.name}: saved 1/1`);

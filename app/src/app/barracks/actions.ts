@@ -27,7 +27,7 @@ function withNotice(path: string, notice: string, tone: "success" | "warn" = "su
 }
 
 export async function addToBarracks(formData: FormData) {
-  const heroSlug = requireText(formData.get("hero_slug"), "Hero slug");
+  const heroInput = requireText(formData.get("hero_slug"), "Hero");
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const supabase = await createClient();
@@ -37,15 +37,29 @@ export async function addToBarracks(formData: FormData) {
 
   if (!user) throw new Error("You must be logged in.");
 
-  const { data: heroRow, error: heroError } = await supabase
+  let { data: heroRow, error: heroError } = await supabase
     .from("heroes")
-    .select("name")
-    .eq("hero_slug", heroSlug)
+    .select("hero_slug,name")
+    .eq("hero_slug", heroInput)
     .single();
 
   if (heroError || !heroRow?.name) {
+    const byName = await supabase
+      .from("heroes")
+      .select("hero_slug,name")
+      .ilike("name", heroInput)
+      .limit(1)
+      .maybeSingle();
+
+    heroRow = byName.data ?? null;
+    heroError = byName.error ?? null;
+  }
+
+  if (heroError || !heroRow?.name || !heroRow.hero_slug) {
     throw new Error("Selected hero was not found in the catalog.");
   }
+
+  const heroSlug = heroRow.hero_slug;
 
   const { data: existing } = await supabase
     .from("user_barracks")

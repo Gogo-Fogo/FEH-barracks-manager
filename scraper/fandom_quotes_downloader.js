@@ -24,6 +24,11 @@ function safeSlug(name) {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 }
 
+function toDbRelativePath(absPath) {
+  const rel = path.relative(DB_ROOT, absPath).replace(/\\/g, '/');
+  return `db/${rel}`;
+}
+
 function normalizeKey(text) {
   const transliterated = String(text || '')
     .replace(/[ðÐ]/g, 'd')
@@ -176,7 +181,7 @@ async function main() {
       game8_name: hero.name,
       game8_slug: slug,
       fandom_quote_page: quoteTitle,
-      local_path: outPath.replace(/\\/g, '/'),
+      local_path: toDbRelativePath(outPath),
       text_length: text.length,
     });
 

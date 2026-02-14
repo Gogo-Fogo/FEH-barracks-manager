@@ -72,6 +72,18 @@ create table if not exists public.user_teams (
 
 create index if not exists user_teams_user_idx on public.user_teams (user_id);
 
+-- Per-user hero visual preferences (e.g. selected background on hero detail page)
+create table if not exists public.user_hero_preferences (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  hero_slug text not null references public.heroes(hero_slug) on delete cascade,
+  background_name text,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, hero_slug)
+);
+
+create index if not exists user_hero_preferences_user_idx on public.user_hero_preferences (user_id);
+create index if not exists user_hero_preferences_hero_idx on public.user_hero_preferences (hero_slug);
+
 -- Optional profile table for display settings
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -85,6 +97,7 @@ alter table public.user_barracks enable row level security;
 alter table public.user_favorites enable row level security;
 alter table public.user_notes enable row level security;
 alter table public.user_teams enable row level security;
+alter table public.user_hero_preferences enable row level security;
 alter table public.profiles enable row level security;
 
 -- heroes: readable by authenticated users, write via service role/import script only
@@ -188,6 +201,32 @@ create policy "user_teams_update_own"
 drop policy if exists "user_teams_delete_own" on public.user_teams;
 create policy "user_teams_delete_own"
   on public.user_teams for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- user_hero_preferences: users can only manage their own rows
+drop policy if exists "user_hero_preferences_select_own" on public.user_hero_preferences;
+create policy "user_hero_preferences_select_own"
+  on public.user_hero_preferences for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_hero_preferences_insert_own" on public.user_hero_preferences;
+create policy "user_hero_preferences_insert_own"
+  on public.user_hero_preferences for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_hero_preferences_update_own" on public.user_hero_preferences;
+create policy "user_hero_preferences_update_own"
+  on public.user_hero_preferences for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_hero_preferences_delete_own" on public.user_hero_preferences;
+create policy "user_hero_preferences_delete_own"
+  on public.user_hero_preferences for delete
   to authenticated
   using (auth.uid() = user_id);
 

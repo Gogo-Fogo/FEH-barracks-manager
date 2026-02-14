@@ -24,3 +24,36 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+:where(button, a, img, [role="button"]) {
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+:where(button, a, img, [role="button"]):not(:disabled) {
+  cursor: pointer;
+}
+
+:where(button, a, img, [role="button"]):hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 10px rgba(120, 175, 255, 0.34),
+    0 0 22px rgba(120, 175, 255, 0.22),
+    0 0 36px rgba(120, 175, 255, 0.14);
+  filter: none;
+}
+
+:where(button, a, img, [role="button"]):active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Treat character art background + foreground as one interactive composite */
+.hero-art-composite img,
+.hero-art-composite img:hover,
+.hero-art-composite img:active {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}

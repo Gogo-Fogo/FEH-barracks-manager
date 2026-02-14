@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
 import { AuthSignOutButton } from "@/components/auth-signout-button";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -46,7 +47,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .from("heroes")
       .select("hero_slug,name,weapon,move,tier")
       .order("name", { ascending: true })
-      .limit(400),
+      .limit(3000),
     supabase
       .from("user_barracks")
       .select("id,hero_slug,hero_name,merges,notes,updated_at")
@@ -111,36 +112,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               No heroes found in database yet. Run the import script first.
             </p>
           ) : (
-            <form action={addToBarracks} className="mt-4 flex flex-wrap items-end gap-3">
-              <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-              <div className="min-w-72 flex-1">
-                <label htmlFor="hero_slug" className="mb-1 block text-sm text-zinc-300">
-                  Hero
-                </label>
-                <select
-                  id="hero_slug"
-                  name="hero_slug"
-                  defaultValue={heroes[0]?.hero_slug ?? ""}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
-                >
-                  {heroes.map((hero) => (
-                    <option key={hero.hero_slug} value={hero.hero_slug}>
-                      {hero.name}
-                      {hero.weapon ? ` • ${hero.weapon}` : ""}
-                      {hero.move ? ` • ${hero.move}` : ""}
-                      {hero.tier != null ? ` • T${hero.tier}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400"
-              >
-                Add
-              </button>
-            </form>
+            <AddHeroTypeahead heroes={heroes} redirectTo="/barracks" addAction={addToBarracks} />
           )}
 
           <div className="mt-6 border-t border-zinc-800 pt-5">
@@ -149,7 +121,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             {!barracks?.length ? (
               <p className="mt-3 text-sm text-zinc-300">No heroes in your barracks yet.</p>
             ) : (
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 max-h-[430px] space-y-2 overflow-y-auto pr-1">
                 {barracks.map((entry) => (
                   <form
                     key={entry.id}
@@ -159,58 +131,78 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     <input type="hidden" name="id" value={entry.id} readOnly />
                     <input type="hidden" name="redirect_to" value="/barracks" readOnly />
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <img
                           src={`/api/headshots/${entry.hero_slug}`}
                           alt={`${entry.hero_name} headshot`}
                           className="h-10 w-10 rounded-lg border border-zinc-700 object-cover"
                           loading="lazy"
                         />
-                        <Link href={`/heroes/${entry.hero_slug}`} className="font-medium hover:text-indigo-300">
+                        <Link href={`/heroes/${entry.hero_slug}`} className="truncate font-medium hover:text-indigo-300">
                           {entry.hero_name}
                         </Link>
-                      </div>
-                      <button
-                        type="submit"
-                        formAction={removeBarracksEntry}
-                        className="rounded-md border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
-                      >
-                        Remove
-                      </button>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 md:grid-cols-[120px_1fr_auto]">
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">Merges</label>
-                        <input
-                          name="merges"
-                          type="number"
-                          min={0}
-                          max={20}
-                          defaultValue={entry.merges ?? 0}
-                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                        />
+                        <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
+                          +{entry.merges ?? 0}
+                        </span>
                       </div>
 
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">Notes</label>
-                        <input
-                          name="notes"
-                          defaultValue={entry.notes ?? ""}
-                          placeholder="Build/IV notes"
-                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                        />
-                      </div>
-
-                      <div className="self-end">
+                      <div className="flex items-center gap-2">
+                        <input type="hidden" name="hero_slug" value={entry.hero_slug} readOnly />
                         <button
                           type="submit"
-                          className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+                          formAction={toggleFavorite}
+                          className="rounded-md border border-amber-700 px-2 py-1 text-xs text-amber-300 hover:bg-amber-950"
                         >
-                          Save
+                          {favoriteSet.has(entry.hero_slug) ? "★ Unfavorite" : "☆ Favorite"}
+                        </button>
+                        <button
+                          type="submit"
+                          formAction={removeBarracksEntry}
+                          className="rounded-md border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
+                        >
+                          Remove
                         </button>
                       </div>
                     </div>
+
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
+                        Edit merges / notes
+                      </summary>
+
+                      <div className="mt-2 grid gap-3 md:grid-cols-[120px_1fr_auto]">
+                        <div>
+                          <label className="mb-1 block text-xs text-zinc-400">Merges</label>
+                          <input
+                            name="merges"
+                            type="number"
+                            min={0}
+                            max={20}
+                            defaultValue={entry.merges ?? 0}
+                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs text-zinc-400">Notes</label>
+                          <input
+                            name="notes"
+                            defaultValue={entry.notes ?? ""}
+                            placeholder="Build/IV notes"
+                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                          />
+                        </div>
+
+                        <div className="self-end">
+                          <button
+                            type="submit"
+                            className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    </details>
 
                     <p className="mt-2 text-xs text-zinc-500">
                       Last updated: {entry.updated_at ? new Date(entry.updated_at).toLocaleString() : "-"}
@@ -239,13 +231,11 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 {(heroes || [])
                   .filter((h) => favoriteSet.has(h.hero_slug))
                   .map((h) => (
-                    <form key={h.hero_slug} action={toggleFavorite}>
-                      <input type="hidden" name="hero_slug" value={h.hero_slug} readOnly />
-                      <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-                      <button
-                        type="submit"
-                        className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
-                      >
+                    <div
+                      key={h.hero_slug}
+                      className="inline-flex items-center gap-2 rounded-full border border-amber-700 px-2 py-1 text-xs text-amber-300"
+                    >
+                      <Link href={`/heroes/${h.hero_slug}`} className="inline-flex items-center rounded-full pr-1 hover:text-amber-200">
                         <img
                           src={`/api/headshots/${h.hero_slug}`}
                           alt={`${h.name} headshot`}
@@ -253,20 +243,30 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                           loading="lazy"
                         />
                         ★ {h.name}
-                      </button>
-                    </form>
+                      </Link>
+
+                      <form action={toggleFavorite}>
+                        <input type="hidden" name="hero_slug" value={h.hero_slug} readOnly />
+                        <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+                        <button
+                          type="submit"
+                          className="rounded-full border border-rose-700 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-950"
+                          aria-label={`Remove ${h.name} from favorites`}
+                        >
+                          Remove
+                        </button>
+                      </form>
+                    </div>
                   ))}
 
                 {(favorites || [])
                   .filter((f) => !(heroes || []).some((h) => h.hero_slug === f.hero_slug))
                   .map((f) => (
-                    <form key={f.hero_slug} action={toggleFavorite}>
-                      <input type="hidden" name="hero_slug" value={f.hero_slug} readOnly />
-                      <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-                      <button
-                        type="submit"
-                        className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
-                      >
+                    <div
+                      key={f.hero_slug}
+                      className="inline-flex items-center gap-2 rounded-full border border-amber-700 px-2 py-1 text-xs text-amber-300"
+                    >
+                      <Link href={`/heroes/${f.hero_slug}`} className="inline-flex items-center rounded-full pr-1 hover:text-amber-200">
                         <img
                           src={`/api/headshots/${f.hero_slug}`}
                           alt={`${(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug} headshot`}
@@ -274,8 +274,20 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                           loading="lazy"
                         />
                         ★ {(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug}
-                      </button>
-                    </form>
+                      </Link>
+
+                      <form action={toggleFavorite}>
+                        <input type="hidden" name="hero_slug" value={f.hero_slug} readOnly />
+                        <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+                        <button
+                          type="submit"
+                          className="rounded-full border border-rose-700 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-950"
+                          aria-label={`Remove ${(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug} from favorites`}
+                        >
+                          Remove
+                        </button>
+                      </form>
+                    </div>
                   ))}
               </div>
             )}
