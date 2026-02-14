@@ -44,7 +44,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   const [{ data: heroes }, { data: barracks }, { data: favorites }, { data: notes }, { data: teams }] = await Promise.all([
     supabase
       .from("heroes")
-      .select("hero_slug,name,weapon,move,tier")
+      .select("hero_slug,name,weapon,move,tier,img_url")
       .order("name", { ascending: true })
       .limit(400),
     supabase
@@ -54,7 +54,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .order("hero_name", { ascending: true }),
     supabase
       .from("user_favorites")
-      .select("hero_slug, heroes(name)")
+      .select("hero_slug, heroes(name,img_url)")
       .eq("user_id", user.id),
     supabase
       .from("user_notes")
@@ -72,6 +72,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
 
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
+  const heroImageBySlug = new Map((heroes || []).map((h) => [h.hero_slug, h.img_url || null]));
 
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
@@ -159,7 +160,17 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     <input type="hidden" name="id" value={entry.id} readOnly />
                     <input type="hidden" name="redirect_to" value="/barracks" readOnly />
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-medium">{entry.hero_name}</p>
+                      <div className="flex items-center gap-2">
+                        {heroImageBySlug.get(entry.hero_slug) ? (
+                          <img
+                            src={heroImageBySlug.get(entry.hero_slug) || undefined}
+                            alt={entry.hero_name}
+                            className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                        <p className="font-medium">{entry.hero_name}</p>
+                      </div>
                       <button
                         type="submit"
                         formAction={removeBarracksEntry}
@@ -236,6 +247,14 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         type="submit"
                         className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
                       >
+                        {h.img_url ? (
+                          <img
+                            src={h.img_url}
+                            alt={h.name}
+                            className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                            loading="lazy"
+                          />
+                        ) : null}
                         ★ {h.name}
                       </button>
                     </form>
@@ -251,6 +270,14 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         type="submit"
                         className="rounded-full border border-amber-700 px-3 py-1 text-xs text-amber-300 hover:bg-amber-950"
                       >
+                        {(f as { heroes?: { img_url?: string | null } | null }).heroes?.img_url ? (
+                          <img
+                            src={(f as { heroes?: { img_url?: string | null } | null }).heroes?.img_url || undefined}
+                            alt={(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug}
+                            className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                            loading="lazy"
+                          />
+                        ) : null}
                         ★ {(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug}
                       </button>
                     </form>
