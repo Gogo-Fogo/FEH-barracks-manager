@@ -8,8 +8,8 @@ const { spawn } = require("node:child_process");
 const readline = require("node:readline/promises");
 const AdmZip = require("adm-zip");
 
-const OWNER = "Gogo-Fogo";
-const REPO = "FEH-barracks-manager";
+const OWNER = process.env.FEH_RELEASE_OWNER || "Gogo-Fogo";
+const REPO = process.env.FEH_RELEASE_REPO || "FEH-barracks-manager-distribution";
 let runtimeGithubToken = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKEN || "";
 
 const APP_ZIP_NAME = "feh-app-bundle.zip";

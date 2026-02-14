@@ -1,4 +1,4 @@
-name: Build Launcher Release
+name: Build Launcher Distribution Release
 
 "on":
   push:
@@ -7,7 +7,7 @@ name: Build Launcher Release
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-and-release:
@@ -49,6 +49,10 @@ jobs:
       - name: Attach release assets
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.DISTRO_REPO_TOKEN }}
+          repository: ${{ vars.FEH_DISTRO_REPO }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           files: |
             dist/FEH-Barracks-Launcher.exe
             feh-app-bundle.zip

@@ -64,19 +64,39 @@ FEH-Barracks-Launcher.exe --menu
 
 This opens the old interactive menu (Install/Update, Launch, Status, Exit).
 
-## Private Repository Note
+## Distribution-Only Repo (Recommended)
 
-If your GitHub repo is private, launcher API calls require a token.
+For true one-click friend install while keeping your source repo private:
 
-- Set environment variable before running launcher:
+1. Keep your main code repo private (`FEH-barracks-manager`).
+2. Create a separate **public** repo (example: `FEH-barracks-manager-distribution`).
+3. Releases in that public distro repo should contain:
+   - `FEH-Barracks-Launcher.exe`
+   - `feh-app-bundle.zip`
+   - `feh-assets-bundle.zip`
+
+Launcher defaults are now set to this distro pattern:
+- owner: `Gogo-Fogo`
+- repo: `FEH-barracks-manager-distribution`
+
+Optional overrides:
 
 ```powershell
-$env:FEH_GITHUB_TOKEN = "<github_pat_with_repo_read_access>"
-./FEH-Barracks-Launcher.exe
+$env:FEH_RELEASE_OWNER = "your-owner"
+$env:FEH_RELEASE_REPO = "your-distro-repo"
 ```
 
-- Token scopes should allow reading repo metadata/releases for this repository.
-- For easiest friend onboarding, make the repository public (then no token is required).
+## GitHub Actions Setup (in private source repo)
+
+Set these in your private repo settings:
+
+- **Actions Variable** `FEH_DISTRO_REPO`
+  - format: `owner/repo`
+  - example: `Gogo-Fogo/FEH-barracks-manager-distribution`
+- **Actions Secret** `DISTRO_REPO_TOKEN`
+  - PAT with permission to create releases/upload assets in distro repo.
+
+Then push a tag (`v*`) in private repo; workflow will build assets and publish release to distro repo.
 
 ## Notes
 
