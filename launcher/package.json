@@ -1,0 +1,19 @@
+{
+  "name": "feh-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows launcher/updater for FEH Barracks Manager",
+  "type": "commonjs",
+  "bin": {
+    "feh-launcher": "launcher.js"
+  },
+  "scripts": {
+    "build": "pkg launcher.js --targets node18-win-x64 --output ../dist/FEH-Barracks-Launcher.exe"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
