@@ -163,7 +163,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         <img
                           src={`/api/headshots/${entry.hero_slug}`}
                           alt={`${entry.hero_name} headshot`}
-                          className="h-8 w-8 rounded-full border border-zinc-700 object-cover"
+                          className="h-10 w-10 rounded-lg border border-zinc-700 object-cover"
                           loading="lazy"
                         />
                         <Link href={`/heroes/${entry.hero_slug}`} className="font-medium hover:text-indigo-300">
@@ -249,7 +249,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         <img
                           src={`/api/headshots/${h.hero_slug}`}
                           alt={`${h.name} headshot`}
-                          className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                          className="mr-2 inline h-6 w-6 rounded-md border border-zinc-700 object-cover align-middle"
                           loading="lazy"
                         />
                         ★ {h.name}
@@ -270,7 +270,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         <img
                           src={`/api/headshots/${f.hero_slug}`}
                           alt={`${(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug} headshot`}
-                          className="mr-2 inline h-5 w-5 rounded-full border border-zinc-700 object-cover align-middle"
+                          className="mr-2 inline h-6 w-6 rounded-md border border-zinc-700 object-cover align-middle"
                           loading="lazy"
                         />
                         ★ {(f as { heroes?: { name?: string } | null }).heroes?.name || f.hero_slug}
