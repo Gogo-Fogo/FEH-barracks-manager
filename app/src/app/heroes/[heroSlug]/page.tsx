@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
 import { FullbodyCarousel } from "@/components/fullbody-carousel";
 import { toggleFavorite } from "@/app/barracks/actions";
 
@@ -27,6 +28,10 @@ type GuideHighlights = {
   weaknesses: string[];
   tips: string[];
   counters: string[];
+};
+
+type QuotesFile = {
+  quote_text?: string;
 };
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
@@ -64,33 +69,6 @@ function buildGuideHighlights(rawText?: string): GuideHighlights {
     tips: pickMatches(sentences, [/\btip\b/i, /\brecommend\b/i, /\bposition\b/i, /\buse\b/i, /\bprioritize\b/i]),
     counters: pickMatches(sentences, [/\bcounter\b/i, /\bagainst\b/i, /\bthreat\b/i, /\bmatchup\b/i]),
   };
-}
-
-function weaponIconName(weapon?: string | null) {
-  if (!weapon) return null;
-  const w = weapon.toLowerCase();
-  const color = w.includes("red") ? "Red" : w.includes("blue") ? "Blue" : w.includes("green") ? "Green" : "Colorless";
-
-  if (w.includes("sword")) return "Icon_Class_Red_Sword.png";
-  if (w.includes("lance")) return "Icon_Class_Blue_Lance.png";
-  if (w.includes("axe")) return "Icon_Class_Green_Axe.png";
-  if (w.includes("staff")) return "Icon_Class_Colorless_Staff.png";
-  if (w.includes("tome")) return `Icon_Class_${color}_Tome.png`;
-  if (w.includes("bow")) return `Icon_Class_${color}_Bow.png`;
-  if (w.includes("dagger")) return `Icon_Class_${color}_Dagger.png`;
-  if (w.includes("breath") || w.includes("dragon")) return `Icon_Class_${color}_Breath.png`;
-  if (w.includes("beast")) return `Icon_Class_${color}_Beast.png`;
-  return null;
-}
-
-function moveIconName(move?: string | null) {
-  if (!move) return null;
-  const m = move.toLowerCase();
-  if (m.includes("infantry")) return "Icon_Move_Infantry.png";
-  if (m.includes("armor")) return "Icon_Move_Armored.png";
-  if (m.includes("flying")) return "Icon_Move_Flying.png";
-  if (m.includes("cavalry")) return "Icon_Move_Cavalry.png";
-  return null;
 }
 
 function unitBackgroundName(tag?: string | null) {
@@ -145,6 +123,94 @@ async function loadUnitFile(heroSlug: string): Promise<UnitFile | null> {
   }
 
   return null;
+}
+
+function extractQuoteCandidates(rawText?: string) {
+  if (!rawText) return [] as string[];
+
+  const allowedSections = new Set([
+    "summoning",
+    "castle",
+    "friend greeting",
+    "leveling up",
+    "ally growth",
+    "5★ lv. 40 conversation",
+    "special trigger",
+    "defeat",
+    "status page",
+    "turn action",
+  ]);
+
+  const sectionHeading = /^(.+?)\s*\[[^\]]*\]\s*$/;
+  const noiseHeading = /^(general|quotes|misc|audio|transcription|rarity|story appearances|random quote)$/i;
+  const markerNoise = /^(\+\[[0-9,]+\]\s*points|\*spit\*|upload file|-|\[[^\]]*\])$/i;
+
+  const lines = rawText
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const unique: string[] = [];
+  let inAllowedSection = false;
+
+  for (const line of lines) {
+    if (/^story appearances\b/i.test(line)) {
+      inAllowedSection = false;
+      continue;
+    }
+
+    if (/^random quote\b/i.test(line)) {
+      inAllowedSection = false;
+      continue;
+    }
+
+    const sectionMatch = line.match(sectionHeading);
+    if (sectionMatch?.[1]) {
+      const sectionName = sectionMatch[1].toLowerCase();
+      inAllowedSection = allowedSections.has(sectionName);
+      continue;
+    }
+
+    if (!inAllowedSection) continue;
+    if (line.length < 10 || line.length > 220) continue;
+    if (/^https?:\/\//i.test(line)) continue;
+    if (noiseHeading.test(line)) continue;
+    if (markerNoise.test(line)) continue;
+    if (/\(map\)/i.test(line)) continue;
+    if (/&#\d+;|&nbsp;/i.test(line)) continue;
+    if (/^\([^)]*\)$/.test(line)) continue;
+    if (/upload file/i.test(line)) continue;
+    if (/\/Story\b/i.test(line)) continue;
+    if (/^in\s.+\/story$/i.test(line)) continue;
+    if (/^(name|source|fandom|extracted_at)\b/i.test(line)) continue;
+    if (!/[A-Za-z]/.test(line)) continue;
+    if (/[ぁ-んァ-ン一-龯]/.test(line)) continue;
+    if (/^[\d\[\]().,:;!/?%+\-\s]+$/.test(line)) continue;
+
+    if (!unique.includes(line)) unique.push(line);
+    if (unique.length >= 80) break;
+  }
+
+  return unique;
+}
+
+async function loadHeroQuotes(heroSlug: string) {
+  const candidates = [
+    path.join(process.cwd(), "db", "quotes", "fandom", `${heroSlug}.json`),
+    path.join(process.cwd(), "..", "db", "quotes", "fandom", `${heroSlug}.json`),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const parsed = JSON.parse(raw) as QuotesFile;
+      return extractQuoteCandidates(parsed.quote_text);
+    } catch {
+      // continue
+    }
+  }
+
+  return [] as string[];
 }
 
 async function loadUnitBackgroundOptions() {
@@ -215,6 +281,7 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   }
 
   const poses = await loadFullbodyPoses(hero.hero_slug);
+  const heroQuotes = await loadHeroQuotes(hero.hero_slug);
   const weaponIcon = weaponIconName(hero.weapon);
   const moveIcon = moveIconName(hero.move);
   const defaultBackgroundName = unitBackgroundName(hero.tag);
@@ -288,6 +355,7 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
             heroName={hero.name}
             heroSlug={hero.hero_slug}
             poses={poses}
+            quotes={heroQuotes}
             initialBackgroundName={initialBackgroundName}
             backgroundOptions={backgroundOptions}
             persistBackgroundPreference={Boolean(heroFromDb)}
@@ -295,6 +363,16 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
 
           <div className="space-y-4">
             <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
+              <p className="mb-2 flex items-center gap-2">
+                {rarityIconName(hero.rarity) ? (
+                  <img
+                    src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIconName(hero.rarity) || "")}`}
+                    alt={`${hero.rarity || "Rarity"} icon`}
+                    className="h-5 w-5 rounded-sm"
+                  />
+                ) : null}
+                <span className="text-zinc-400">Rarity:</span> {hero.rarity || "-"}
+              </p>
               <p className="mb-2 flex items-center gap-2">
                 {weaponIcon ? (
                   <img

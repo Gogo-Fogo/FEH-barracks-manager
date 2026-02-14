@@ -4,6 +4,7 @@ import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
 import { AuthSignOutButton } from "@/components/auth-signout-button";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import {
   addToBarracks,
   createUserNote,
@@ -42,12 +43,23 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     redirect("/login");
   }
 
-  const [{ data: heroes }, { data: barracks }, { data: favorites }, { data: notes }, { data: teams }] = await Promise.all([
+  const fetchHeroes = async (withRarity: boolean) =>
     supabase
       .from("heroes")
-      .select("hero_slug,name,weapon,move,tier")
+      .select(withRarity ? "hero_slug,name,rarity,weapon,move,tier" : "hero_slug,name,weapon,move,tier")
       .order("name", { ascending: true })
-      .limit(3000),
+      .limit(3000);
+
+  let heroesResult = await fetchHeroes(true);
+  if (heroesResult.error && heroesResult.error.message.includes("rarity")) {
+    const fallback = await fetchHeroes(false);
+    heroesResult = {
+      ...fallback,
+      data: (fallback.data || []).map((h) => ({ ...h, rarity: null })),
+    } as typeof heroesResult;
+  }
+
+  const [{ data: barracks }, { data: favorites }, { data: notes }, { data: teams }] = await Promise.all([
     supabase
       .from("user_barracks")
       .select("id,hero_slug,hero_name,merges,notes,updated_at")
@@ -71,8 +83,18 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .limit(20),
   ]);
 
+  const heroes = (heroesResult.data || []) as Array<{
+    hero_slug: string;
+    name: string;
+    rarity: string | null;
+    weapon: string | null;
+    move: string | null;
+    tier: number | null;
+  }>;
+
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
+  const heroMetaBySlug = new Map(heroes.map((h) => [h.hero_slug, h]));
 
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
@@ -106,12 +128,6 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               >
                 Export AI Context (.md)
               </a>
-              <a
-                href="/api/ai-export?mode=full"
-                className="rounded-md border border-emerald-900 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-950/60"
-              >
-                Export AI Context (full guides)
-              </a>
               <Link
                 href="/aether-resort"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
@@ -123,6 +139,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
                 Open hero browser
+              </Link>
+              <Link
+                href="/barracks/library"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Open My Wifus
               </Link>
             </div>
           </div>
@@ -136,7 +158,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           )}
 
           <div className="mt-6 border-t border-zinc-800 pt-5">
-            <h3 className="text-lg font-semibold">My entries</h3>
+            <h3 className="text-lg font-semibold">My Wifus</h3>
 
             {!barracks?.length ? (
               <p className="mt-3 text-sm text-zinc-300">No heroes in your barracks yet.</p>
@@ -151,20 +173,56 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     <input type="hidden" name="id" value={entry.id} readOnly />
                     <input type="hidden" name="redirect_to" value="/barracks" readOnly />
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <Link
+                        href={`/heroes/${entry.hero_slug}`}
+                        className="group flex min-w-0 items-center gap-2 rounded-lg px-1 py-1 transition-all hover:-translate-y-0.5 hover:bg-zinc-800/40"
+                      >
                         <img
                           src={`/api/headshots/${entry.hero_slug}`}
                           alt={`${entry.hero_name} headshot`}
-                          className="h-10 w-10 rounded-lg border border-zinc-700 object-cover"
+                          className="h-10 w-10 rounded-lg border border-zinc-700 object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
                         />
-                        <Link href={`/heroes/${entry.hero_slug}`} className="truncate font-medium hover:text-indigo-300">
+                        <span className="truncate font-medium group-hover:text-indigo-300">
                           {entry.hero_name}
-                        </Link>
+                        </span>
+                        {(() => {
+                          const meta = heroMetaBySlug.get(entry.hero_slug);
+                          const rarityIcon = rarityIconName(meta?.rarity || null);
+                          const weaponIcon = weaponIconName(meta?.weapon || null);
+                          const moveIcon = moveIconName(meta?.move || null);
+                          return (
+                            <span className="flex items-center gap-1 text-[11px] text-zinc-400">
+                              {rarityIcon ? (
+                                <img
+                                  src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIcon)}`}
+                                  alt={`${meta?.rarity || "Rarity"} icon`}
+                                  className="h-3.5 w-3.5 rounded-sm"
+                                />
+                              ) : null}
+                              <span>{rarityStarsText(meta?.rarity || null)}</span>
+                              {weaponIcon ? (
+                                <img
+                                  src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIcon)}`}
+                                  alt={`${meta?.weapon || "Weapon"} icon`}
+                                  className="h-3.5 w-3.5 rounded-sm"
+                                />
+                              ) : null}
+                              {moveIcon ? (
+                                <img
+                                  src={`/api/shared-icons/move?name=${encodeURIComponent(moveIcon)}`}
+                                  alt={`${meta?.move || "Move"} icon`}
+                                  className="h-3.5 w-3.5 rounded-sm"
+                                />
+                              ) : null}
+                              <span>{meta?.tier != null ? `T${meta.tier}` : "T-"}</span>
+                            </span>
+                          );
+                        })()}
                         <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
                           +{entry.merges ?? 0}
                         </span>
-                      </div>
+                      </Link>
 
                       <div className="flex items-center gap-2">
                         <input type="hidden" name="hero_slug" value={entry.hero_slug} readOnly />
@@ -257,8 +315,9 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             ) : (
               <>
                 <p className="mt-2 text-xs text-zinc-400">{favorites.length} favorite(s) synced to your account.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                {(heroes || [])
+                <div className="mt-3 max-h-[320px] overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-2">
+                {heroes
                   .filter((h) => favoriteSet.has(h.hero_slug))
                   .map((h) => (
                     <div
@@ -290,7 +349,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                   ))}
 
                 {(favorites || [])
-                  .filter((f) => !(heroes || []).some((h) => h.hero_slug === f.hero_slug))
+                  .filter((f) => !heroes.some((h) => h.hero_slug === f.hero_slug))
                   .map((f) => (
                     <div
                       key={f.hero_slug}
@@ -320,12 +379,144 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     </div>
                   ))}
                 </div>
+                </div>
               </>
             )}
           </div>
 
           <div className="mt-8 border-t border-zinc-800 pt-5">
+            <h3 className="text-lg font-semibold">Team Builder</h3>
+            <p className="mt-1 text-xs text-zinc-400">
+              Teams are account-bound and synced online for this login.
+            </p>
+            <p className="mt-1 text-xs text-zinc-400">
+              Pick up to 4 hero IDs from suggestions. (Hero ID, previously called &quot;slug&quot;, is the internal key like <code>alear___dragon_child</code>.)
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Duplicate slots are automatically de-duplicated and at least one hero is required.
+            </p>
+
+            <datalist id="barracks-slug-suggestions">
+              {barracksSlugOptions.map((b) => (
+                <option key={b.hero_slug} value={b.hero_slug}>
+                  {b.hero_name}
+                </option>
+              ))}
+            </datalist>
+
+            <form action={createUserTeam} className="mt-3 grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+              <input
+                name="name"
+                placeholder="Team name (e.g. Arena Core)"
+                required
+                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+              />
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  name="slot_1"
+                  placeholder="Slot 1 hero ID"
+                  list="barracks-slug-suggestions"
+                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                />
+                <input
+                  name="slot_2"
+                  placeholder="Slot 2 hero ID"
+                  list="barracks-slug-suggestions"
+                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                />
+                <input
+                  name="slot_3"
+                  placeholder="Slot 3 hero ID"
+                  list="barracks-slug-suggestions"
+                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                />
+                <input
+                  name="slot_4"
+                  placeholder="Slot 4 hero ID"
+                  list="barracks-slug-suggestions"
+                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                />
+              </div>
+              <input
+                name="description"
+                placeholder="Optional description"
+                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+              />
+              <button
+                type="submit"
+                className="w-fit rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+              >
+                Save team
+              </button>
+            </form>
+
+            <div className="mt-3 space-y-2">
+              {(teams || []).map((team) => (
+                <form key={team.id} action={updateUserTeam} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                  <input type="hidden" name="id" value={team.id} readOnly />
+                  <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+                  <input
+                    name="name"
+                    defaultValue={team.name}
+                    required
+                    className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                  />
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <input
+                      name="slot_1"
+                      defaultValue={Array.isArray(team.slots) ? (team.slots[0] as string) || "" : ""}
+                      placeholder="Slot 1 hero ID"
+                      list="barracks-slug-suggestions"
+                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                    />
+                    <input
+                      name="slot_2"
+                      defaultValue={Array.isArray(team.slots) ? (team.slots[1] as string) || "" : ""}
+                      placeholder="Slot 2 hero ID"
+                      list="barracks-slug-suggestions"
+                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                    />
+                    <input
+                      name="slot_3"
+                      defaultValue={Array.isArray(team.slots) ? (team.slots[2] as string) || "" : ""}
+                      placeholder="Slot 3 hero ID"
+                      list="barracks-slug-suggestions"
+                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                    />
+                    <input
+                      name="slot_4"
+                      defaultValue={Array.isArray(team.slots) ? (team.slots[3] as string) || "" : ""}
+                      placeholder="Slot 4 hero ID"
+                      list="barracks-slug-suggestions"
+                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <input
+                    name="description"
+                    defaultValue={team.description ?? ""}
+                    className="mt-2 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button type="submit" className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800">
+                      Save
+                    </button>
+                    <button
+                      type="submit"
+                      formAction={removeUserTeam}
+                      className="rounded border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </form>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-zinc-800 pt-5">
             <h3 className="text-lg font-semibold">Notes</h3>
+            <p className="mt-1 text-xs text-zinc-400">Notes are account-bound and synced online for this login.</p>
 
             <form action={createUserNote} className="mt-3 grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
               <input type="hidden" name="redirect_to" value="/barracks" readOnly />
@@ -398,143 +589,6 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                     ) : null}
                     Updated: {note.updated_at ? new Date(note.updated_at).toLocaleString() : "-"}
                   </p>
-                </form>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-zinc-800 pt-5">
-            <h3 className="text-lg font-semibold">Team Builder</h3>
-            <p className="mt-1 text-xs text-zinc-400">
-              Type hero slugs with suggestions from your barracks (or paste comma list).
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              Duplicate slots are automatically de-duplicated and at least one hero is required.
-            </p>
-
-            <datalist id="barracks-slug-suggestions">
-              {barracksSlugOptions.map((b) => (
-                <option key={b.hero_slug} value={b.hero_slug}>
-                  {b.hero_name}
-                </option>
-              ))}
-            </datalist>
-
-            <form action={createUserTeam} className="mt-3 grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-              <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-              <input
-                name="name"
-                placeholder="Team name (e.g. Arena Core)"
-                required
-                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-              />
-              <input
-                name="slots_text"
-                placeholder="hero_slug_1, hero_slug_2, hero_slug_3, hero_slug_4"
-                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-              />
-              <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  name="slot_1"
-                  placeholder="Slot 1 hero slug"
-                  list="barracks-slug-suggestions"
-                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                />
-                <input
-                  name="slot_2"
-                  placeholder="Slot 2 hero slug"
-                  list="barracks-slug-suggestions"
-                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                />
-                <input
-                  name="slot_3"
-                  placeholder="Slot 3 hero slug"
-                  list="barracks-slug-suggestions"
-                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                />
-                <input
-                  name="slot_4"
-                  placeholder="Slot 4 hero slug"
-                  list="barracks-slug-suggestions"
-                  className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                />
-              </div>
-              <input
-                name="description"
-                placeholder="Optional description"
-                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-              />
-              <button
-                type="submit"
-                className="w-fit rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
-              >
-                Save team
-              </button>
-            </form>
-
-            <div className="mt-3 space-y-2">
-              {(teams || []).map((team) => (
-                <form key={team.id} action={updateUserTeam} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                  <input type="hidden" name="id" value={team.id} readOnly />
-                  <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-                  <input
-                    name="name"
-                    defaultValue={team.name}
-                    required
-                    className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                  />
-                  <input
-                    name="slots_text"
-                    defaultValue={Array.isArray(team.slots) ? team.slots.join(", ") : ""}
-                    className="mt-2 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                  />
-                  <div className="mt-2 grid gap-2 md:grid-cols-2">
-                    <input
-                      name="slot_1"
-                      defaultValue={Array.isArray(team.slots) ? (team.slots[0] as string) || "" : ""}
-                      placeholder="Slot 1 hero slug"
-                      list="barracks-slug-suggestions"
-                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                    />
-                    <input
-                      name="slot_2"
-                      defaultValue={Array.isArray(team.slots) ? (team.slots[1] as string) || "" : ""}
-                      placeholder="Slot 2 hero slug"
-                      list="barracks-slug-suggestions"
-                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                    />
-                    <input
-                      name="slot_3"
-                      defaultValue={Array.isArray(team.slots) ? (team.slots[2] as string) || "" : ""}
-                      placeholder="Slot 3 hero slug"
-                      list="barracks-slug-suggestions"
-                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                    />
-                    <input
-                      name="slot_4"
-                      defaultValue={Array.isArray(team.slots) ? (team.slots[3] as string) || "" : ""}
-                      placeholder="Slot 4 hero slug"
-                      list="barracks-slug-suggestions"
-                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <input
-                    name="description"
-                    defaultValue={team.description ?? ""}
-                    className="mt-2 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <button type="submit" className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800">
-                      Save
-                    </button>
-                    <button
-                      type="submit"
-                      formAction={removeUserTeam}
-                      className="rounded border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
-                    >
-                      Delete
-                    </button>
-                  </div>
                 </form>
               ))}
             </div>

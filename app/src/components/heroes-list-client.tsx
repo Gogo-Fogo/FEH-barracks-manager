@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { addToBarracks, toggleFavorite } from "@/app/barracks/actions";
+import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 
 type HeroRow = {
   hero_slug: string;
   name: string;
+  rarity: string | null;
   weapon: string | null;
   move: string | null;
   tier: number | null;
@@ -35,23 +37,49 @@ export function HeroesListClient({ heroesList, favoriteSlugs, currentPath }: Her
           key={hero.hero_slug}
           className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
         >
-          <div className="flex items-center gap-2">
+          <Link
+            href={`/heroes/${hero.hero_slug}`}
+            className="group flex items-center gap-2 rounded-lg px-1 py-1 transition-all hover:-translate-y-0.5 hover:bg-zinc-800/40"
+          >
             <img
               src={`/api/headshots/${hero.hero_slug}`}
               alt={`${hero.name} headshot`}
-              className="h-12 w-12 rounded-lg border border-zinc-700 object-cover"
+              className="h-12 w-12 rounded-lg border border-zinc-700 object-cover transition-transform group-hover:scale-105"
               loading="lazy"
             />
             <div>
-              <Link href={`/heroes/${hero.hero_slug}`} className="font-medium hover:text-indigo-300">
+              <p className="font-medium group-hover:text-indigo-300">
                 {hero.name}
-              </Link>
-              <p className="text-xs text-zinc-400">
-                {hero.weapon || "-"} • {hero.move || "-"}
-                {hero.tier != null ? ` • T${hero.tier}` : ""}
               </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                {rarityIconName(hero.rarity) ? (
+                  <img
+                    src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIconName(hero.rarity) || "")}`}
+                    alt={`${hero.rarity || "Rarity"} icon`}
+                    className="h-4 w-4 rounded-sm"
+                  />
+                ) : null}
+                <span>{rarityStarsText(hero.rarity)}</span>
+                {weaponIconName(hero.weapon) ? (
+                  <img
+                    src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIconName(hero.weapon) || "")}`}
+                    alt={`${hero.weapon || "Weapon"} icon`}
+                    className="h-4 w-4 rounded-sm"
+                  />
+                ) : null}
+                <span>{hero.weapon || "-"}</span>
+                {moveIconName(hero.move) ? (
+                  <img
+                    src={`/api/shared-icons/move?name=${encodeURIComponent(moveIconName(hero.move) || "")}`}
+                    alt={`${hero.move || "Move"} icon`}
+                    className="h-4 w-4 rounded-sm"
+                  />
+                ) : null}
+                <span>{hero.move || "-"}</span>
+                {hero.tier != null ? <span>• T{hero.tier}</span> : null}
+              </div>
             </div>
-          </div>
+          </Link>
 
           <form action={addToBarracks}>
             <input type="hidden" name="hero_slug" value={hero.hero_slug} readOnly />

@@ -6,6 +6,7 @@ type FullbodyCarouselProps = {
   heroName: string;
   poses: string[];
   heroSlug: string;
+  quotes?: string[];
   initialBackgroundName?: string;
   backgroundOptions?: string[];
   persistBackgroundPreference?: boolean;
@@ -19,11 +20,13 @@ export function FullbodyCarousel({
   heroName,
   poses,
   heroSlug,
+  quotes,
   initialBackgroundName,
   backgroundOptions,
   persistBackgroundPreference = true,
 }: FullbodyCarouselProps) {
   const safePoses = poses.length ? poses : ["portrait"];
+  const safeQuotes = (quotes || []).filter(Boolean);
   const safeBackgrounds =
     backgroundOptions?.length
       ? backgroundOptions
@@ -32,15 +35,21 @@ export function FullbodyCarousel({
         : [];
 
   const [index, setIndex] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(() =>
+    safeQuotes.length ? Math.floor(Math.random() * safeQuotes.length) : 0
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const initialBackgroundIndex = Math.max(0, safeBackgrounds.indexOf(initialBackgroundName || ""));
   const [backgroundIndex, setBackgroundIndex] = useState(initialBackgroundIndex);
 
   const currentPose = safePoses[index] || safePoses[0];
+  const currentQuote = safeQuotes[quoteIndex] || "";
   const currentBackground = safeBackgrounds[backgroundIndex] || initialBackgroundName;
 
   const prev = () => setIndex((i) => (i - 1 + safePoses.length) % safePoses.length);
   const next = () => setIndex((i) => (i + 1) % safePoses.length);
+  const prevQuote = () => setQuoteIndex((i) => (i - 1 + safeQuotes.length) % safeQuotes.length);
+  const nextQuote = () => setQuoteIndex((i) => (i + 1) % safeQuotes.length);
 
   const persistBackground = (backgroundName: string) => {
     if (!backgroundName) return;
@@ -86,6 +95,38 @@ export function FullbodyCarousel({
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+      {safeQuotes.length ? (
+        <div className="mb-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+          {safeQuotes.length > 1 ? (
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={prevQuote}
+                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-800"
+                aria-label="Previous quote"
+              >
+                ←
+              </button>
+              <p className="text-xs text-zinc-400">
+                Quote {quoteIndex + 1}/{safeQuotes.length}
+              </p>
+              <button
+                type="button"
+                onClick={nextQuote}
+                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-800"
+                aria-label="Next quote"
+              >
+                →
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400">Quote 1/1</p>
+          )}
+
+          <p className="mt-2 text-base italic leading-relaxed text-zinc-100">“{currentQuote}”</p>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={() => setIsExpanded(true)}

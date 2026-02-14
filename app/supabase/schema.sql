@@ -9,6 +9,7 @@ create table if not exists public.heroes (
   name text not null,
   source_url text,
   tier numeric,
+  rarity text,
   weapon text,
   move text,
   tag text,

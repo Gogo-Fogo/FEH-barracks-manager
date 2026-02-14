@@ -40,18 +40,29 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
 
   const currentPath = `/heroes?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&move=${encodeURIComponent(move)}`;
 
-  let query = supabase
-    .from("heroes")
-    .select("hero_slug,name,weapon,move,tier")
-    .order("hero_slug", { ascending: true })
-    .limit(200);
+  const buildHeroesQuery = (withRarity: boolean) => {
+    let query = supabase
+      .from("heroes")
+      .select(withRarity ? "hero_slug,name,rarity,weapon,move,tier" : "hero_slug,name,weapon,move,tier")
+      .order("hero_slug", { ascending: true })
+      .limit(200);
 
-  if (q) query = query.ilike("name", `%${q}%`);
-  if (weapon) query = query.eq("weapon", weapon);
-  if (move) query = query.eq("move", move);
+    if (q) query = query.ilike("name", `%${q}%`);
+    if (weapon) query = query.eq("weapon", weapon);
+    if (move) query = query.eq("move", move);
+    return query;
+  };
 
-  const [{ data: heroes }, { data: weapons }, { data: moves }, { data: favorites }] = await Promise.all([
-    query,
+  let heroesResult = await buildHeroesQuery(true);
+  if (heroesResult.error && heroesResult.error.message.includes("rarity")) {
+    const fallback = await buildHeroesQuery(false);
+    heroesResult = {
+      ...fallback,
+      data: (fallback.data || []).map((h) => ({ ...h, rarity: null })),
+    } as typeof heroesResult;
+  }
+
+  const [{ data: weapons }, { data: moves }, { data: favorites }] = await Promise.all([
     supabase.from("heroes").select("weapon").not("weapon", "is", null),
     supabase.from("heroes").select("move").not("move", "is", null),
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
@@ -64,7 +75,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     new Set((moves || []).map((r) => r.move).filter((value): value is string => Boolean(value?.trim())))
   ).sort((a, b) => a.localeCompare(b));
   const dedupedHeroes = Array.from(
-    new Map((heroes || []).map((hero) => [hero.hero_slug, hero])).values()
+    new Map((heroesResult.data || []).map((hero) => [hero.hero_slug, hero])).values()
   );
   const heroesList = dedupedHeroes.sort((a, b) => {
     if (a.hero_slug < b.hero_slug) return -1;

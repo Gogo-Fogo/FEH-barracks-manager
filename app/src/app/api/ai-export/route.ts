@@ -156,6 +156,17 @@ export async function GET(request: Request) {
   lines.push(`Mode: ${includeFullRawText ? "full" : "compact"}`);
   lines.push("");
 
+  lines.push("## Index");
+  lines.push("1. Summary");
+  lines.push("2. AI Assistant Instructions");
+  lines.push("3. Limitations");
+  lines.push("4. Teams");
+  lines.push("5. Barracks");
+  lines.push("6. User Notes");
+  lines.push("7. Character Guide Context (owned heroes only)");
+  lines.push("8. Banner Pull Guidance (Game8)");
+  lines.push("");
+
   lines.push("## Summary");
   lines.push(`- Barracks heroes: ${(barracks || []).length}`);
   lines.push(`- Team presets: ${(teams || []).length}`);

@@ -58,15 +58,18 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
   - Game8 identity fields remain canonical
   - Fandom fields remain source metadata only
 - [x] Add upsert script for repeatable syncs.
+- [x] Add compatibility fallback for Supabase schema drift (`heroes.rarity` may be absent in older DBs).
 
 ## Phase 5 - Core Screens
 - [x] Login / Signup pages
 - [x] Hero list with filters (weapon/move/tier)
 - [x] Hero detail page
 - [x] My Barracks page (add/remove/edit entries)
-- [~] Notes + favorites UX
-- [~] Team builder UX (create/save/edit team comps)
+- [x] Notes + favorites UX
+- [x] Team builder UX (create/save/edit team comps)
 - [x] Aether Resort prototype page with account/local persistence fallback
+- [x] Barracks Library page (`/barracks/library`) with filter/sort and favorite-only mode
+- [~] Rarity display reliability across all pages (icon endpoint validated; source rarity coverage still needs stronger ingestion)
 
 ## Phase 6 - Ops / Deployment
 - [x] Deploy web app to Vercel.
@@ -89,9 +92,10 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [ ] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
 - [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 - [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
-- [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker)
-- [x] Polish Notes/Favorites UX (empty states, quick actions, consistency with heroes page)
+- [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker, moved above Notes)
+- [x] Polish Notes/Favorites UX (empty states, quick actions, consistency with heroes page, long-list scroll)
 - [x] Implement password reset flow
 - [x] Prep deployment checklist (Vercel + Supabase prod + scheduled refresh)
 - [x] Configure Supabase Auth URL settings for deployed Vercel domain (site URL + reset/login redirects)
 - [x] Add weekly GitHub Actions workflow file for hero import (`.github/workflows/weekly-hero-import.yml`)
+- [ ] Add deterministic rarity ingestion source (prefer explicit field/source manifest over weak text heuristics)

@@ -107,9 +107,30 @@ Notes:
 ## App Data Guardrails (Supabase)
 - Store only lightweight synced data in Supabase:
   - user profiles, barracks entries, team comps, notes, favorites
-  - hero metadata (name/weapon/move/tier/url pointers)
+  - hero metadata (name/weapon/move/tier/tag/rarity/url pointers)
 - Do **not** upload large local PNG archives into Supabase Storage under current free-tier strategy.
 - Keep row-level security strict by `auth.uid()` for all user-owned tables.
+
+## Recent App UX Updates (2026-02)
+- Barracks now includes:
+  - Team Builder section moved above Notes
+  - clarified "Hero ID" wording (formerly "slug")
+  - favorites list scroll container for long lists
+  - explicit account-bound sync copy for Teams/Notes
+- Added Barracks Library screen:
+  - `/barracks/library`
+  - filter/sort/favorite-only browsing for owned heroes
+  - icon-driven weapon/move/rarity display + tier labels
+- Hero Browser / Barracks / Library include rarity-star text rendering where rarity data exists.
+
+## Rarity Data Note
+- Rarity icons are sourced from Fandom shared assets (`db/unit_assets/fandom/shared/rarity/`).
+- App rendering can only show correct per-hero rarity when rarity metadata exists in `public.heroes`.
+- Current importer supports schema compatibility fallback when `heroes.rarity` is missing, but fallback mode may omit rarity values.
+- Preferred maintenance path:
+  1. ensure Supabase schema includes `public.heroes.rarity`
+  2. run `npm --prefix app run import:heroes`
+  3. verify rarity values are populated before UI validation.
 
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.

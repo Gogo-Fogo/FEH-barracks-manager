@@ -268,15 +268,12 @@ function normalizeTeamSlots(raw: string[]) {
 export async function createUserTeam(formData: FormData) {
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const slotsText = optionalText(formData.get("slots_text"));
-  const parsedSlots = slotsText
-    ? parseSlots(slotsText)
-    : parseSlots(
-        ["slot_1", "slot_2", "slot_3", "slot_4"]
-          .map((field) => optionalText(formData.get(field)))
-          .filter(Boolean)
-          .join(",")
-      );
+  const parsedSlots = parseSlots(
+    ["slot_1", "slot_2", "slot_3", "slot_4"]
+      .map((field) => optionalText(formData.get(field)))
+      .filter(Boolean)
+      .join(",")
+  );
   const slots = normalizeTeamSlots(parsedSlots);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
@@ -287,7 +284,7 @@ export async function createUserTeam(formData: FormData) {
   if (!user) throw new Error("You must be logged in.");
 
   if (!slots.length) {
-    redirect(withNotice(redirectTo, "Team must include at least one unique hero slug.", "warn"));
+    redirect(withNotice(redirectTo, "Team must include at least one hero ID.", "warn"));
   }
 
   const { error } = await supabase.from("user_teams").insert({
@@ -306,15 +303,12 @@ export async function updateUserTeam(formData: FormData) {
   const id = requireText(formData.get("id"), "Team id");
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const slotsText = optionalText(formData.get("slots_text"));
-  const parsedSlots = slotsText
-    ? parseSlots(slotsText)
-    : parseSlots(
-        ["slot_1", "slot_2", "slot_3", "slot_4"]
-          .map((field) => optionalText(formData.get(field)))
-          .filter(Boolean)
-          .join(",")
-      );
+  const parsedSlots = parseSlots(
+    ["slot_1", "slot_2", "slot_3", "slot_4"]
+      .map((field) => optionalText(formData.get(field)))
+      .filter(Boolean)
+      .join(",")
+  );
   const slots = normalizeTeamSlots(parsedSlots);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
@@ -325,7 +319,7 @@ export async function updateUserTeam(formData: FormData) {
   if (!user) throw new Error("You must be logged in.");
 
   if (!slots.length) {
-    redirect(withNotice(redirectTo, "Team must include at least one unique hero slug.", "warn"));
+    redirect(withNotice(redirectTo, "Team must include at least one hero ID.", "warn"));
   }
 
   const { error } = await supabase

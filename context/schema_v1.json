@@ -8,6 +8,7 @@
   "name": "Hero Name - Title",
   "url": "https://game8.co/games/fire-emblem-heroes/archives/000000",
   "tier": "9.0",
+  "rarity": "5 or 4/5 (normalized star availability for app display)",
   "img_url": "https://img.game8.co/example.png/show",
   "weapon": "Sword",
   "move": "Infantry",
