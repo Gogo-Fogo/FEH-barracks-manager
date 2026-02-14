@@ -1,0 +1,56 @@
+name: Build Launcher Release
+
+"on":
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install launcher dependencies
+        run: npm ci --prefix launcher
+
+      - name: Build launcher executable
+        run: npm run build --prefix launcher
+
+      - name: Prepare release bundles
+        run: |
+          mkdir -p release_build/app
+          mkdir -p release_build/assets
+
+          rsync -a \
+            --exclude node_modules \
+            --exclude .next \
+            --exclude .env.local \
+            app/ release_build/app/app/
+
+          cp -R db release_build/assets/db
+
+          cd release_build/app
+          zip -r ../../feh-app-bundle.zip app
+          cd ../assets
+          zip -r ../../feh-assets-bundle.zip db
+
+      - name: Attach release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/FEH-Barracks-Launcher.exe
+            feh-app-bundle.zip
+            feh-assets-bundle.zip
+          generate_release_notes: true
