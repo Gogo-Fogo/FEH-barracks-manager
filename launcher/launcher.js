@@ -185,6 +185,28 @@ function runCommand(command, args, cwd) {
   });
 }
 
+async function ensureNpmAvailable() {
+  try {
+    await runCommand("npm", ["--version"], APP_PATH);
+    return;
+  } catch {
+    // continue to fallback check below
+  }
+
+  if (process.platform === "win32") {
+    try {
+      await runCommand("npm.cmd", ["--version"], APP_PATH);
+      return;
+    } catch {
+      // continue to throw
+    }
+  }
+
+  throw new Error(
+    "npm is not installed or not in PATH. Please install Node.js LTS from https://nodejs.org and re-run launcher."
+  );
+}
+
 async function readMeta() {
   try {
     const raw = await fsp.readFile(META_PATH, "utf8");
@@ -265,6 +287,8 @@ async function installOrUpdateFromRelease(release) {
     throw new Error(`Expected app package at ${APP_PATH}. Check app bundle structure.`);
   }
 
+  await ensureNpmAvailable();
+
   console.log("Installing app dependencies...");
   try {
     await runCommand("npm", ["ci"], APP_PATH);
@@ -315,6 +339,8 @@ async function launchApp() {
     await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
     return "needs-env";
   }
+
+  await ensureNpmAvailable();
 
   console.log("\nStarting FEH Barracks app (local)...");
   console.log("App URL: http://localhost:3000");
