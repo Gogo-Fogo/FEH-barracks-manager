@@ -34,6 +34,7 @@ type LibraryEntry = {
   hero_slug: string;
   hero_name: string;
   merges: number;
+  copies_owned: number;
   notes: string | null;
   updated_at: string | null;
   rarity: string | null;
@@ -104,7 +105,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const [{ data: barracks }, { data: favorites }] = await Promise.all([
     supabase
       .from("user_barracks")
-      .select("hero_slug,hero_name,merges,notes,updated_at")
+      .select("hero_slug,hero_name,merges,copies_owned,notes,updated_at")
       .eq("user_id", user.id)
       .order("hero_name", { ascending: true }),
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
@@ -160,6 +161,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
       hero_slug: entry.hero_slug,
       hero_name: entry.hero_name,
       merges: entry.merges ?? 0,
+      copies_owned: entry.copies_owned ?? 0,
       notes: entry.notes,
       updated_at: entry.updated_at,
       rarity: meta?.rarity ?? null,
@@ -343,6 +345,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   </div>
                   <p className="text-xs text-zinc-400">Tag: {hero.tag || "-"}</p>
                   <p className="text-xs text-zinc-300">Merges: +{hero.merges}</p>
+                  <p className="text-xs text-cyan-300">Dupes owned: {hero.copies_owned}</p>
                   {hero.notes ? <p className="line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
                 </div>
                 </article>

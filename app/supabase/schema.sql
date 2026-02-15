@@ -28,11 +28,15 @@ create table if not exists public.user_barracks (
   hero_slug text not null references public.heroes(hero_slug) on delete cascade,
   hero_name text not null,
   merges integer not null default 0,
+  copies_owned integer not null default 0,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, hero_slug)
 );
+
+alter table public.user_barracks
+  add column if not exists copies_owned integer not null default 0;
 
 create index if not exists user_barracks_user_idx on public.user_barracks (user_id);
 create index if not exists user_barracks_hero_idx on public.user_barracks (hero_slug);

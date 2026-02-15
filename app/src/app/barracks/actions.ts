@@ -88,11 +88,14 @@ export async function addToBarracks(formData: FormData) {
 export async function updateBarracksEntry(formData: FormData) {
   const id = requireText(formData.get("id"), "Entry id");
   const mergesRaw = optionalText(formData.get("merges")) || "0";
+  const copiesOwnedRaw = optionalText(formData.get("copies_owned")) || "0";
   const notes = optionalText(formData.get("notes"));
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const merges = Number.parseInt(mergesRaw ?? "0", 10);
+  const copiesOwned = Number.parseInt(copiesOwnedRaw ?? "0", 10);
   const safeMerges = Number.isFinite(merges) ? Math.max(0, Math.min(20, merges)) : 0;
+  const safeCopiesOwned = Number.isFinite(copiesOwned) ? Math.max(0, Math.min(999, copiesOwned)) : 0;
 
   const supabase = await createClient();
   const {
@@ -101,11 +104,20 @@ export async function updateBarracksEntry(formData: FormData) {
 
   if (!user) throw new Error("You must be logged in.");
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from("user_barracks")
-    .update({ merges: safeMerges, notes, updated_at: new Date().toISOString() })
+    .update({ merges: safeMerges, copies_owned: safeCopiesOwned, notes, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("user_id", user.id);
+
+  if (error?.message?.includes("copies_owned")) {
+    const fallback = await supabase
+      .from("user_barracks")
+      .update({ merges: safeMerges, notes, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", user.id);
+    error = fallback.error;
+  }
 
   if (error) throw new Error(error.message);
 

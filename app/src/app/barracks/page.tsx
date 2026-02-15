@@ -119,7 +119,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   const [{ data: barracks }, { data: favorites }, { data: notes }, { data: teams }] = await Promise.all([
     supabase
       .from("user_barracks")
-      .select("id,hero_slug,hero_name,merges,notes,updated_at")
+      .select("id,hero_slug,hero_name,merges,copies_owned,notes,updated_at")
       .eq("user_id", user.id)
       .order("hero_name", { ascending: true }),
     supabase
@@ -272,6 +272,9 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                         <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
                           +{entry.merges ?? 0}
                         </span>
+                        <span className="rounded border border-cyan-800 px-1.5 py-0.5 text-[11px] text-cyan-300">
+                          Dupes: {entry.copies_owned ?? 0}
+                        </span>
                       </Link>
 
                       <div className="flex items-center gap-2">
@@ -295,10 +298,10 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
 
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
-                        Edit merges / notes
+                        Edit merges / dupes / notes
                       </summary>
 
-                      <div className="mt-2 grid gap-3 md:grid-cols-[120px_1fr_auto]">
+                      <div className="mt-2 grid gap-3 md:grid-cols-[120px_120px_1fr_auto]">
                         <div>
                           <label className="mb-1 block text-xs text-zinc-400">Merges</label>
                           <input
@@ -307,6 +310,18 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                             min={0}
                             max={20}
                             defaultValue={entry.merges ?? 0}
+                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs text-zinc-400">Dupes owned</label>
+                          <input
+                            name="copies_owned"
+                            type="number"
+                            min={0}
+                            max={999}
+                            defaultValue={entry.copies_owned ?? 0}
                             className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
                           />
                         </div>
