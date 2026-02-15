@@ -61,6 +61,36 @@ jobs:
           cd release_build/assets
           zip -r ../../feh-assets-bundle.zip db
 
+      - name: Prepare runtime config bundle (Supabase auto-config)
+        env:
+          VAR_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          VAR_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SECRET_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SECRET_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          SUPABASE_URL="$VAR_SUPABASE_URL"
+          SUPABASE_ANON_KEY="$VAR_SUPABASE_ANON_KEY"
+
+          if [ -z "$SUPABASE_URL" ]; then
+            SUPABASE_URL="$SECRET_SUPABASE_URL"
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            SUPABASE_ANON_KEY="$SECRET_SUPABASE_ANON_KEY"
+          fi
+
+          cat > feh-runtime-config.json <<JSON
+          {
+            "supabaseUrl": "$SUPABASE_URL",
+            "supabaseAnonKey": "$SUPABASE_ANON_KEY"
+          }
+          JSON
+
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            echo "Created populated feh-runtime-config.json for automatic launcher setup."
+          else
+            echo "Created empty feh-runtime-config.json (no Supabase vars configured in repo settings)."
+          fi
+
       - name: Release note for local full assets bundle
         run: |
           echo "Built feh-assets-bundle.zip from repo-tracked data only." >> RELEASE_NOTES.txt
@@ -85,6 +115,7 @@ jobs:
             feh-app-bundle.zip
             feh-node-runtime.zip
             feh-assets-bundle.zip
+            feh-runtime-config.json
           generate_release_notes: true
 
       - name: Attach release assets (distribution repo)
@@ -100,4 +131,5 @@ jobs:
             feh-app-bundle.zip
             feh-node-runtime.zip
             feh-assets-bundle.zip
+            feh-runtime-config.json
           generate_release_notes: true

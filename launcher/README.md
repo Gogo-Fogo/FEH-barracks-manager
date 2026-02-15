@@ -10,6 +10,7 @@ This launcher installs/updates a local runnable copy of FEH Barracks Manager fro
   - `feh-app-bundle.zip` (required)
   - `feh-node-runtime.zip` (required fallback runtime for no-Node machines)
   - `feh-assets-bundle.zip` (optional, for heavy local assets)
+  - `feh-runtime-config.json` (optional, for automatic Supabase setup)
 - Extracts bundles into install folder
 - Runs `npm ci` inside installed `app/`
 - Lets user launch local app (`npm run dev`)
@@ -23,6 +24,8 @@ Each release should include:
 2. `feh-node-runtime.zip`
    - Embedded Node.js runtime used when user machine does not have Node/npm installed.
 3. `feh-assets-bundle.zip` (optional but recommended for full local art)
+4. `feh-runtime-config.json` (optional)
+   - If present, launcher auto-writes `app/.env.local` so friends don’t need manual Supabase key entry.
    - Should contain relevant `db/` asset folders/manifests needed by API routes
 
 If assets zip is missing, launcher keeps existing local assets.
@@ -50,6 +53,16 @@ Output:
 3. Open `http://localhost:3000`
 
 If `.env.local` is missing, launcher copies from `.env.example` and asks user to fill Supabase values first.
+If release includes `feh-runtime-config.json`, launcher auto-creates `.env.local` from that config.
+
+## Automatic Supabase Config for Friends
+
+Set these in GitHub repo **Variables** (preferred) or **Secrets**:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Release workflow will package them into `feh-runtime-config.json`, and launcher will configure `.env.local` automatically on first install.
 
 ## Advanced Menu (Optional)
 

@@ -16,6 +16,7 @@ const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
 const FULL_ASSETS_ZIP_NAME = "feh-assets-full-bundle.zip";
 const NODE_RUNTIME_ZIP_NAME = "feh-node-runtime.zip";
+const RUNTIME_CONFIG_NAME = "feh-runtime-config.json";
 
 const LAUNCHER_BASE_DIR = process.pkg
   ? path.dirname(process.execPath)
@@ -265,11 +266,47 @@ async function ensureEnvLocalTemplate() {
   const template = [
     "NEXT_PUBLIC_SUPABASE_URL=",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
-    "SUPABASE_SERVICE_ROLE_KEY=",
     "",
   ].join("\r\n");
 
   await fsp.writeFile(ENV_LOCAL_PATH, template, "utf8");
+}
+
+function parseRuntimeConfig(raw) {
+  try {
+    const parsed = JSON.parse(String(raw || ""));
+    const supabaseUrl = String(parsed?.supabaseUrl || "").trim();
+    const supabaseAnonKey = String(parsed?.supabaseAnonKey || "").trim();
+    if (!supabaseUrl || !supabaseAnonKey) return null;
+    return { supabaseUrl, supabaseAnonKey };
+  } catch {
+    return null;
+  }
+}
+
+async function applyRuntimeConfigFromRelease(release, tempDir) {
+  const configAsset = findAsset(release, RUNTIME_CONFIG_NAME);
+  if (!configAsset) return false;
+
+  const configPath = path.join(tempDir, RUNTIME_CONFIG_NAME);
+  console.log(`Downloading ${RUNTIME_CONFIG_NAME}...`);
+  await downloadFile(configAsset.browser_download_url, configPath);
+  const raw = await fsp.readFile(configPath, "utf8");
+  const config = parseRuntimeConfig(raw);
+  if (!config) {
+    console.log(`${RUNTIME_CONFIG_NAME} is invalid. Skipping auto-env setup.`);
+    return false;
+  }
+
+  const envContent = [
+    `NEXT_PUBLIC_SUPABASE_URL=${config.supabaseUrl}`,
+    `NEXT_PUBLIC_SUPABASE_ANON_KEY=${config.supabaseAnonKey}`,
+    "",
+  ].join("\r\n");
+
+  await fsp.writeFile(ENV_LOCAL_PATH, envContent, "utf8");
+  console.log("Configured app/.env.local from release runtime config.");
+  return true;
 }
 
 async function fetchLatestRelease() {
@@ -316,6 +353,8 @@ async function installOrUpdateFromRelease(release) {
     throw new Error(`Expected app package at ${APP_PATH}. Check app bundle structure.`);
   }
 
+  await applyRuntimeConfigFromRelease(release, tempDir);
+
   try {
     await resolveNpmCommand();
   } catch {
@@ -358,21 +397,31 @@ async function launchApp() {
   }
 
   if (!fs.existsSync(ENV_LOCAL_PATH)) {
-    if (fs.existsSync(ENV_EXAMPLE_PATH)) {
-      await fsp.copyFile(ENV_EXAMPLE_PATH, ENV_LOCAL_PATH);
-      console.log("\nCreated app/.env.local from .env.example");
+    const release = await fetchLatestRelease();
+    const tempDir = path.join(INSTALL_ROOT, "_tmp");
+    ensureDirSync(tempDir);
+    const configuredFromRelease = await applyRuntimeConfigFromRelease(release, tempDir).catch(() => false);
+    if (configuredFromRelease) {
+      await fsp.rm(tempDir, { recursive: true, force: true });
+    }
+
+    if (!fs.existsSync(ENV_LOCAL_PATH)) {
+      if (fs.existsSync(ENV_EXAMPLE_PATH)) {
+        await fsp.copyFile(ENV_EXAMPLE_PATH, ENV_LOCAL_PATH);
+        console.log("\nCreated app/.env.local from .env.example");
+        console.log("Please fill Supabase values in:");
+        console.log(`  ${ENV_LOCAL_PATH}`);
+        await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
+        return "needs-env";
+      }
+
+      await ensureEnvLocalTemplate();
+      console.log("\nCreated app/.env.local template (no .env.example found in bundle).");
       console.log("Please fill Supabase values in:");
       console.log(`  ${ENV_LOCAL_PATH}`);
       await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
       return "needs-env";
     }
-
-    await ensureEnvLocalTemplate();
-    console.log("\nCreated app/.env.local template (no .env.example found in bundle).");
-    console.log("Please fill Supabase values in:");
-    console.log(`  ${ENV_LOCAL_PATH}`);
-    await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
-    return "needs-env";
   }
 
   await resolveNpmCommand();
