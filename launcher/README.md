@@ -8,6 +8,7 @@ This launcher installs/updates a local runnable copy of FEH Barracks Manager fro
   - `<folder-containing-exe>/FEH-Barracks-Manager`
 - Downloads latest release bundles from:
   - `feh-app-bundle.zip` (required)
+  - `feh-node-runtime.zip` (required fallback runtime for no-Node machines)
   - `feh-assets-bundle.zip` (optional, for heavy local assets)
 - Extracts bundles into install folder
 - Runs `npm ci` inside installed `app/`
@@ -19,7 +20,9 @@ Each release should include:
 
 1. `feh-app-bundle.zip`
    - Must contain `app/` folder (with `package.json`)
-2. `feh-assets-bundle.zip` (optional but recommended for full local art)
+2. `feh-node-runtime.zip`
+   - Embedded Node.js runtime used when user machine does not have Node/npm installed.
+3. `feh-assets-bundle.zip` (optional but recommended for full local art)
    - Should contain relevant `db/` asset folders/manifests needed by API routes
 
 If assets zip is missing, launcher keeps existing local assets.

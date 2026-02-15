@@ -15,6 +15,7 @@ let runtimeGithubToken = process.env.FEH_GITHUB_TOKEN || process.env.GITHUB_TOKE
 const APP_ZIP_NAME = "feh-app-bundle.zip";
 const ASSETS_ZIP_NAME = "feh-assets-bundle.zip";
 const FULL_ASSETS_ZIP_NAME = "feh-assets-full-bundle.zip";
+const NODE_RUNTIME_ZIP_NAME = "feh-node-runtime.zip";
 
 const LAUNCHER_BASE_DIR = process.pkg
   ? path.dirname(process.execPath)
@@ -27,6 +28,7 @@ const APP_PATH = path.join(INSTALL_ROOT, "app");
 const ENV_LOCAL_PATH = path.join(APP_PATH, ".env.local");
 const ENV_EXAMPLE_PATH = path.join(APP_PATH, ".env.example");
 const START_SCRIPT_PATH = path.join(INSTALL_ROOT, "Start-FEH-Barracks.bat");
+const EMBEDDED_NPM_PATH = path.join(INSTALL_ROOT, "node-runtime", "npm.cmd");
 
 function ensureDirSync(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -185,10 +187,10 @@ function runCommand(command, args, cwd) {
   });
 }
 
-async function ensureNpmAvailable() {
+async function resolveNpmCommand() {
   try {
     await runCommand("npm", ["--version"], APP_PATH);
-    return;
+    return "npm";
   } catch {
     // continue to fallback check below
   }
@@ -196,7 +198,14 @@ async function ensureNpmAvailable() {
   if (process.platform === "win32") {
     try {
       await runCommand("npm.cmd", ["--version"], APP_PATH);
-      return;
+      return "npm.cmd";
+    } catch {
+      // continue to embedded check
+    }
+
+    try {
+      await runCommand(EMBEDDED_NPM_PATH, ["--version"], APP_PATH);
+      return EMBEDDED_NPM_PATH;
     } catch {
       // continue to throw
     }
@@ -205,6 +214,26 @@ async function ensureNpmAvailable() {
   throw new Error(
     "npm is not installed or not in PATH. Please install Node.js LTS from https://nodejs.org and re-run launcher."
   );
+}
+
+async function runNpm(args, cwd = APP_PATH) {
+  const npmCommand = await resolveNpmCommand();
+  return runCommand(npmCommand, args, cwd);
+}
+
+async function ensureEmbeddedNodeRuntime(release, tempDir) {
+  const runtimeAsset = findAsset(release, NODE_RUNTIME_ZIP_NAME);
+  if (!runtimeAsset) {
+    throw new Error(
+      `npm is not available and ${NODE_RUNTIME_ZIP_NAME} is missing from release ${release.tag_name}.`
+    );
+  }
+
+  const runtimeZipPath = path.join(tempDir, NODE_RUNTIME_ZIP_NAME);
+  console.log(`Downloading ${NODE_RUNTIME_ZIP_NAME}...`);
+  await downloadFile(runtimeAsset.browser_download_url, runtimeZipPath);
+  console.log("Extracting embedded Node runtime...");
+  await extractZip(runtimeZipPath, INSTALL_ROOT);
 }
 
 async function readMeta() {
@@ -287,14 +316,20 @@ async function installOrUpdateFromRelease(release) {
     throw new Error(`Expected app package at ${APP_PATH}. Check app bundle structure.`);
   }
 
-  await ensureNpmAvailable();
+  try {
+    await resolveNpmCommand();
+  } catch {
+    console.log("npm not found on system. Falling back to bundled Node runtime...");
+    await ensureEmbeddedNodeRuntime(release, tempDir);
+    await resolveNpmCommand();
+  }
 
   console.log("Installing app dependencies...");
   try {
-    await runCommand("npm", ["ci"], APP_PATH);
+    await runNpm(["ci"], APP_PATH);
   } catch (ciErr) {
     console.log(`npm ci failed (${ciErr.message}). Retrying with npm install...`);
-    await runCommand("npm", ["install"], APP_PATH);
+    await runNpm(["install"], APP_PATH);
   }
 
   const existing = await readMeta();
@@ -340,12 +375,12 @@ async function launchApp() {
     return "needs-env";
   }
 
-  await ensureNpmAvailable();
+  await resolveNpmCommand();
 
   console.log("\nStarting FEH Barracks app (local)...");
   console.log("App URL: http://localhost:3000");
   runCommand("cmd", ["/c", "start", "", "http://localhost:3000"], APP_PATH).catch(() => {});
-  await runCommand("npm", ["run", "dev"], APP_PATH);
+  await runNpm(["run", "dev"], APP_PATH);
   return "started";
 }
 

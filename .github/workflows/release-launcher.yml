@@ -44,6 +44,16 @@ jobs:
           cd release_build/app
           zip -r ../../feh-app-bundle.zip app
 
+      - name: Prepare bundled Node runtime (Windows x64)
+        run: |
+          NODE_VERSION=$(node -p "process.version")
+          mkdir -p release_build/runtime
+          cd release_build/runtime
+          curl -L "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-win-x64.zip" -o node-win.zip
+          unzip -q node-win.zip
+          mv "node-${NODE_VERSION}-win-x64" node-runtime
+          zip -r ../../feh-node-runtime.zip node-runtime
+
       - name: Prepare minimal assets bundle from repo-tracked data
         run: |
           mkdir -p release_build/assets/db
@@ -73,6 +83,7 @@ jobs:
           files: |
             dist/FEH-Barracks-Launcher.exe
             feh-app-bundle.zip
+            feh-node-runtime.zip
             feh-assets-bundle.zip
           generate_release_notes: true
 
@@ -87,5 +98,6 @@ jobs:
           files: |
             dist/FEH-Barracks-Launcher.exe
             feh-app-bundle.zip
+            feh-node-runtime.zip
             feh-assets-bundle.zip
           generate_release_notes: true
