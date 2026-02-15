@@ -266,7 +266,12 @@ async function installOrUpdateFromRelease(release) {
   }
 
   console.log("Installing app dependencies...");
-  await runCommand("npm", ["ci"], APP_PATH);
+  try {
+    await runCommand("npm", ["ci"], APP_PATH);
+  } catch (ciErr) {
+    console.log(`npm ci failed (${ciErr.message}). Retrying with npm install...`);
+    await runCommand("npm", ["install"], APP_PATH);
+  }
 
   const existing = await readMeta();
   await writeMeta({
