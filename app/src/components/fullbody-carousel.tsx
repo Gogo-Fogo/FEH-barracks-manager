@@ -35,9 +35,7 @@ export function FullbodyCarousel({
         : [];
 
   const [index, setIndex] = useState(0);
-  const [quoteIndex, setQuoteIndex] = useState(() =>
-    safeQuotes.length ? Math.floor(Math.random() * safeQuotes.length) : 0
-  );
+  const [quoteIndex, setQuoteIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const initialBackgroundIndex = Math.max(0, safeBackgrounds.indexOf(initialBackgroundName || ""));
   const [backgroundIndex, setBackgroundIndex] = useState(initialBackgroundIndex);
