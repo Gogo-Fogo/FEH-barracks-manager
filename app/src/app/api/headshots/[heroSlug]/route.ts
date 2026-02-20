@@ -3,6 +3,37 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { loadFandomHeadshotUrlBySlug, loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
 
+async function proxyRemoteImage(url: string) {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      redirect: "follow",
+      cache: "force-cache",
+    });
+
+    if (!response.ok) return null;
+
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.startsWith("image/")) return null;
+
+    const imageBytes = await response.arrayBuffer();
+    return new NextResponse(imageBytes, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 function normalizeSlug(value: string) {
   return value
     .normalize("NFKD")
@@ -113,11 +144,15 @@ export async function GET(
     if (!filePath) {
       const fandomHeadshot = await loadFandomHeadshotUrlBySlug(heroSlug);
       if (fandomHeadshot) {
+        const proxied = await proxyRemoteImage(fandomHeadshot);
+        if (proxied) return proxied;
         return NextResponse.redirect(fandomHeadshot, 302);
       }
 
       const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
       if (remoteImage) {
+        const proxied = await proxyRemoteImage(remoteImage);
+        if (proxied) return proxied;
         return NextResponse.redirect(remoteImage, 302);
       }
 

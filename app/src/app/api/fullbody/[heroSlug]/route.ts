@@ -8,6 +8,37 @@ import {
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
 
+async function proxyRemoteImage(url: string) {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      redirect: "follow",
+      cache: "force-cache",
+    });
+
+    if (!response.ok) return null;
+
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.startsWith("image/")) return null;
+
+    const imageBytes = await response.arrayBuffer();
+    return new NextResponse(imageBytes, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 function inferContentType(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".webp") return "image/webp";
@@ -100,11 +131,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ hero
   if (!filePath) {
     const fandomFullbody = await loadFandomFullbodyUrlBySlug(heroSlug, pose);
     if (fandomFullbody) {
+      const proxied = await proxyRemoteImage(fandomFullbody);
+      if (proxied) return proxied;
       return NextResponse.redirect(fandomFullbody, 302);
     }
 
     const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
     if (remoteImage) {
+      const proxied = await proxyRemoteImage(remoteImage);
+      if (proxied) return proxied;
       return NextResponse.redirect(remoteImage, 302);
     }
 
