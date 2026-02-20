@@ -7,7 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
-import { loadFandomQuoteTextBySlug, loadUnitRarityBySlugs } from "@/lib/local-unit-data";
+import {
+  loadFandomFullbodyPosesBySlug,
+  loadFandomQuoteTextBySlug,
+  loadUnitRarityBySlugs,
+} from "@/lib/local-unit-data";
 import { FullbodyCarousel } from "@/components/fullbody-carousel";
 import { toggleFavorite } from "@/app/barracks/actions";
 
@@ -400,6 +404,8 @@ function unitBackgroundName(tag?: string | null) {
 }
 
 async function loadFullbodyPoses(heroSlug: string) {
+  let localPoses: string[] = [];
+
   const roots = [
     path.join(process.cwd(), "db", "unit_assets", "fandom", "fullbody", heroSlug),
     path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "fullbody", heroSlug),
@@ -415,11 +421,25 @@ async function loadFullbodyPoses(heroSlug: string) {
       }
 
       if (poses.size) {
-        return DEFAULT_POSE_ORDER.filter((pose) => poses.has(pose));
+        localPoses = DEFAULT_POSE_ORDER.filter((pose) => poses.has(pose));
+        break;
       }
     } catch {
       // continue
     }
+  }
+
+  const fandomPoses = await loadFandomFullbodyPosesBySlug(heroSlug);
+  if (fandomPoses.length > localPoses.length) {
+    return fandomPoses;
+  }
+
+  if (localPoses.length) {
+    return localPoses;
+  }
+
+  if (fandomPoses.length) {
+    return fandomPoses;
   }
 
   return ["portrait"];

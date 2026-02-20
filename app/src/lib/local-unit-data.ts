@@ -24,6 +24,7 @@ const fandomImageUrlByTitleCache = new Map<string, Promise<string | null>>();
 let fandomQuotePageLookupPromise: Promise<Map<string, string>> | null = null;
 
 type FandomImageKind = "headshot" | "fullbody";
+const FULLBODY_POSE_ORDER = ["portrait", "attack", "special", "damage"] as const;
 
 function normalizeLookupText(value: string) {
   const text = String(value || "")
@@ -512,6 +513,17 @@ export async function loadFandomHeadshotUrlBySlug(heroSlug: string) {
 
 export async function loadFandomFullbodyUrlBySlug(heroSlug: string, pose: string = "portrait") {
   return resolveFandomImageUrl(heroSlug, "fullbody", pose);
+}
+
+export async function loadFandomFullbodyPosesBySlug(heroSlug: string) {
+  const poses: string[] = [];
+
+  for (const pose of FULLBODY_POSE_ORDER) {
+    const sourceUrl = await loadFandomFullbodyUrlBySlug(heroSlug, pose);
+    if (sourceUrl) poses.push(pose);
+  }
+
+  return poses;
 }
 
 export async function loadFandomQuoteTextBySlug(heroSlug: string) {

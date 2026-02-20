@@ -1,7 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { loadFandomFullbodyUrlBySlug, loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
+import {
+  loadFandomFullbodyUrlBySlug,
+  loadUnitImageUrlBySlug,
+} from "@/lib/local-unit-data";
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
 
