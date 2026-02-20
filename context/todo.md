@@ -1,6 +1,6 @@
-# FEH Barracks App - TODO Roadmap
+t# FEH Barracks App - TODO Roadmap
 
-Last updated: 2026-02-14
+Last updated: 2026-02-20
 
 ## Goal
 Build a shared FEH Barracks app that is accessible to you and your friend, with safe data boundaries between Game8 unit data and Fandom assets.
@@ -52,7 +52,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ## Phase 4 - Data Ingestion
 - [~] Define importer from:
   - [x] `db/index.json`
-  - [ ] `db/units/*.json`
+  - [~] `db/units/*.json` (importer now supplements missing index entries from unit files)
   - [ ] `db/unit_assets_manifest/*`
 - [x] Preserve source boundaries:
   - Game8 identity fields remain canonical
@@ -90,6 +90,8 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [ ] Run Supabase SQL: `app/supabase/schema.sql` (on dedicated production Supabase project if splitting envs)
 - [x] Fill `app/.env.local` (Supabase URL, anon key, service role key)
 - [ ] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
+- [ ] Run index-to-unit coverage sanity check before import:
+  - `node -e "const fs=require('fs');const safe=s=>String(s||'').replace(/[^a-z0-9]/gi,'_').toLowerCase();const idx=JSON.parse(fs.readFileSync('db/index.json','utf8'));const idxSet=new Set(idx.map(h=>safe(h.name)).filter(Boolean));const unitSlugs=fs.readdirSync('db/units',{withFileTypes:true}).filter(e=>e.isFile()&&/\.json$/i.test(e.name)).map(e=>e.name.replace(/\.json$/i,'').toLowerCase());const missing=unitSlugs.filter(s=>!idxSet.has(s));console.log('index_rows',idx.length,'unit_files',unitSlugs.length,'missing_from_index',missing.length);if(missing.length)console.log('sample_missing',missing.slice(0,20));"`
 - [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 - [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
 - [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker, moved above Notes)
