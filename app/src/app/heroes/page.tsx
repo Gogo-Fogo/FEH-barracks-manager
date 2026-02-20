@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { HeroesListClient } from "@/components/heroes-list-client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
+import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,6 +49,10 @@ async function loadLocalRarityBySlug() {
   }
 
   return new Map<string, string | null>();
+}
+
+function looksLikeGuideTitle(name: string) {
+  return /\b(builds?|best\s+refine|best\s+build|tier\s+list|ratings?)\b/i.test(name);
 }
 
 export default async function HeroesPage({ searchParams }: HeroesPageProps) {
@@ -130,6 +135,24 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       tier: h.tier,
     }));
   }
+
+  const localUnitRarityBySlug = await loadUnitRarityBySlugs(heroRows.map((hero) => hero.hero_slug));
+
+  heroRows = heroRows.map((hero) => {
+    const patchedRarity = hero.rarity ?? localUnitRarityBySlug.get(hero.hero_slug) ?? null;
+    const patchedName = looksLikeGuideTitle(hero.name)
+      ? hero.name
+          .replace(/\bBuilds?\s+and\s+Best\s+Refine\b/gi, "")
+          .replace(/\s+/g, " ")
+          .trim()
+      : hero.name;
+
+    return {
+      ...hero,
+      name: patchedName || hero.name,
+      rarity: patchedRarity,
+    };
+  });
 
   const aliasSlug = q ? await resolveHeroAliasToSlug(q) : null;
   if (q && aliasSlug) {

@@ -131,6 +131,24 @@ function normalizeLegacyWeapon(weapon) {
   return trimmed;
 }
 
+function cleanLegacyHeroName(name) {
+  const text = String(name || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  return text
+    .replace(/\s+Builds?\s+and\s+Best\s+Refine\b/gi, "")
+    .replace(/\s+Best\s+Builds?\b/gi, "")
+    .replace(/\s+Builds?\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeGuideTitle(name) {
+  return /\b(builds?|best\s+refine|best\s+build|tier\s+list|ratings?)\b/i.test(
+    String(name || "")
+  );
+}
+
 function parseLegacyHeroMetadata(rawText) {
   const text = String(rawText || "");
   if (!text) return null;
@@ -148,10 +166,11 @@ function parseLegacyHeroMetadata(rawText) {
   const tier = tierMatch ? tierMatch[1] : null;
 
   return {
-    heroName: heroMatch[1].trim(),
+    heroName: cleanLegacyHeroName(heroMatch[1]),
     weapon: normalizeLegacyWeapon(weaponMoveMatch?.[1] || ""),
     move: weaponMoveMatch?.[2]?.trim() || null,
     tier,
+    rarity: parseRarityFromRawText(text),
   };
 }
 
@@ -175,7 +194,7 @@ function buildSupplementalHeroCandidate(unitRow) {
 
   const candidate = {
     ...unitRow,
-    name: String(unitRow.name || "").trim(),
+    name: cleanLegacyHeroName(unitRow.name),
     url: String(unitRow.url || "").trim(),
     weapon: unitRow.weapon ?? null,
     move: unitRow.move ?? null,
@@ -187,9 +206,13 @@ function buildSupplementalHeroCandidate(unitRow) {
     const legacy = parseLegacyHeroMetadata(candidate.raw_text_data);
     if (!legacy) return null;
 
+    if (looksLikeGuideTitle(candidate.name)) {
+      candidate.name = cleanLegacyHeroName(legacy.heroName || candidate.name);
+    }
     candidate.weapon = candidate.weapon || legacy.weapon || null;
     candidate.move = candidate.move || legacy.move || null;
     candidate.tier = candidate.tier ?? legacy.tier ?? null;
+    candidate.rarity = candidate.rarity ?? legacy.rarity ?? null;
     candidate.tag = "Old Hero";
   }
 
@@ -209,7 +232,7 @@ function readIndex() {
 }
 
 function toHeroRow(hero) {
-  const heroSlug = safeSlug(hero.name);
+  const heroSlug = String(hero.hero_slug || "").trim().toLowerCase() || safeSlug(hero.name);
   const unitFile = readUnitFileBySlug(heroSlug);
   const parsedRarity = parseRarityFromRawText(unitFile?.raw_text_data);
   const tierNum = Number.parseFloat(String(hero.tier ?? ""));
@@ -277,6 +300,7 @@ async function run() {
     }
 
     supplementalRows.push(supplementalCandidate);
+    supplementalRows[supplementalRows.length - 1].hero_slug = unitSlug;
     supplementalStats.added += 1;
   }
 
@@ -288,6 +312,27 @@ async function run() {
 
   const sourceRows = [...indexRows, ...supplementalRows];
   const heroRows = sourceRows.map(toHeroRow).filter((h) => h.hero_slug && h.name);
+
+  const supplementalByUrl = supplementalRows
+    .map((row) => ({
+      hero_slug: String(row.hero_slug || "").trim().toLowerCase(),
+      source_url: String(row.url || "").trim(),
+    }))
+    .filter((row) => row.hero_slug && row.source_url);
+
+  for (const row of supplementalByUrl) {
+    const { error: staleUrlError } = await supabase
+      .from("heroes")
+      .delete()
+      .eq("source_url", row.source_url)
+      .neq("hero_slug", row.hero_slug);
+
+    if (staleUrlError) {
+      console.warn(
+        `WARN: stale duplicate cleanup failed for ${row.source_url}: ${staleUrlError.message}`
+      );
+    }
+  }
 
   const { error: cleanupLegacyTagError } = await supabase
     .from("heroes")

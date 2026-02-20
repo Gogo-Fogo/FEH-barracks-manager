@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
 
 function normalizeSlug(value: string) {
   return value
@@ -110,6 +111,11 @@ export async function GET(
     const filePath = await findHeadshotFile(heroSlug);
 
     if (!filePath) {
+      const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
+      if (remoteImage) {
+        return NextResponse.redirect(remoteImage, 302);
+      }
+
       return new NextResponse(placeholderSvg(heroSlug), {
         status: 200,
         headers: {

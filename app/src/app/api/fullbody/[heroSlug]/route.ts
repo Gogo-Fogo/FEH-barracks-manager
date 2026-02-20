@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
 
@@ -94,6 +95,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ hero
   const filePath = await findFullbody(heroSlug, pose);
 
   if (!filePath) {
+    const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
+    if (remoteImage) {
+      return NextResponse.redirect(remoteImage, 302);
+    }
+
     return new NextResponse(placeholderSvg(heroSlug), {
       status: 200,
       headers: {
