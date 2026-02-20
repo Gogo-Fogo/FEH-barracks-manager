@@ -13,6 +13,10 @@
   "weapon": "Sword",
   "move": "Infantry",
   "tag": "New Hero",
+  "hero_slug": "hero_name___title (canonical safe slug)",
+  "archive_id": 0,
+  "discovered_via": "maintenance_updater | legacy_seed_backfill",
+  "discovered_at": "ISO timestamp when row was discovered/seeded",
   "raw_text_data": "Sanitized unit article text (scripts/ads removed).",
   "recommended_build": {
     "weapon": "Skill Name",

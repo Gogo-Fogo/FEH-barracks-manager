@@ -124,24 +124,119 @@
       "aliases": [
         "Spring Exalt Chrom"
       ]
+    },
+    {
+      "canonical_slug": "kagero___honorable_ninja",
+      "canonical_name": "Kagero - Honorable Ninja",
+      "aliases": [
+        "Kagero Spring Ninja"
+      ]
+    },
+    {
+      "canonical_slug": "siegbert___future_king",
+      "canonical_name": "Siegbert - Future King",
+      "aliases": [
+        "Siegbert Future King"
+      ]
+    },
+    {
+      "canonical_slug": "eliwood___devoted_love",
+      "canonical_name": "Eliwood - Devoted Love",
+      "aliases": [
+        "Eliwood Devoted Love"
+      ]
+    },
+    {
+      "canonical_slug": "sanaki___begnion_s_apostle",
+      "canonical_name": "Sanaki - Begnion's Apostle",
+      "aliases": [
+        "Sanaki Begnion's Apostle"
+      ]
+    },
+    {
+      "canonical_slug": "delthea___free_spirit",
+      "canonical_name": "Delthea - Free Spirit",
+      "aliases": [
+        "Delthea Free Spirit"
+      ]
+    },
+    {
+      "canonical_slug": "alm___hero_of_prophecy",
+      "canonical_name": "Alm - Hero of Prophecy",
+      "aliases": [
+        "Alm Hero of Prophecy"
+      ]
+    },
+    {
+      "canonical_slug": "celica___imprisoned_soul",
+      "canonical_name": "Celica - Imprisoned Soul",
+      "aliases": [
+        "Celica Imprisoned Soul"
+      ]
+    },
+    {
+      "canonical_slug": "olivia___blushing_beauty",
+      "canonical_name": "Olivia - Blushing Beauty",
+      "aliases": [
+        "Olivia Blushing Beauty"
+      ]
+    },
+    {
+      "canonical_slug": "marth___enigmatic_blade",
+      "canonical_name": "Marth - Enigmatic Blade",
+      "aliases": [
+        "Marth Enigmatic Blade"
+      ]
+    },
+    {
+      "canonical_slug": "luke___rowdy_squire",
+      "canonical_name": "Luke - Rowdy Squire",
+      "aliases": [
+        "Luke Rowdy Squire"
+      ]
+    },
+    {
+      "canonical_slug": "eldigan___lionheart",
+      "canonical_name": "Eldigan - Lionheart",
+      "aliases": [
+        "Eldigan Lionheart"
+      ]
+    },
+    {
+      "canonical_slug": "canas___wisdom_seeker",
+      "canonical_name": "Canas - Wisdom Seeker",
+      "aliases": [
+        "Canas Wisdom Seeker"
+      ]
+    },
+    {
+      "canonical_slug": "shiro___raw_talent",
+      "canonical_name": "Shiro - Raw Talent",
+      "aliases": [
+        "Shiro Raw Talent"
+      ]
+    },
+    {
+      "canonical_slug": "hardin___dark_emperor",
+      "canonical_name": "Hardin - Dark Emperor",
+      "aliases": [
+        "Hardin Dark Emperor"
+      ]
+    },
+    {
+      "canonical_slug": "quan___luminous_lancer",
+      "canonical_name": "Quan - Luminous Lancer",
+      "aliases": [
+        "Quan Luminous Lancer"
+      ]
+    },
+    {
+      "canonical_slug": "julia___naga_s_blood",
+      "canonical_name": "Julia - Naga's Blood",
+      "aliases": [
+        "Naga's voice"
+      ]
     }
   ],
-  "unresolved_aliases": [
-    "Kagero Spring Ninja",
-    "Siegbert Future King",
-    "Eliwood Devoted Love",
-    "Sanaki Begnion's Apostle",
-    "Delthea Free Spirit",
-    "Alm Hero of Prophecy",
-    "Celica Imprisoned Soul",
-    "Olivia Blushing Beauty",
-    "Marth Enigmatic Blade",
-    "Luke Rowdy Squire",
-    "Eldigan Lionheart",
-    "Canas Wisdom Seeker",
-    "Shiro Raw Talent",
-    "Hardin Dark Emperor",
-    "Quan Luminous Lancer",
-    "Naga's voice"
-  ]
+  "unresolved_aliases": []
 }

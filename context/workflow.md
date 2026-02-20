@@ -249,8 +249,46 @@ Implementation notes (current repo):
   1. `db/index.json` contains canonical row.
   2. `db/units/` contains matching slug file.
   3. `db/hero_aliases.json` maps alias -> canonical slug.
-- Current known state example:
-  - `Luke Rowdy Squire` is in `unresolved_aliases` (not canonicalized yet), and not present in current `db/index.json`/`db/units`.
+- Current resolved state (2026-02-20):
+  - `Luke Rowdy Squire` is now mapped and resolved to canonical `luke___rowdy_squire`.
+  - Canonical rows for the previously missing legacy set were backfilled and enriched.
+  - `npm run validate:hero-aliases` reports `MISSING_COUNT=0`.
+- Hero Browser visibility fix (same incident):
+  - Root cause was not alias data alone: Hero Browser query had a restrictive `.limit(200)`.
+  - Fixed by expanding the query range in `app/src/app/heroes/page.tsx` so restored heroes can appear in the browser list.
+- Deep-data follow-up (same incident):
+  - Backfilled legacy hero files were initially metadata-only.
+  - Targeted Researcher runs (`scraper/build_parser.js --only=<slug>.json`) were executed to populate `raw_text_data`, `recommended_build`, and `ivs` for the recovered set.
+- Root cause extension (2026-02-20 evening):
+  - Re-running Scout/Researcher alone did **not** repair all historical gaps because Scout only discovers from the current tier-list feed.
+  - Some canonical unit files existed in `db/units` but were still missing in `db/index.json`.
+  - Some archive URLs (example: `267116`) were missing from both `db/units` and `db/index.json` until explicitly seeded.
+
+### Missing Unit Recovery Runbook (Do This, Not Ad-hoc One-Liners)
+1. Reconcile index from canonical units + optional archive URL seeds:
+   - `npm run reconcile:index`
+   - With explicit missing archive URL(s):
+     - `npm run reconcile:index -- --archive-url=https://game8.co/games/fire-emblem-heroes/archives/267116`
+2. Enrich seeded/new unit file(s):
+   - `node scraper/build_parser.js --only=<slug>.json`
+3. Re-import app catalog:
+   - `npm --prefix app run import:heroes`
+4. Verify in local index and Supabase:
+   - `node -e "const fs=require('fs');const rows=JSON.parse(fs.readFileSync('db/index.json','utf8'));const u='https://game8.co/games/fire-emblem-heroes/archives/267116';const h=rows.find(r=>String(r.url||'')===u);console.log('INDEX_FOUND='+(h?1:0),h?.hero_slug||'');"`
+   - (Supabase check via service-role env)
+   - Generic archive-presence spot check (any archive URL):
+     - `node -e "const fs=require('fs');const u=process.argv[1];const rows=JSON.parse(fs.readFileSync('db/index.json','utf8'));const h=rows.find(r=>String(r.url||'')===u);console.log('INDEX_FOUND='+(h?1:0));if(h)console.log('INDEX_NAME='+h.name,'INDEX_SLUG='+(h.hero_slug||String(h.name||'').replace(/[^a-z0-9]/gi,'_').toLowerCase()));" "https://game8.co/games/fire-emblem-heroes/archives/<id>"`
+5. If result is valid, document incident outcome in `context/workflow.md` + `context/todo.md`.
+
+### Verified Recovery Example (2026-02-20)
+- Input missing archive URL:
+  - `https://game8.co/games/fire-emblem-heroes/archives/267116`
+- Reconcile result:
+  - Seeded slug: `tiki___naga_s_voice`
+  - Added/updated canonical alias-backed missing index rows: `18`
+- Post-enrichment/import verification:
+  - `db/index.json`: `INDEX_FOUND=1`, `hero_slug=tiki___naga_s_voice`
+  - Supabase `public.heroes`: `SUPABASE_FOUND=1` for `source_url=.../267116`
 - Use Windows-safe lookup commands (do not rely on `grep`):
   - `Get-ChildItem -Name db/units | Where-Object { $_ -match 'luke' }`
   - `npm run validate:hero-aliases`
@@ -264,6 +302,31 @@ Implementation notes (current repo):
 - After match, read only targeted files, e.g.:
   - `db/units/adrift_corrin__f_.json`
   - never batch-read all unit JSON files during triage.
+
+### Anti-Stuck Execution Protocol (Windows + Large Context)
+- Prefer temporary script files over long inline one-liners when commands get large or brittle:
+  1. create `scripts/temp_<task>.js`
+  2. run with `node scripts/temp_<task>.js`
+  3. validate output
+  4. delete temp file immediately
+- If terminal output is truncated or malformed:
+  - rerun as a focused script with concise delimiters (`|`/CSV-like output)
+  - avoid complex quoting chains in `node -e`.
+- Keep context stable under heavy repos:
+  - never read full `db/units` into context,
+  - always target specific files discovered via terminal filters.
+- For repeat maintenance, prefer committed helper scripts (like `scripts/reconcile-index-from-units.js`) over repeatedly improvising long shell one-liners.
+- For Git inspections in terminal, prefer non-interactive/no-pager commands to avoid stuck sessions:
+  - `git --no-pager diff -- <path>`
+  - `git --no-pager status --short`
+
+### Local Smoke-Test Server (Quick Run)
+- When validating hero pages quickly on this machine, use:
+  - `npm --prefix app run start -- --port 3022`
+- Then open:
+  - `http://localhost:3022`
+- If `start` cannot launch due to missing build, fallback to:
+  - `npm --prefix app run dev -- --port 3022`
 
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.

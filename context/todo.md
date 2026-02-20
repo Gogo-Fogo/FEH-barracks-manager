@@ -1,4 +1,4 @@
-t# FEH Barracks App - TODO Roadmap
+# FEH Barracks App - TODO Roadmap
 
 Last updated: 2026-02-20
 
@@ -89,7 +89,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ## Immediate Next Step
 - [ ] Run Supabase SQL: `app/supabase/schema.sql` (on dedicated production Supabase project if splitting envs)
 - [x] Fill `app/.env.local` (Supabase URL, anon key, service role key)
-- [ ] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
+- [x] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
 - [ ] Run index-to-unit coverage sanity check before import:
   - `node -e "const fs=require('fs');const safe=s=>String(s||'').replace(/[^a-z0-9]/gi,'_').toLowerCase();const idx=JSON.parse(fs.readFileSync('db/index.json','utf8'));const idxSet=new Set(idx.map(h=>safe(h.name)).filter(Boolean));const unitSlugs=fs.readdirSync('db/units',{withFileTypes:true}).filter(e=>e.isFile()&&/\.json$/i.test(e.name)).map(e=>e.name.replace(/\.json$/i,'').toLowerCase());const missing=unitSlugs.filter(s=>!idxSet.has(s));console.log('index_rows',idx.length,'unit_files',unitSlugs.length,'missing_from_index',missing.length);if(missing.length)console.log('sample_missing',missing.slice(0,20));"`
 - [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
@@ -116,4 +116,9 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
   - run `npm run validate:hero-aliases`
   - review `db/hero_aliases.json -> unresolved_aliases`
   - promote confident mappings into `entries[]`
-- [ ] Resolve current unresolved aliases backlog (16 entries, including `Luke Rowdy Squire`)
+- [x] Resolve current unresolved aliases backlog (16 entries, including `Luke Rowdy Squire`)
+- [x] Backfill/enrich recovered legacy canonical heroes so details are populated (`raw_text_data`, `recommended_build`, `ivs`)
+- [x] Fix Hero Browser catalog truncation (removed restrictive 200-row cap)
+- [x] Add short post-incident runbook note for Windows-safe anti-stuck execution (temp script pattern)
+- [x] Add deterministic index reconciliation utility for missing canonical units + explicit archive URL seeds (`scripts/reconcile-index-from-units.js`)
+- [x] Verify recovery for missing archive URL `267116` (`tiki___naga_s_voice`) through index + Supabase import
