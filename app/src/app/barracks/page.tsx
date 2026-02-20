@@ -8,6 +8,7 @@ import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
+import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 import {
   addToBarracks,
   createUserNote,
@@ -114,6 +115,18 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,
+    }));
+  }
+
+  const missingRaritySlugs = heroRows
+    .filter((hero) => !hero.rarity)
+    .map((hero) => hero.hero_slug);
+
+  if (missingRaritySlugs.length) {
+    const unitRarityBySlug = await loadUnitRarityBySlugs(missingRaritySlugs);
+    heroRows = heroRows.map((hero) => ({
+      ...hero,
+      rarity: hero.rarity ?? unitRarityBySlug.get(hero.hero_slug) ?? null,
     }));
   }
 
