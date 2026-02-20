@@ -35,30 +35,32 @@ Use this when you want controlled, human-reviewed updates instead of fully autom
 1. Refresh source data locally (Scout -> Researcher):
    - `node scraper/Maintenance_Updater.js`
    - `node scraper/build_parser.js`
-2. Review failures and fix/retry if needed:
+2. Run index-to-unit coverage sanity check (prevents hidden catalog omissions):
+   - `node -e "const fs=require('fs');const safe=s=>String(s||'').replace(/[^a-z0-9]/gi,'_').toLowerCase();const idx=JSON.parse(fs.readFileSync('db/index.json','utf8'));const idxSet=new Set(idx.map(h=>safe(h.name)).filter(Boolean));const unitSlugs=fs.readdirSync('db/units',{withFileTypes:true}).filter(e=>e.isFile()&&/\.json$/i.test(e.name)).map(e=>e.name.replace(/\.json$/i,'').toLowerCase());const missing=unitSlugs.filter(s=>!idxSet.has(s));console.log('index_rows',idx.length,'unit_files',unitSlugs.length,'missing_from_index',missing.length);if(missing.length)console.log('sample_missing',missing.slice(0,20));"`
+3. Review failures and fix/retry if needed:
    - `db/failed_maintenance_units.json`
    - `db/failed_build_parser_units.json`
-3. (Optional, when asset refresh is desired) run Fandom pulls in order:
+4. (Optional, when asset refresh is desired) run Fandom pulls in order:
    - `node scraper/fandom_fullbody_downloader.js`
    - `node scraper/fandom_headshot_downloader.js`
    - `node scraper/fandom_quotes_downloader.js`
-4. Validate Fandom source/path isolation:
+5. Validate Fandom source/path isolation:
    - `node -e "const fs=require('fs');const p=['fullbody','headshots','quotes'];for(const d of p){const m=JSON.parse(fs.readFileSync('g:/Workspace/MyTools/FEH-barracks-manager/db/unit_assets_manifest/fandom/'+d+'_manifest.json','utf8'));const bad=(m.items||[]).filter(i=>i.source!=='fandom'||!(i.local_path||'').includes('/fandom/'));console.log(d,'items=',m.items.length,'missing=',(m.missing_mapping||[]).length,'bad=',bad.length);}"`
-5. Sync app catalog to Supabase:
+6. Sync app catalog to Supabase:
    - `npm --prefix app run import:heroes`
-6. Smoke test hosted app (Vercel):
+7. Smoke test hosted app (Vercel):
    - heroes list/detail, auth, barracks CRUD, preferences
-7. Repo hygiene before push:
+8. Repo hygiene before push:
    - `git status`
    - ensure generated/local artifacts (especially `db/units/` and failure logs) are not unintentionally staged
-8. Commit + push only intentional maintenance changes.
+9. Commit + push only intentional maintenance changes.
 
-9. Refresh banner pull-guide data (for summon recommendation context):
+10. Refresh banner pull-guide data (for summon recommendation context):
    - `npm run scrape:banner-guides`
    - seed URLs live in `db/banner_pull_seed_urls.json`
    - output file: `db/banner_pull_guides.json` (local generated file)
 
-10. Export account AI context when needed:
+11. Export account AI context when needed:
    - Compact: `/api/ai-export`
    - Full guides: `/api/ai-export?mode=full`
    - Export now includes banner pull-guide sections when `db/banner_pull_guides.json` exists.
@@ -176,6 +178,34 @@ Implementation notes (current repo):
 3. Re-import heroes:
    - `npm --prefix app run import:heroes`
 4. Confirm importer did **not** drop rarity due to missing DB column.
+
+### Incident Note (2026-02-20): Hero in `db/units` Missing from Hero Browser
+- Symptom:
+  - `db/units/byleth___of_the_academy.json` existed, but hero did not appear in Hero Browser.
+- Confirmed cause:
+  - Hero Browser reads Supabase `public.heroes`.
+  - Import pipeline previously sourced catalog rows from `db/index.json` only.
+  - The Byleth unit file existed, but `db/index.json` did not include that hero row, so import omitted it.
+- Fix applied:
+  - `app/scripts/import-heroes.mjs` now supplements index-driven import with any missing `db/units/*.json` rows (slug not present in index), and logs a warning count.
+- Follow-up inconsistency audit (same day):
+  - `missing_from_index` count was 254 unit files.
+  - An initial strict filter recovered only 4 rows, which was too narrow for legacy hero pages.
+  - Importer now parses legacy hero rank-page metadata and recovers additional valid hero rows while still skipping guide/skill junk pages.
+  - Current supplemental import summary after hardening:
+    - `added=106`
+    - `skipped_not_likely_hero=83`
+    - `skipped_duplicate_url=65`
+  - This specifically restores many older seasonal/legacy heroes (including aliases like Fjorm New Traditions, Spring Exalt Chrom, etc.) that were absent from `db/index.json`.
+- Import hardening (global fix):
+  - Supplemental unit import now includes **only likely hero rows** (valid hero URL + hero-like weapon/move or hero tag hints).
+  - Explicitly excludes `Legacy ID Snipe` rows from supplemental catalog import.
+  - Dedupes supplemental rows against index by URL.
+  - Performs cleanup delete of lingering `Legacy ID Snipe` rows in Supabase `public.heroes` before upsert.
+- Prevention:
+  1. Run the index-to-unit coverage sanity check during maintenance (see protocol step 2).
+  2. Treat non-zero `missing_from_index` as data drift that must be reviewed before release/import validation.
+  3. Keep Scout as primary canonical source, but do not let temporary index drift hide valid unit files from app catalog import.
 
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.

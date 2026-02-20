@@ -13,6 +13,40 @@ const { loadEnvConfig } = nextEnv;
 
 loadEnvConfig(APP_ROOT);
 
+const unitFileCache = new Map();
+const HERO_WEAPON_TYPES = new Set([
+  "Sword",
+  "Lance",
+  "Axe",
+  "Bow",
+  "Dagger",
+  "Tome",
+  "Breath",
+  "Beast",
+  "Red Tome",
+  "Blue Tome",
+  "Green Tome",
+  "Colorless Tome",
+  "Red Bow",
+  "Blue Bow",
+  "Green Bow",
+  "Colorless Bow",
+  "Red Dagger",
+  "Blue Dagger",
+  "Green Dagger",
+  "Colorless Dagger",
+  "Staff",
+  "Red Breath",
+  "Blue Breath",
+  "Green Breath",
+  "Colorless Breath",
+  "Red Beast",
+  "Blue Beast",
+  "Green Beast",
+  "Colorless Beast",
+]);
+const HERO_MOVE_TYPES = new Set(["Infantry", "Armored", "Cavalry", "Flying"]);
+
 function safeSlug(name) {
   return String(name || "")
     .replace(/[^a-z0-9]/gi, "_")
@@ -53,13 +87,114 @@ function parseRarityFromRawText(rawText) {
 }
 
 function readUnitFileBySlug(heroSlug) {
-  const unitPath = path.join(ROOT, "db", "units", `${heroSlug}.json`);
+  const normalizedSlug = String(heroSlug || "").trim().toLowerCase();
+  if (!normalizedSlug) return null;
+  if (unitFileCache.has(normalizedSlug)) return unitFileCache.get(normalizedSlug);
+
+  const unitPath = path.join(ROOT, "db", "units", `${normalizedSlug}.json`);
   try {
     const raw = fs.readFileSync(unitPath, "utf8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    unitFileCache.set(normalizedSlug, parsed);
+    return parsed;
   } catch {
+    unitFileCache.set(normalizedSlug, null);
     return null;
   }
+}
+
+function listUnitSlugs() {
+  const unitsDir = path.join(ROOT, "db", "units");
+  try {
+    return fs
+      .readdirSync(unitsDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".json"))
+      .map((entry) => entry.name.replace(/\.json$/i, "").toLowerCase())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeLegacyWeapon(weapon) {
+  const trimmed = String(weapon || "").trim();
+  if (!trimmed) return null;
+  if (HERO_WEAPON_TYPES.has(trimmed)) return trimmed;
+
+  const lower = trimmed.toLowerCase();
+  if (lower === "bow") return "Colorless Bow";
+  if (lower === "dagger") return "Colorless Dagger";
+  if (lower === "tome") return "Colorless Tome";
+  if (lower === "breath" || lower === "dragon") return "Colorless Breath";
+  if (lower === "beast") return "Colorless Beast";
+
+  return trimmed;
+}
+
+function parseLegacyHeroMetadata(rawText) {
+  const text = String(rawText || "");
+  if (!text) return null;
+
+  const heroMatch = text.match(
+    /This is a ranking page for the hero\s+([^\.]+?)\s+from the game Fire Emblem Heroes/i
+  );
+  if (!heroMatch) return null;
+
+  const weaponMoveMatch = text.match(
+    /Color\s*\/\s*Weapon Type\s*\/\s*Move Type\s+[^\/\n]+\s*\/\s*([^\/\n]+?)\s*\/\s*(Infantry|Armored|Cavalry|Flying)/i
+  );
+
+  const tierMatch = text.match(/Overall Rating\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*10/i);
+  const tier = tierMatch ? tierMatch[1] : null;
+
+  return {
+    heroName: heroMatch[1].trim(),
+    weapon: normalizeLegacyWeapon(weaponMoveMatch?.[1] || ""),
+    move: weaponMoveMatch?.[2]?.trim() || null,
+    tier,
+  };
+}
+
+function isLikelyHeroUnitRow(row) {
+  const name = String(row?.name || "").trim();
+  const url = String(row?.url || "").trim();
+  const tag = String(row?.tag || "").trim();
+  const weapon = String(row?.weapon || "").trim();
+  const move = String(row?.move || "").trim();
+
+  if (!name) return false;
+  if (!/^https?:\/\//i.test(url)) return false;
+  if (tag === "Legacy ID Snipe") return false;
+
+  const hasValidWeaponMove = HERO_WEAPON_TYPES.has(weapon) && HERO_MOVE_TYPES.has(move);
+  return hasValidWeaponMove;
+}
+
+function buildSupplementalHeroCandidate(unitRow) {
+  if (!unitRow) return null;
+
+  const candidate = {
+    ...unitRow,
+    name: String(unitRow.name || "").trim(),
+    url: String(unitRow.url || "").trim(),
+    weapon: unitRow.weapon ?? null,
+    move: unitRow.move ?? null,
+    tier: unitRow.tier ?? null,
+    tag: unitRow.tag ?? null,
+  };
+
+  if (String(candidate.tag || "").trim() === "Legacy ID Snipe") {
+    const legacy = parseLegacyHeroMetadata(candidate.raw_text_data);
+    if (!legacy) return null;
+
+    candidate.weapon = candidate.weapon || legacy.weapon || null;
+    candidate.move = candidate.move || legacy.move || null;
+    candidate.tier = candidate.tier ?? legacy.tier ?? null;
+    candidate.tag = "Old Hero";
+  }
+
+  if (!isLikelyHeroUnitRow(candidate)) return null;
+  return candidate;
 }
 
 function readIndex() {
@@ -108,7 +243,60 @@ async function run() {
   });
 
   const indexRows = readIndex();
-  const heroRows = indexRows.map(toHeroRow).filter((h) => h.hero_slug && h.name);
+  const indexSlugs = new Set(
+    indexRows.map((hero) => safeSlug(hero?.name)).filter(Boolean)
+  );
+  const indexUrls = new Set(
+    indexRows.map((hero) => String(hero?.url || "").trim()).filter(Boolean)
+  );
+
+  const supplementalRows = [];
+  const supplementalStats = {
+    missingFromIndex: 0,
+    added: 0,
+    skippedNotLikelyHero: 0,
+    skippedDuplicateUrl: 0,
+  };
+
+  for (const unitSlug of listUnitSlugs()) {
+    if (indexSlugs.has(unitSlug)) continue;
+    supplementalStats.missingFromIndex += 1;
+
+    const unitRow = readUnitFileBySlug(unitSlug);
+    const supplementalCandidate = buildSupplementalHeroCandidate(unitRow);
+
+    if (!supplementalCandidate) {
+      supplementalStats.skippedNotLikelyHero += 1;
+      continue;
+    }
+
+    const unitUrl = String(supplementalCandidate?.url || "").trim();
+    if (unitUrl && indexUrls.has(unitUrl)) {
+      supplementalStats.skippedDuplicateUrl += 1;
+      continue;
+    }
+
+    supplementalRows.push(supplementalCandidate);
+    supplementalStats.added += 1;
+  }
+
+  if (supplementalStats.missingFromIndex > 0) {
+    console.warn(
+      `WARN: ${supplementalStats.missingFromIndex} unit file(s) are missing from db/index.json. Supplemental import summary: added=${supplementalStats.added}, skipped_not_likely_hero=${supplementalStats.skippedNotLikelyHero}, skipped_duplicate_url=${supplementalStats.skippedDuplicateUrl}`
+    );
+  }
+
+  const sourceRows = [...indexRows, ...supplementalRows];
+  const heroRows = sourceRows.map(toHeroRow).filter((h) => h.hero_slug && h.name);
+
+  const { error: cleanupLegacyTagError } = await supabase
+    .from("heroes")
+    .delete()
+    .eq("tag", "Legacy ID Snipe");
+
+  if (cleanupLegacyTagError) {
+    console.warn(`WARN: cleanup for Legacy ID Snipe rows failed: ${cleanupLegacyTagError.message}`);
+  }
 
   const batchSize = 500;
   let warnedMissingRarityColumn = false;
