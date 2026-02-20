@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
+import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 import { FullbodyCarousel } from "@/components/fullbody-carousel";
 import { toggleFavorite } from "@/app/barracks/actions";
 
@@ -571,6 +572,9 @@ async function loadLocalRarityBySlug(heroSlug: string) {
       // continue
     }
   }
+
+  const fallback = await loadUnitRarityBySlugs([heroSlug]);
+  return fallback.get(heroSlug) ?? null;
 
   return null;
 }
