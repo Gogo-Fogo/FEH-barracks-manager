@@ -1,0 +1,147 @@
+{
+  "_meta": {
+    "canonical_source": "game8",
+    "purpose": "Legacy/community title aliases that resolve to Game8 canonical hero slugs.",
+    "updated_at": "2026-02-20"
+  },
+  "entries": [
+    {
+      "canonical_slug": "new_year_fjorm",
+      "canonical_name": "New Year Fjorm",
+      "aliases": [
+        "Fjorm New Traditions",
+        "Fjorm - New Traditions"
+      ]
+    },
+    {
+      "canonical_slug": "summer_tiki__adult_",
+      "canonical_name": "Summer Tiki (Adult)",
+      "aliases": [
+        "Tiki Summering Scion"
+      ]
+    },
+    {
+      "canonical_slug": "young_azura",
+      "canonical_name": "Young Azura",
+      "aliases": [
+        "Azura Young Songstress"
+      ]
+    },
+    {
+      "canonical_slug": "spring_camilla",
+      "canonical_name": "Spring Camilla",
+      "aliases": [
+        "Camilla Spring Princess"
+      ]
+    },
+    {
+      "canonical_slug": "bridal_cordelia",
+      "canonical_name": "Bridal Cordelia",
+      "aliases": [
+        "Cordelia Perfect Bride"
+      ]
+    },
+    {
+      "canonical_slug": "new_year_corrin__m_",
+      "canonical_name": "New Year Corrin (M)",
+      "aliases": [
+        "Corrin Enjoying Tradition"
+      ]
+    },
+    {
+      "canonical_slug": "amelia",
+      "canonical_name": "Amelia",
+      "aliases": [
+        "Amelia Rose of the War"
+      ]
+    },
+    {
+      "canonical_slug": "performing_olivia",
+      "canonical_name": "Performing Olivia",
+      "aliases": [
+        "Olivia Festival Dancer"
+      ]
+    },
+    {
+      "canonical_slug": "sakura",
+      "canonical_name": "Sakura",
+      "aliases": [
+        "Sakura Loving Priestess"
+      ]
+    },
+    {
+      "canonical_slug": "groom_marth",
+      "canonical_name": "Groom Marth",
+      "aliases": [
+        "Marth Altean Groom"
+      ]
+    },
+    {
+      "canonical_slug": "titania",
+      "canonical_name": "Titania",
+      "aliases": [
+        "Titania Mighty Mercenary"
+      ]
+    },
+    {
+      "canonical_slug": "halloween_kagero",
+      "canonical_name": "Halloween Kagero",
+      "aliases": [
+        "Kagero Beverage Ninja"
+      ]
+    },
+    {
+      "canonical_slug": "summer_xander",
+      "canonical_name": "Summer Xander",
+      "aliases": [
+        "Xander Student Swimmer"
+      ]
+    },
+    {
+      "canonical_slug": "barst",
+      "canonical_name": "Barst",
+      "aliases": [
+        "Barst The Hatchet"
+      ]
+    },
+    {
+      "canonical_slug": "dorcas",
+      "canonical_name": "Dorcas",
+      "aliases": [
+        "Dorcas Serene Warrior"
+      ]
+    },
+    {
+      "canonical_slug": "hector",
+      "canonical_name": "Hector",
+      "aliases": [
+        "Hector General of Ostia"
+      ]
+    },
+    {
+      "canonical_slug": "spring_chrom",
+      "canonical_name": "Spring Chrom",
+      "aliases": [
+        "Spring Exalt Chrom"
+      ]
+    }
+  ],
+  "unresolved_aliases": [
+    "Kagero Spring Ninja",
+    "Siegbert Future King",
+    "Eliwood Devoted Love",
+    "Sanaki Begnion's Apostle",
+    "Delthea Free Spirit",
+    "Alm Hero of Prophecy",
+    "Celica Imprisoned Soul",
+    "Olivia Blushing Beauty",
+    "Marth Enigmatic Blade",
+    "Luke Rowdy Squire",
+    "Eldigan Lionheart",
+    "Canas Wisdom Seeker",
+    "Shiro Raw Talent",
+    "Hardin Dark Emperor",
+    "Quan Luminous Lancer",
+    "Naga's voice"
+  ]
+}

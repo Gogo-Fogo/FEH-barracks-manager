@@ -10,18 +10,46 @@ type HeroOption = {
   tier: number | null;
 };
 
+type HeroAliasOption = {
+  alias: string;
+  hero_slug: string;
+};
+
 type AddHeroTypeaheadProps = {
   heroes: HeroOption[];
+  aliasOptions?: HeroAliasOption[];
   redirectTo: string;
   addAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function AddHeroTypeahead({ heroes, redirectTo, addAction }: AddHeroTypeaheadProps) {
+function normalizeAlias(value: string) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function AddHeroTypeahead({
+  heroes,
+  aliasOptions = [],
+  redirectTo,
+  addAction,
+}: AddHeroTypeaheadProps) {
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState("");
   const [open, setOpen] = useState(false);
 
   const normalizedQuery = query.trim().toLowerCase();
+  const aliasLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const option of aliasOptions) {
+      const key = normalizeAlias(option.alias);
+      if (key && !map.has(key)) {
+        map.set(key, option.hero_slug);
+      }
+    }
+    return map;
+  }, [aliasOptions]);
 
   const filteredHeroes = useMemo(() => {
     if (!normalizedQuery) return heroes.slice(0, 10);
@@ -44,7 +72,12 @@ export function AddHeroTypeahead({ heroes, redirectTo, addAction }: AddHeroTypea
     [heroes, normalizedQuery]
   );
 
-  const resolvedSlug = selectedSlug || exactMatch?.hero_slug || "";
+  const aliasMatchSlug = useMemo(() => {
+    if (!query.trim()) return "";
+    return aliasLookup.get(normalizeAlias(query)) || "";
+  }, [aliasLookup, query]);
+
+  const resolvedSlug = selectedSlug || exactMatch?.hero_slug || aliasMatchSlug || "";
 
   return (
     <form action={addAction} className="mt-4 flex flex-wrap items-end gap-3">

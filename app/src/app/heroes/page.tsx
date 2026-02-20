@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { HeroesListClient } from "@/components/heroes-list-client";
+import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -128,6 +129,56 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       move: h.move,
       tier: h.tier,
     }));
+  }
+
+  const aliasSlug = q ? await resolveHeroAliasToSlug(q) : null;
+  if (q && aliasSlug) {
+    const aliasResultWithRarity = await supabase
+      .from("heroes")
+      .select("hero_slug,name,rarity,weapon,move,tier")
+      .eq("hero_slug", aliasSlug)
+      .maybeSingle();
+
+    let aliasHeroRow: {
+      hero_slug: string;
+      name: string;
+      rarity: string | null;
+      weapon: string | null;
+      move: string | null;
+      tier: number | null;
+    } | null = null;
+
+    if (aliasResultWithRarity.error?.message.includes("rarity")) {
+      const aliasFallback = await supabase
+        .from("heroes")
+        .select("hero_slug,name,weapon,move,tier")
+        .eq("hero_slug", aliasSlug)
+        .maybeSingle();
+
+      if (aliasFallback.data) {
+        aliasHeroRow = {
+          hero_slug: aliasFallback.data.hero_slug,
+          name: aliasFallback.data.name,
+          rarity: localRarityBySlug.get(aliasFallback.data.hero_slug) ?? null,
+          weapon: aliasFallback.data.weapon,
+          move: aliasFallback.data.move,
+          tier: aliasFallback.data.tier,
+        };
+      }
+    } else if (aliasResultWithRarity.data) {
+      aliasHeroRow = {
+        hero_slug: aliasResultWithRarity.data.hero_slug,
+        name: aliasResultWithRarity.data.name,
+        rarity: aliasResultWithRarity.data.rarity ?? localRarityBySlug.get(aliasResultWithRarity.data.hero_slug) ?? null,
+        weapon: aliasResultWithRarity.data.weapon,
+        move: aliasResultWithRarity.data.move,
+        tier: aliasResultWithRarity.data.tier,
+      };
+    }
+
+    if (aliasHeroRow) {
+      heroRows = [aliasHeroRow, ...heroRows];
+    }
   }
 
   const [{ data: weapons }, { data: moves }, { data: favorites }] = await Promise.all([

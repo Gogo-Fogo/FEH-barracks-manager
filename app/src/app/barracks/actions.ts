@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 
 function requireText(value: FormDataEntryValue | null, label: string) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -29,6 +30,8 @@ function withNotice(path: string, notice: string, tone: "success" | "warn" = "su
 export async function addToBarracks(formData: FormData) {
   const heroInput = requireText(formData.get("hero_slug"), "Hero");
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
+  const aliasResolvedSlug = await resolveHeroAliasToSlug(heroInput);
+  const normalizedHeroInput = aliasResolvedSlug || heroInput;
 
   const supabase = await createClient();
   const {
@@ -40,14 +43,14 @@ export async function addToBarracks(formData: FormData) {
   let { data: heroRow, error: heroError } = await supabase
     .from("heroes")
     .select("hero_slug,name")
-    .eq("hero_slug", heroInput)
+    .eq("hero_slug", normalizedHeroInput)
     .single();
 
   if (heroError || !heroRow?.name) {
     const byName = await supabase
       .from("heroes")
       .select("hero_slug,name")
-      .ilike("name", heroInput)
+      .ilike("name", normalizedHeroInput)
       .limit(1)
       .maybeSingle();
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
 import { AuthSignOutButton } from "@/components/auth-signout-button";
+import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
@@ -141,6 +142,8 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   ]);
 
   const heroes = heroRows;
+  const heroSlugSet = new Set(heroes.map((h) => h.hero_slug));
+  const heroAliasOptions = await listHeroAliasOptionsBySlug(heroSlugSet);
 
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
@@ -204,7 +207,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               No heroes found in database yet. Run the import script first.
             </p>
           ) : (
-            <AddHeroTypeahead heroes={heroes} redirectTo="/barracks" addAction={addToBarracks} />
+            <AddHeroTypeahead
+              heroes={heroes}
+              aliasOptions={heroAliasOptions}
+              redirectTo="/barracks"
+              addAction={addToBarracks}
+            />
           )}
 
           <div className="mt-6 border-t border-zinc-800 pt-5">

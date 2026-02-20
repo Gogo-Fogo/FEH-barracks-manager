@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
 import { FullbodyCarousel } from "@/components/fullbody-carousel";
 import { toggleFavorite } from "@/app/barracks/actions";
@@ -580,8 +581,15 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   }
 
   const { heroSlug } = await params;
-  const unitFile = await loadUnitFile(heroSlug);
-  const localRarity = await loadLocalRarityBySlug(heroSlug);
+  const aliasResolvedSlug = await resolveHeroAliasToSlug(heroSlug);
+  const canonicalHeroSlug = aliasResolvedSlug || heroSlug;
+
+  if (aliasResolvedSlug && aliasResolvedSlug !== heroSlug) {
+    redirect(`/heroes/${aliasResolvedSlug}`);
+  }
+
+  const unitFile = await loadUnitFile(canonicalHeroSlug);
+  const localRarity = await loadLocalRarityBySlug(canonicalHeroSlug);
 
   const supabase = await createClient();
   const {
@@ -595,21 +603,21 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   const { data: heroFromDb } = await supabase
     .from("heroes")
     .select("*")
-    .eq("hero_slug", heroSlug)
+    .eq("hero_slug", canonicalHeroSlug)
     .maybeSingle();
 
   const { data: favoriteRow } = await supabase
     .from("user_favorites")
     .select("hero_slug")
     .eq("user_id", user.id)
-    .eq("hero_slug", heroSlug)
+    .eq("hero_slug", canonicalHeroSlug)
     .maybeSingle();
 
   const hero = heroFromDb ||
     (unitFile
       ? {
-          hero_slug: heroSlug,
-          name: unitFile.name || heroSlug,
+          hero_slug: canonicalHeroSlug,
+          name: unitFile.name || canonicalHeroSlug,
           tier: null,
           weapon: null,
           move: null,

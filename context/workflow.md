@@ -67,6 +67,29 @@ Notes:
 - This protocol updates shared hero/catalog data; it does not modify user-owned profile/barracks data.
 - Keep Game8 identity canonical; never rename unit identity from Fandom labels.
 
+## Legacy Title / Canonical Name Mismatch (Important)
+- Game8 remains the canonical identity source for hero names and URLs.
+- If a requested hero title is historical/community wording (or a prior alias), it may not appear in the current Game8 tier-list feed under that exact title even after a full refresh.
+- In this repo, a full validation run (Scout + Researcher) can complete successfully while some legacy title requests still remain unresolved as canonical Game8 names.
+
+Recommended handling:
+1. Do **not** overwrite canonical `name` with legacy wording.
+2. Treat unresolved legacy names as an alias-mapping problem first, not a scraper failure.
+3. If product UX needs old naming support, keep a separate lookup alias map (legacy -> canonical) in app/search logic.
+4. Only add targeted/manual recovery when a trusted source URL/title mapping is available.
+
+Implementation notes (current repo):
+- Alias source file: `db/hero_aliases.json`
+  - `entries[]` holds curated mappings: `canonical_slug`, `canonical_name`, `aliases[]`.
+  - `unresolved_aliases[]` tracks requests still not confidently mapped.
+- Barracks add flow supports aliases through server-side resolver:
+  - `app/src/lib/hero-aliases.ts`
+  - `app/src/app/barracks/actions.ts`
+  - `app/src/components/add-hero-typeahead.tsx`
+- Validation utility:
+  - `npm run validate:hero-aliases`
+  - Emits `FOUND / ALIAS / MISS` so unresolved names can be reviewed and promoted into `entries[]` when confidence is high.
+
 ## Normal Maintenance Run
 1. Run Scout:
    - `node scraper/Maintenance_Updater.js`
