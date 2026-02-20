@@ -155,6 +155,28 @@ Implementation notes (current repo):
   2. run `npm --prefix app run import:heroes`
   3. verify rarity values are populated before UI validation.
 
+### Incident Note (2026-02-20): Rarity/Stars Disappeared Site-Wide
+- Symptom:
+  - Rarity stars/icons disappeared across Heroes/Barracks/Library.
+- Confirmed cause:
+  - `db/index.json` lost `rarity` fields after commit `b928808` (`rarity_key` dropped from 1105 to 0).
+  - Alias-search changes were **not** the cause.
+- Recovery used:
+  1. `npm run scrape:fandom-rarities` (restores `rarity`/`rarities` into `db/index.json`)
+  2. `npm --prefix app run import:heroes`
+- Important warning:
+  - If importer logs `heroes.rarity column not found ... retrying without rarity`, Supabase is discarding rarity on import.
+  - In that case UI depends on local fallback (`db/index.json`) only.
+
+### Rarity Safety Checklist (Run before push/deploy)
+1. Check local index has rarity:
+   - `node -e "const fs=require('fs');const rows=JSON.parse(fs.readFileSync('db/index.json','utf8'));let has=0;for(const r of rows){if(Object.prototype.hasOwnProperty.call(r,'rarity'))has++;}console.log('rows',rows.length,'rarity_key',has);"`
+2. If `rarity_key` is low/zero, immediately run:
+   - `npm run scrape:fandom-rarities`
+3. Re-import heroes:
+   - `npm --prefix app run import:heroes`
+4. Confirm importer did **not** drop rarity due to missing DB column.
+
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.
 - Primary AI retrieval target should remain:
