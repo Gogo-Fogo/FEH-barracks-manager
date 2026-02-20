@@ -10,6 +10,7 @@ import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+const HERO_QUERY_MAX_ROWS = 5000;
 
 type HeroesPageProps = {
   searchParams: Promise<{
@@ -84,7 +85,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       .from("heroes")
       .select("hero_slug,name,rarity,weapon,move,tier")
       .order("hero_slug", { ascending: true })
-      .limit(200);
+      .range(0, HERO_QUERY_MAX_ROWS - 1);
 
     if (q) query = query.ilike("name", `%${q}%`);
     if (weapon) query = query.eq("weapon", weapon);
@@ -97,7 +98,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       .from("heroes")
       .select("hero_slug,name,weapon,move,tier")
       .order("hero_slug", { ascending: true })
-      .limit(200);
+      .range(0, HERO_QUERY_MAX_ROWS - 1);
 
     if (q) query = query.ilike("name", `%${q}%`);
     if (weapon) query = query.eq("weapon", weapon);

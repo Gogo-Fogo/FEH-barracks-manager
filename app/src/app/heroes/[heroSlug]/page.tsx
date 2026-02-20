@@ -276,15 +276,33 @@ function extractIllustratorName(rawText?: string) {
   const compact = normalizeGuideText(rawText);
   if (!compact) return null;
 
-  const patterns = [
-    /Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80}?)\s+(?:Appears In|Illustration|FEH:|Related Guides)/i,
-    /Voice Actor and Illustrator Information[\s\S]{0,220}?Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80})/i,
-  ];
+  const matches = Array.from(
+    compact.matchAll(/Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,140})/gi)
+  );
 
-  for (const pattern of patterns) {
-    const match = compact.match(pattern);
-    const candidate = match?.[1]?.replace(/\s+/g, " ").trim();
-    if (candidate && !/^information$/i.test(candidate)) {
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    let candidate = (matches[i]?.[1] || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const nestedIllustratorMatches = Array.from(
+      candidate.matchAll(/Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80})/gi)
+    );
+    if (nestedIllustratorMatches.length) {
+      candidate = (nestedIllustratorMatches[nestedIllustratorMatches.length - 1]?.[1] || "").trim();
+    }
+
+    candidate = candidate
+      .replace(/\s+(Appears In|Illustration|FEH:|Related Guides)\b[\s\S]*$/i, "")
+      .replace(/\s*\([^)]*$/, "")
+      .trim();
+
+    if (
+      candidate &&
+      candidate.length <= 80 &&
+      !/\b(voice actor|information|english)\b/i.test(candidate) &&
+      !/^information$/i.test(candidate)
+    ) {
       return candidate;
     }
   }
