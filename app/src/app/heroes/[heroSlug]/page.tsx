@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
-import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
+import { loadFandomQuoteTextBySlug, loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 import { FullbodyCarousel } from "@/components/fullbody-carousel";
 import { toggleFavorite } from "@/app/barracks/actions";
 
@@ -531,6 +531,10 @@ async function loadHeroQuotes(heroSlug: string) {
   return [] as string[];
 }
 
+function parseQuoteTextToCandidates(rawText?: string | null) {
+  return extractQuoteCandidates(rawText ?? undefined);
+}
+
 async function loadUnitBackgroundOptions() {
   const roots = [
     path.join(process.cwd(), "db", "unit_assets", "fandom", "shared", "unit_backgrounds"),
@@ -639,7 +643,11 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   }
 
   const poses = await loadFullbodyPoses(hero.hero_slug);
-  const heroQuotes = await loadHeroQuotes(hero.hero_slug);
+  let heroQuotes = await loadHeroQuotes(hero.hero_slug);
+  if (!heroQuotes.length) {
+    const fandomQuoteText = await loadFandomQuoteTextBySlug(hero.hero_slug);
+    heroQuotes = parseQuoteTextToCandidates(fandomQuoteText);
+  }
   const weaponIcon = weaponIconName(hero.weapon);
   const moveIcon = moveIconName(hero.move);
   const defaultBackgroundName = unitBackgroundName(hero.tag);

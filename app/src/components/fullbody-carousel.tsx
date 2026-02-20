@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type FullbodyCarouselProps = {
   heroName: string;
@@ -35,23 +35,19 @@ export function FullbodyCarousel({
         : [];
 
   const [index, setIndex] = useState(0);
-  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(() =>
+    safeQuotes.length ? Math.floor(Math.random() * safeQuotes.length) : 0
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const initialBackgroundIndex = Math.max(0, safeBackgrounds.indexOf(initialBackgroundName || ""));
   const [backgroundIndex, setBackgroundIndex] = useState(initialBackgroundIndex);
 
   const currentPose = safePoses[index] || safePoses[0];
-  const currentQuote = safeQuotes[quoteIndex] || "";
+  const normalizedQuoteIndex = safeQuotes.length
+    ? ((quoteIndex % safeQuotes.length) + safeQuotes.length) % safeQuotes.length
+    : 0;
+  const currentQuote = safeQuotes[normalizedQuoteIndex] || "";
   const currentBackground = safeBackgrounds[backgroundIndex] || initialBackgroundName;
-
-  useEffect(() => {
-    if (!safeQuotes.length) {
-      setQuoteIndex(0);
-      return;
-    }
-
-    setQuoteIndex(Math.floor(Math.random() * safeQuotes.length));
-  }, [safeQuotes.length]);
 
   const prev = () => setIndex((i) => (i - 1 + safePoses.length) % safePoses.length);
   const next = () => setIndex((i) => (i + 1) % safePoses.length);
@@ -115,7 +111,7 @@ export function FullbodyCarousel({
                 ←
               </button>
               <p className="text-xs text-zinc-400">
-                Quote {quoteIndex + 1}/{safeQuotes.length}
+                Quote {normalizedQuoteIndex + 1}/{safeQuotes.length}
               </p>
               <button
                 type="button"
