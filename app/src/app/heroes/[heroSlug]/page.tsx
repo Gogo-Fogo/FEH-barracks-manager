@@ -30,11 +30,327 @@ type GuideHighlights = {
   counters: string[];
 };
 
+type BuildEntryDetail = {
+  key: string;
+  value: string;
+  description: string | null;
+  inheritSources: string[];
+  isDerivedSpecial: boolean;
+};
+
+type SkillHint = "weapon" | "special";
+
+type UnitSnapshot = {
+  name: string;
+  rawText: string;
+};
+
 type QuotesFile = {
   quote_text?: string;
 };
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
+const ARTIST_REFERENCE_URL = "https://feheroes.fandom.com/wiki/List_of_artists";
+const BUILD_KEY_ORDER = [
+  "weapon",
+  "assist",
+  "special",
+  "emblem",
+  "passive_a",
+  "passive_b",
+  "passive_c",
+  "sacred_seal",
+  "attuned",
+];
+
+let unitSnapshotsPromise: Promise<UnitSnapshot[]> | null = null;
+let inheritableSkillSourcesPromise: Promise<Map<string, string[]>> | null = null;
+const skillDescriptionCache = new Map<string, string | null>();
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeSkillKey(value?: string | null) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[’]/g, "'")
+    .replace(/[^A-Za-z0-9+/'().\-\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function cleanDescription(value?: string | null) {
+  const cleaned = (value || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s([,.;!?])/g, "$1")
+    .trim();
+
+  if (!cleaned) return null;
+  if (cleaned.length <= 520) return cleaned;
+  return `${cleaned.slice(0, 517)}...`;
+}
+
+function extractSkillDescriptionFromRaw(rawText: string | undefined, skillName: string, hint: SkillHint) {
+  if (!rawText || !skillName || skillName.trim() === "-") return null;
+
+  const compact = rawText.replace(/\s+/g, " ").trim();
+  if (!compact) return null;
+
+  const escaped = escapeRegExp(skillName.trim());
+
+  const patterns =
+    hint === "weapon"
+      ? [
+          new RegExp(
+            `${escaped}\\s+Might:\\s*\\d+\\s+Range:\\s*\\d+\\s*([\\s\\S]{12,1200}?)(?=\\s+[A-Za-z0-9'+./\\- ]+\\s+Cooldown Count\\s*=|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best IVs|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best Builds|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best Weapon Refine|$)`,
+            "i"
+          ),
+          new RegExp(
+            `${escaped}\\s+\\d+\\s+\\d+\\s*([\\s\\S]{12,1200}?)(?=\\s+[345]\\u2605|\\s+Assists\\s+This Hero|\\s+Specials\\s+Skill Name|\\s+Passives\\s+Skill Name|$)`,
+            "i"
+          ),
+        ]
+      : [
+          new RegExp(
+            `${escaped}\\s*\\(Cooldown Count\\s*=\\s*\\d+\\)\\s*([\\s\\S]{10,900}?)(?=\\s+[345]\\u2605|\\s+[A-Za-z0-9'+./\\- ]+\\s*\\(Cooldown Count\\s*=|\\s+Passives\\s+Skill Name|\\s+[A-Za-z0-9'+./\\- ]+\\s+as a Source Hero|\\s+How to Get|$)`,
+            "i"
+          ),
+          new RegExp(
+            `${escaped}\\s+Cooldown Count\\s*=\\s*\\d+\\s*([\\s\\S]{10,900}?)(?=\\s+[A-Za-z0-9'+./\\- ]+\\s+(?:At start of combat|Inflicts|After combat|Boosts|Treats)|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best IVs|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best Builds|$)`,
+            "i"
+          ),
+        ];
+
+  for (const pattern of patterns) {
+    const match = compact.match(pattern);
+    const cleaned = cleanDescription(match?.[1]);
+    if (cleaned) return cleaned;
+  }
+
+  return null;
+}
+
+async function loadUnitSnapshots(): Promise<UnitSnapshot[]> {
+  if (unitSnapshotsPromise) return unitSnapshotsPromise;
+
+  unitSnapshotsPromise = (async () => {
+    const roots = [
+      path.join(process.cwd(), "db", "units"),
+      path.join(process.cwd(), "..", "db", "units"),
+    ];
+
+    for (const root of roots) {
+      try {
+        const files = (await fs.readdir(root)).filter((file) => file.endsWith(".json"));
+        const snapshots: UnitSnapshot[] = [];
+
+        for (const file of files) {
+          try {
+            const raw = await fs.readFile(path.join(root, file), "utf8");
+            const parsed = JSON.parse(raw) as UnitFile;
+            snapshots.push({
+              name: parsed.name || file.replace(/\.json$/i, ""),
+              rawText: parsed.raw_text_data || "",
+            });
+          } catch {
+            // skip malformed files
+          }
+        }
+
+        return snapshots;
+      } catch {
+        // continue to next root candidate
+      }
+    }
+
+    return [] as UnitSnapshot[];
+  })();
+
+  return unitSnapshotsPromise;
+}
+
+async function findSkillDescription(skillName: string, hint: SkillHint, preferredRawText?: string) {
+  if (!skillName || skillName.trim() === "-") return null;
+
+  const cacheKey = `${hint}:${normalizeSkillKey(skillName)}`;
+  if (skillDescriptionCache.has(cacheKey)) {
+    return skillDescriptionCache.get(cacheKey) ?? null;
+  }
+
+  const preferred = extractSkillDescriptionFromRaw(preferredRawText, skillName, hint);
+  if (preferred) {
+    skillDescriptionCache.set(cacheKey, preferred);
+    return preferred;
+  }
+
+  const snapshots = await loadUnitSnapshots();
+  for (const snapshot of snapshots) {
+    const fromSnapshot = extractSkillDescriptionFromRaw(snapshot.rawText, skillName, hint);
+    if (fromSnapshot) {
+      skillDescriptionCache.set(cacheKey, fromSnapshot);
+      return fromSnapshot;
+    }
+  }
+
+  skillDescriptionCache.set(cacheKey, null);
+  return null;
+}
+
+function extractInheritableSkills(rawText?: string) {
+  if (!rawText) return [] as string[];
+
+  const compact = rawText.replace(/\s+/g, " ").trim();
+  if (!compact) return [] as string[];
+
+  const skills = new Set<string>();
+  const inheritanceRegex =
+    /\bhas\s+(.{3,320}?)\s+as\s+(?:[a-z-]+\s+){0,4}(?:inheritable|inheritance)\s+(?:options|skills)\b/gi;
+
+  for (const match of compact.matchAll(inheritanceRegex)) {
+    const fragment = (match[1] || "")
+      .replace(/\([^)]*\)/g, " ")
+      .replace(/\b(?:both|either)\b/gi, " ")
+      .replace(/\bplus another skill\b/gi, " ");
+
+    const candidates = fragment
+      .replace(/\band\/or\b/gi, ",")
+      .replace(/\band\b/gi, ",")
+      .replace(/\bplus\b/gi, ",")
+      .split(",")
+      .map((piece) =>
+        piece
+          .replace(/\b(?:skills?|options?)\b/gi, " ")
+          .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9+/'().\-\s]+$/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+      )
+      .filter((piece) => piece.length >= 2 && piece.length <= 80 && /[A-Za-z]/.test(piece));
+
+    for (const candidate of candidates) {
+      skills.add(candidate);
+    }
+  }
+
+  return Array.from(skills);
+}
+
+async function loadInheritableSkillSources() {
+  if (inheritableSkillSourcesPromise) return inheritableSkillSourcesPromise;
+
+  inheritableSkillSourcesPromise = (async () => {
+    const snapshots = await loadUnitSnapshots();
+    const map = new Map<string, Set<string>>();
+
+    for (const snapshot of snapshots) {
+      const inheritSkills = extractInheritableSkills(snapshot.rawText);
+      for (const skill of inheritSkills) {
+        const key = normalizeSkillKey(skill);
+        if (!key) continue;
+
+        if (!map.has(key)) map.set(key, new Set<string>());
+        map.get(key)?.add(snapshot.name);
+      }
+    }
+
+    return new Map(
+      Array.from(map.entries()).map(([key, names]) => [
+        key,
+        Array.from(names).sort((a, b) => a.localeCompare(b)),
+      ])
+    );
+  })();
+
+  return inheritableSkillSourcesPromise;
+}
+
+function extractIllustratorName(rawText?: string) {
+  const compact = normalizeGuideText(rawText);
+  if (!compact) return null;
+
+  const patterns = [
+    /Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80}?)\s+(?:Appears In|Illustration|FEH:|Related Guides)/i,
+    /Voice Actor and Illustrator Information[\s\S]{0,220}?Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = compact.match(pattern);
+    const candidate = match?.[1]?.replace(/\s+/g, " ").trim();
+    if (candidate && !/^information$/i.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function deriveSpecialFromRawText(rawText?: string) {
+  const compact = normalizeGuideText(rawText);
+  if (!compact) return null;
+
+  const patterns = [
+    /Skills at 5★[\s\S]{0,750}?\b([A-Z][A-Za-z0-9'’+./\- ]{1,60})\s+Cooldown Count\s*=\s*\d+/i,
+    /Specials\s+Skill Name\s+Effect\s+Learned At\s+([A-Z][A-Za-z0-9'’+./\- ]{1,60})\s*\(Cooldown Count\s*=\s*\d+\)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = compact.match(pattern);
+    const candidate = match?.[1]?.replace(/\s+/g, " ").trim();
+    if (!candidate) continue;
+    if (/^(skills?|specials?|cooldown|count|effect|learned|at)$/i.test(candidate)) continue;
+    return candidate;
+  }
+
+  return null;
+}
+
+function SkillValueWithTooltip({
+  skillName,
+  description,
+}: {
+  skillName: string;
+  description: string | null;
+}) {
+  if (!skillName || skillName.trim() === "-") {
+    return <span>{skillName || "-"}</span>;
+  }
+
+  return (
+    <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
+      <span
+        tabIndex={0}
+        className="inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-1.5 py-0.5 text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
+      >
+        <span className="truncate">{skillName}</span>
+        {description ? <span className="text-[10px] text-indigo-300">ⓘ</span> : null}
+      </span>
+
+      {description ? (
+        <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(34rem,82vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-3 text-xs leading-relaxed text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block group-focus-within:block">
+          {description}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function buildKeyLabel(key: string) {
+  const labels: Record<string, string> = {
+    weapon: "Weapon",
+    assist: "Assist",
+    special: "Special",
+    emblem: "Emblem",
+    passive_a: "Passive A",
+    passive_b: "Passive B",
+    passive_c: "Passive C",
+    sacred_seal: "Sacred Seal",
+    attuned: "Attuned",
+  };
+
+  return labels[key] || key.replaceAll("_", " ");
+}
 
 function normalizeGuideText(raw?: string | null) {
   return (raw || "")
@@ -340,7 +656,40 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
       : backgroundOptions[0] || defaultBackgroundName;
 
   const recommendedBuild = unitFile?.recommended_build || {};
-  const buildEntries = Object.entries(recommendedBuild).filter(([, value]) => value && value.trim());
+  const baseSpecial = (recommendedBuild.special || "").trim();
+  const derivedSpecial = !baseSpecial || baseSpecial === "-" ? deriveSpecialFromRawText(unitFile?.raw_text_data) : null;
+  const effectiveBuild: Record<string, string> = {
+    ...recommendedBuild,
+    ...(derivedSpecial ? { special: derivedSpecial } : {}),
+  };
+
+  const inheritSourceMap = await loadInheritableSkillSources();
+  const buildEntriesDetailed: BuildEntryDetail[] = await Promise.all(
+    BUILD_KEY_ORDER.map(async (key) => {
+      const value = (effectiveBuild[key] || "").trim();
+      if (!value || value === "-") return null;
+
+      const description =
+        key === "weapon" || key === "special"
+          ? await findSkillDescription(value, key as SkillHint, unitFile?.raw_text_data)
+          : null;
+
+      const inheritSources = (inheritSourceMap.get(normalizeSkillKey(value)) || [])
+        .filter((sourceName) => sourceName !== hero.name)
+        .slice(0, 8);
+
+      return {
+        key,
+        value,
+        description,
+        inheritSources,
+        isDerivedSpecial: key === "special" && Boolean(derivedSpecial),
+      } as BuildEntryDetail;
+    })
+  ).then((entries) => entries.filter((entry): entry is BuildEntryDetail => Boolean(entry)));
+
+  const isSpecialMissing = !buildEntriesDetailed.some((entry) => entry.key === "special");
+  const artistName = extractIllustratorName(unitFile?.raw_text_data);
   const highlights = buildGuideHighlights(unitFile?.raw_text_data);
   const hasAnyHighlight =
     highlights.role.length ||
@@ -381,15 +730,46 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
         </div>
 
         <section className="mt-6 grid gap-6 md:grid-cols-[minmax(360px,420px)_1fr]">
-          <FullbodyCarousel
-            heroName={hero.name}
-            heroSlug={hero.hero_slug}
-            poses={poses}
-            quotes={heroQuotes}
-            initialBackgroundName={initialBackgroundName}
-            backgroundOptions={backgroundOptions}
-            persistBackgroundPreference={Boolean(heroFromDb)}
-          />
+          <div className="space-y-3">
+            <FullbodyCarousel
+              heroName={hero.name}
+              heroSlug={hero.hero_slug}
+              poses={poses}
+              quotes={heroQuotes}
+              initialBackgroundName={initialBackgroundName}
+              backgroundOptions={backgroundOptions}
+              persistBackgroundPreference={Boolean(heroFromDb)}
+            />
+
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-300">
+              <span className="text-zinc-400">Banner art illustrator:</span>{" "}
+              {artistName ? (
+                <>
+                  {artistName}{" "}
+                  <a
+                    href={ARTIST_REFERENCE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-300 hover:underline"
+                  >
+                    (artist list)
+                  </a>
+                </>
+              ) : (
+                <>
+                  Unknown{" "}
+                  <a
+                    href={ARTIST_REFERENCE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-300 hover:underline"
+                  >
+                    (check artist list)
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
 
           <div className="space-y-4">
             <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
@@ -450,16 +830,43 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
               </div>
             ) : null}
 
-            {buildEntries.length ? (
+            {buildEntriesDetailed.length ? (
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
                 <h2 className="mb-2 text-base font-semibold">Recommended Build</h2>
-                <div className="grid gap-1 md:grid-cols-2">
-                  {buildEntries.map(([key, value]) => (
-                    <p key={key}>
-                      <span className="text-zinc-400">{key.replaceAll("_", " ")}:</span> {value}
-                    </p>
+                <p className="mb-2 text-xs text-zinc-400">Hover Weapon / Special for effect descriptions.</p>
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  {buildEntriesDetailed.map((entry) => (
+                    <div key={entry.key} className="rounded-md border border-zinc-800 bg-zinc-900/45 p-2">
+                      <p>
+                        <span className="text-zinc-400">{buildKeyLabel(entry.key)}:</span>{" "}
+                        {entry.key === "weapon" || entry.key === "special" ? (
+                          <SkillValueWithTooltip skillName={entry.value} description={entry.description} />
+                        ) : (
+                          <span>{entry.value}</span>
+                        )}
+                      </p>
+
+                      {entry.isDerivedSpecial ? (
+                        <p className="mt-1 text-[11px] text-amber-300">
+                          Filled from profile text because special was missing in structured build data.
+                        </p>
+                      ) : null}
+
+                      {entry.inheritSources.length ? (
+                        <p className="mt-1 text-[11px] text-cyan-200">
+                          Inherit from: {entry.inheritSources.join(", ")}
+                        </p>
+                      ) : null}
+                    </div>
                   ))}
                 </div>
+
+                {isSpecialMissing ? (
+                  <p className="mt-3 rounded-md border border-amber-800/80 bg-amber-950/25 px-2 py-1.5 text-xs text-amber-200">
+                    This hero is currently missing a detected Special/Ult in available data.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 

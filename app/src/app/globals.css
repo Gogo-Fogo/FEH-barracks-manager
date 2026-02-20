@@ -57,3 +57,8 @@ body {
   box-shadow: none !important;
   filter: none !important;
 }
+
+/* Tooltips should stay anchored and readable (no parent hover transform jitter) */
+.group.relative {
+  transform: none !important;
+}
