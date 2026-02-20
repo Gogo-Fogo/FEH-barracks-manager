@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type FullbodyCarouselProps = {
   heroName: string;
@@ -39,6 +39,19 @@ export function FullbodyCarousel({
   const [isExpanded, setIsExpanded] = useState(false);
   const initialBackgroundIndex = Math.max(0, safeBackgrounds.indexOf(initialBackgroundName || ""));
   const [backgroundIndex, setBackgroundIndex] = useState(initialBackgroundIndex);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  if (!isHydrated) {
+    return (
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="h-[420px] animate-pulse rounded-lg border border-zinc-800 bg-zinc-900/60" />
+      </div>
+    );
+  }
 
   const currentPose = safePoses[index] || safePoses[0];
   const normalizedQuoteIndex = safeQuotes.length
