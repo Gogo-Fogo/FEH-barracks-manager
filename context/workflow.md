@@ -207,6 +207,64 @@ Implementation notes (current repo):
   2. Treat non-zero `missing_from_index` as data drift that must be reviewed before release/import validation.
   3. Keep Scout as primary canonical source, but do not let temporary index drift hide valid unit files from app catalog import.
 
+### Incident Note (2026-02-20): Hero Art Missing Even When Fandom URL Exists
+- Symptom:
+  - Some heroes (example: Abel / Adrift Corrin) showed missing fullbody/headshot art in browser.
+  - Direct endpoint checks showed valid Fandom URLs, but browser rendering was inconsistent when endpoint returned redirects.
+- Confirmed cause:
+  - Art API fallback returned external `302` redirects (`static.wikia.nocookie.net` / other remote sources).
+  - Browser/runtime behavior can fail or be inconsistent with cross-origin/hotlink redirect chains.
+- Fix applied:
+  - `app/src/app/api/fullbody/[heroSlug]/route.ts`
+  - `app/src/app/api/headshots/[heroSlug]/route.ts`
+  - Both routes now proxy remote image bytes server-side and return same-origin `200 image/*` responses when local files are missing.
+- Required fallback order (do not change):
+  1. local fandom asset in `db/unit_assets/fandom/...`
+  2. remote Fandom source via resolver (`loadFandom*UrlBySlug`)
+  3. legacy unit `img_url`
+  4. SVG placeholder
+- Verification commands (post-change):
+  - Header check:
+    - `curl -I "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
+    - `curl -I "http://localhost:3022/api/headshots/<heroSlug>"`
+  - Content check (must end as `200 image/*`):
+    - `curl -L -o NUL -w "%{http_code} %{content_type} %{size_download}\n" "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
+    - `curl -L -o NUL -w "%{http_code} %{content_type} %{size_download}\n" "http://localhost:3022/api/headshots/<heroSlug>"`
+
+### Incident Note (2026-02-20): Hydration Mismatch on Hero Detail
+- Symptom:
+  - React hydration mismatch on `/heroes/[heroSlug]` around `FullbodyCarousel`.
+- Confirmed causes/fixes:
+  1. Non-deterministic initial state (`Math.random`) in client component state init.
+  2. Additional hydration hardening needed for art panel render path.
+- Guardrails:
+  - Never use `Math.random()`, `Date.now()`, or locale-sensitive dynamic formatting in SSR-visible initial render output.
+  - Keep initial client state deterministic.
+  - If hydration guard is used, keep hook ordering valid (declare hooks before conditional return).
+  - Run build after any hero detail/client component edit:
+    - `npm --prefix app run build`
+
+### Alias / Missing-Hero Triage Guardrail (Luke Example)
+- If a hero is reported missing (e.g., "Luke Rowdy Squire"), verify in this order:
+  1. `db/index.json` contains canonical row.
+  2. `db/units/` contains matching slug file.
+  3. `db/hero_aliases.json` maps alias -> canonical slug.
+- Current known state example:
+  - `Luke Rowdy Squire` is in `unresolved_aliases` (not canonicalized yet), and not present in current `db/index.json`/`db/units`.
+- Use Windows-safe lookup commands (do not rely on `grep`):
+  - `Get-ChildItem -Name db/units | Where-Object { $_ -match 'luke' }`
+  - `npm run validate:hero-aliases`
+
+### Context-Safety Guardrail (`db/units` is large)
+- Never load the entire `db/` or `db/units/` folder into AI context.
+- For hero lookups, always locate candidate filenames first with terminal filtering, then read only specific file(s).
+- Windows-safe examples:
+  - `Get-ChildItem -Name db/units | Where-Object { $_ -match 'byleth' }`
+  - `Get-ChildItem -Name db/units | Where-Object { $_ -match 'corrin' }`
+- After match, read only targeted files, e.g.:
+  - `db/units/adrift_corrin__f_.json`
+  - never batch-read all unit JSON files during triage.
+
 ## Asset Data Conventions (Token-Efficient)
 - Keep text/metadata retrieval separate from binary images.
 - Primary AI retrieval target should remain:

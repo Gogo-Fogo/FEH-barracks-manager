@@ -101,3 +101,19 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [x] Configure Supabase Auth URL settings for deployed Vercel domain (site URL + reset/login redirects)
 - [x] Add weekly GitHub Actions workflow file for hero import (`.github/workflows/weekly-hero-import.yml`)
 - [ ] Add deterministic rarity ingestion source (prefer explicit field/source manifest over weak text heuristics)
+
+---
+
+## Incident Hardening (2026-02-20)
+- [ ] Add post-change art endpoint smoke test to release checklist:
+  - `curl -I "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
+  - `curl -I "http://localhost:3022/api/headshots/<heroSlug>"`
+  - `curl -L -o NUL -w "%{http_code} %{content_type} %{size_download}\n" ...` should end as `200 image/*`
+- [ ] Add hydration safety review for hero detail client components:
+  - no `Math.random()` / `Date.now()` / locale-nondeterministic SSR-visible initial render values
+  - preserve valid hook ordering when adding hydration guards
+- [ ] Add weekly alias triage step in maintenance:
+  - run `npm run validate:hero-aliases`
+  - review `db/hero_aliases.json -> unresolved_aliases`
+  - promote confident mappings into `entries[]`
+- [ ] Resolve current unresolved aliases backlog (16 entries, including `Luke Rowdy Squire`)
