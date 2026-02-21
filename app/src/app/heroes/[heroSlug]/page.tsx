@@ -44,7 +44,16 @@ type BuildEntryDetail = {
   isDerivedSpecial: boolean;
 };
 
-type SkillHint = "weapon" | "special";
+type SkillHint =
+  | "weapon"
+  | "assist"
+  | "special"
+  | "emblem"
+  | "passive_a"
+  | "passive_b"
+  | "passive_c"
+  | "sacred_seal"
+  | "attuned";
 
 type UnitSnapshot = {
   name: string;
@@ -119,21 +128,54 @@ function extractSkillDescriptionFromRaw(rawText: string | undefined, skillName: 
             "i"
           ),
         ]
-      : [
-          new RegExp(
-            `${escaped}\\s*\\(Cooldown Count\\s*=\\s*\\d+\\)\\s*([\\s\\S]{10,900}?)(?=\\s+[345]\\u2605|\\s+[A-Za-z0-9'+./\\- ]+\\s*\\(Cooldown Count\\s*=|\\s+Passives\\s+Skill Name|\\s+[A-Za-z0-9'+./\\- ]+\\s+as a Source Hero|\\s+How to Get|$)`,
-            "i"
-          ),
-          new RegExp(
-            `${escaped}\\s+Cooldown Count\\s*=\\s*\\d+\\s*([\\s\\S]{10,900}?)(?=\\s+[A-Za-z0-9'+./\\- ]+\\s+(?:At start of combat|Inflicts|After combat|Boosts|Treats)|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best IVs|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best Builds|$)`,
-            "i"
-          ),
-        ];
+      : hint === "special"
+        ? [
+            new RegExp(
+              `${escaped}\\s*\\(Cooldown Count\\s*=\\s*\\d+\\)\\s*([\\s\\S]{10,900}?)(?=\\s+[345]\\u2605|\\s+[A-Za-z0-9'+./\\- ]+\\s*\\(Cooldown Count\\s*=|\\s+Passives\\s+Skill Name|\\s+[A-Za-z0-9'+./\\- ]+\\s+as a Source Hero|\\s+How to Get|$)`,
+              "i"
+            ),
+            new RegExp(
+              `${escaped}\\s+Cooldown Count\\s*=\\s*\\d+\\s*([\\s\\S]{10,900}?)(?=\\s+[A-Za-z0-9'+./\\- ]+\\s+(?:At start of combat|Inflicts|After combat|Boosts|Treats)|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best IVs|\\s+[A-Za-z0-9'+./\\- ]+\\s+Best Builds|$)`,
+              "i"
+            ),
+          ]
+        : [
+            new RegExp(
+              `${escaped}\\s+(?:Range:\\s*\\d+\\s+)?(?:Might:\\s*\\d+\\s+)?([\\s\\S]{8,900}?)(?=\\s+[345]\\u2605|\\s+[A-Za-z0-9'+./\\- ]{2,90}\\s+(?:Might:|Range:|Cooldown Count|Best IVs|Best Builds|How to Get|Stats|Roles)|$)`,
+              "i"
+            ),
+          ];
 
   for (const pattern of patterns) {
     const match = compact.match(pattern);
     const cleaned = cleanDescription(match?.[1]);
     if (cleaned) return cleaned;
+  }
+
+  // Fallback for assists/passives/seals/emblem/attuned skills.
+  const fallbackMatch = compact.match(new RegExp(`${escaped}\\s+([\\s\\S]{10,460})`, "i"));
+  if (fallbackMatch?.[1]) {
+    let snippet = fallbackMatch[1]
+      .replace(/^Might:\s*\d+\s*/i, "")
+      .replace(/^Range:\s*\d+\s*/i, "")
+      .replace(/^Cooldown Count\s*=\s*\d+\s*/i, "")
+      .replace(/^SP:\s*\d+\s*/i, "")
+      .replace(/\s+[345]★[\s\S]*$/i, "")
+      .replace(
+        /\s+[A-Za-z0-9'+./\- ]{2,90}\s+(?:Might:|Range:|Cooldown Count|Best IVs|Best Builds|How to Get|Stats|Roles)[\s\S]*$/i,
+        ""
+      )
+      .trim();
+
+    const effectStart = snippet.search(
+      /\b(If|Inflicts|Grants|Restores|Boosts|Treats|At start of|During combat|After combat|Effective against|Moves|Push|Target|Unit can|Enables|Neutralizes|Accelerates|Deals)\b/i
+    );
+    if (effectStart > 0) {
+      snippet = snippet.slice(effectStart).trim();
+    }
+
+    const cleanedFallback = cleanDescription(snippet);
+    if (cleanedFallback) return cleanedFallback;
   }
 
   return null;
@@ -341,21 +383,24 @@ function SkillValueWithTooltip({
     return <span>{skillName || "-"}</span>;
   }
 
+  const tooltipText =
+    description || "Description not yet extracted from current scraped skill text.";
+
   return (
     <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
       <span
         tabIndex={0}
-        className="inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-1.5 py-0.5 text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
+        title={tooltipText}
+        aria-label={`${skillName}: ${tooltipText}`}
+        className="inline-flex max-w-full cursor-help items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-1.5 py-0.5 text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         <span className="truncate">{skillName}</span>
-        {description ? <span className="text-[10px] text-indigo-300">ⓘ</span> : null}
+        <span className="text-[10px] text-indigo-300">ⓘ</span>
       </span>
 
-      {description ? (
-        <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(34rem,82vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-3 text-xs leading-relaxed text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block group-focus-within:block">
-          {description}
-        </span>
-      ) : null}
+      <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(34rem,82vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-3 text-xs leading-relaxed text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block group-focus-within:block">
+        {tooltipText}
+      </span>
     </span>
   );
 }
@@ -728,9 +773,7 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
       if (!value || value === "-") return null;
 
       const description =
-        key === "weapon" || key === "special"
-          ? await findSkillDescription(value, key as SkillHint, unitFile?.raw_text_data)
-          : null;
+        await findSkillDescription(value, key as SkillHint, unitFile?.raw_text_data);
 
       const inheritSources = (inheritSourceMap.get(normalizeSkillKey(value)) || [])
         .filter((sourceName) => sourceName !== hero.name)
@@ -891,18 +934,14 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
             {buildEntriesDetailed.length ? (
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
                 <h2 className="mb-2 text-base font-semibold">Recommended Build</h2>
-                <p className="mb-2 text-xs text-zinc-400">Hover Weapon / Special for effect descriptions.</p>
+                <p className="mb-2 text-xs text-zinc-400">Hover any skill for effect descriptions.</p>
 
                 <div className="grid gap-2 md:grid-cols-2">
                   {buildEntriesDetailed.map((entry) => (
                     <div key={entry.key} className="rounded-md border border-zinc-800 bg-zinc-900/45 p-2">
                       <p>
                         <span className="text-zinc-400">{buildKeyLabel(entry.key)}:</span>{" "}
-                        {entry.key === "weapon" || entry.key === "special" ? (
-                          <SkillValueWithTooltip skillName={entry.value} description={entry.description} />
-                        ) : (
-                          <span>{entry.value}</span>
-                        )}
+                        <SkillValueWithTooltip skillName={entry.value} description={entry.description} />
                       </p>
 
                       {entry.isDerivedSpecial ? (
