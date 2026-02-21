@@ -2,9 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { HeroBrowserFilters } from "@/components/hero-browser-filters";
+import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
+import { buildAliasTermsBySlug, normalizeHeroSearchText, normalizeHeroSlugSearchText } from "@/lib/hero-typeahead";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,6 +53,7 @@ function normalize(value: string | null | undefined) {
 }
 
 function toNum(value: string | undefined) {
+  if (!value || !value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -89,7 +93,8 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const weapon = (params.weapon || "").trim();
   const move = (params.move || "").trim();
   const tag = (params.tag || "").trim();
-  const minTier = toNum(params.minTier);
+  const minTierRaw = (params.minTier || "").trim();
+  const minTier = toNum(minTierRaw);
   const favoriteOnly = params.favorite === "1";
   const sort = (params.sort || "tier_desc").trim();
 
@@ -173,9 +178,31 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
     };
   });
 
+  const typeaheadHeroes = libraryAll.map((hero) => ({
+    hero_slug: hero.hero_slug,
+    name: hero.hero_name,
+    weapon: hero.weapon,
+    move: hero.move,
+    tier: hero.tier,
+  }));
+  const heroAliasOptions = await listHeroAliasOptionsBySlug(
+    new Set(typeaheadHeroes.map((hero) => hero.hero_slug))
+  );
+  const aliasTermsBySlug = buildAliasTermsBySlug(heroAliasOptions);
+  const normalizedQuery = normalizeHeroSearchText(q);
+  const normalizedSlugQuery = normalizeHeroSlugSearchText(q);
+
   const filtered = libraryAll
     .filter((row) => {
-      if (q && !normalize(row.hero_name).includes(normalize(q))) return false;
+      if (q) {
+        const normalizedName = normalizeHeroSearchText(row.hero_name);
+        const normalizedSlug = row.hero_slug.toLowerCase();
+        const aliasTerms = aliasTermsBySlug.get(row.hero_slug) || [];
+        const matchesName = normalizedQuery ? normalizedName.includes(normalizedQuery) : false;
+        const matchesSlug = normalizedSlugQuery ? normalizedSlug.includes(normalizedSlugQuery) : false;
+        const matchesAlias = normalizedQuery ? aliasTerms.some((alias) => alias.includes(normalizedQuery)) : false;
+        if (!matchesName && !matchesSlug && !matchesAlias) return false;
+      }
       if (weapon && row.weapon !== weapon) return false;
       if (move && row.move !== move) return false;
       if (tag && row.tag !== tag) return false;
@@ -222,67 +249,20 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
           </Link>
         </header>
 
-        <form className="mt-6 grid gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-4 xl:grid-cols-8">
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Search name"
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm xl:col-span-2"
-          />
-
-          <select name="weapon" defaultValue={weapon} className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
-            <option value="">All weapons</option>
-            {weaponOptions.map((w) => (
-              <option key={w} value={w}>
-                {w}
-              </option>
-            ))}
-          </select>
-
-          <select name="move" defaultValue={move} className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
-            <option value="">All moves</option>
-            {moveOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-
-          <select name="tag" defaultValue={tag} className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
-            <option value="">All tags</option>
-            {tagOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-
-          <input
-            name="minTier"
-            type="number"
-            step="0.1"
-            min={0}
-            max={10}
-            defaultValue={minTier ?? ""}
-            placeholder="Min tier"
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          />
-
-          <select name="sort" defaultValue={sort} className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
-            <option value="tier_desc">Tier: High → Low (default)</option>
-            <option value="name_asc">Name: A → Z</option>
-            <option value="updated_desc">Recently updated</option>
-          </select>
-
-          <label className="flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
-            <input type="checkbox" name="favorite" value="1" defaultChecked={favoriteOnly} />
-            Favorites only
-          </label>
-
-          <button type="submit" className="rounded bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-400">
-            Apply filters
-          </button>
-        </form>
+        <HeroBrowserFilters
+          heroes={typeaheadHeroes}
+          aliasOptions={heroAliasOptions}
+          weaponOptions={weaponOptions}
+          moveOptions={moveOptions}
+          tagOptions={tagOptions}
+          initialQuery={q}
+          initialWeapon={weapon}
+          initialMove={move}
+          initialTag={tag}
+          initialMinTier={minTierRaw}
+          initialFavoriteOnly={favoriteOnly}
+          initialSort={sort}
+        />
 
         <p className="mt-4 text-xs text-zinc-400">
           Showing {filtered.length} of {libraryAll.length} entries.
