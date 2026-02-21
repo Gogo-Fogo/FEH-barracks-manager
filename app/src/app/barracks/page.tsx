@@ -587,15 +587,6 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                   <form key={team.id} action={updateUserTeam} className="rounded-xl border border-zinc-700 bg-zinc-900/70 p-3">
                     <input type="hidden" name="id" value={team.id} readOnly />
                     <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-                    {slots.map((slotValue, slotIndex) => (
-                      <input
-                        key={`${team.id}_hidden_slot_${slotIndex + 1}`}
-                        type="hidden"
-                        name={`slot_${slotIndex + 1}`}
-                        value={slotValue}
-                        readOnly
-                      />
-                    ))}
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <input
@@ -682,8 +673,8 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                           <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950/80 p-1">
                                             <button
                                               type="submit"
-                                              name={`slot_${index + 1}`}
-                                              value=""
+                                              name={`clear_slot_${index + 1}`}
+                                              value="1"
                                               className="mb-1 w-full rounded border border-rose-900/70 px-2 py-1 text-left text-[11px] text-rose-300 hover:bg-rose-950/50"
                                             >
                                               Remove from slot

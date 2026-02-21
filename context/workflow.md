@@ -348,6 +348,21 @@ Implementation notes (current repo):
   - Each slot row shows headshot image, hero label, and editable hero ID input.
   - Team save/delete flows remain unchanged.
 
+### Incident Follow-up (2026-02-21): Team slot edits not persisting / remove no-op
+- Symptom:
+  - Typed hero changes in saved team slots appeared to do nothing after save.
+  - "Remove from slot" sometimes had no effect.
+- Confirmed causes:
+  1. Saved-team form still included hidden `slot_*` fields that could override edited values.
+  2. Remove action posted empty `slot_*` while another non-empty slot field could still win.
+- Fix applied:
+  - Removed conflicting hidden `slot_*` inputs from saved-team form (`app/src/app/barracks/page.tsx`).
+  - Switched remove action to explicit clear sentinel (`clear_slot_<n>=1`) in UI.
+  - Updated server slot parser to honor clear sentinel before reading slot value (`app/src/app/barracks/actions.ts`).
+- Verification:
+  - `npm --prefix app run build`
+  - Local route responds on start (`http://localhost:3022/barracks` -> auth redirect when logged out).
+
 ### Local Smoke-Test Server (Quick Run)
 - When validating hero pages quickly on this machine, use:
   - `npm --prefix app run start -- --port 3022`

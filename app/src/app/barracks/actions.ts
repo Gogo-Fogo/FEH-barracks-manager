@@ -270,6 +270,12 @@ function latestFieldValue(formData: FormData, field: string) {
   return "";
 }
 
+function resolveSlotFieldValue(formData: FormData, slotNumber: number) {
+  const clearFlag = latestFieldValue(formData, `clear_slot_${slotNumber}`);
+  if (clearFlag === "1") return "";
+  return latestFieldValue(formData, `slot_${slotNumber}`);
+}
+
 function normalizeTeamSlots(raw: string[]) {
   const seen = new Set<string>();
   const slots: string[] = [];
@@ -286,8 +292,8 @@ function normalizeTeamSlots(raw: string[]) {
 export async function createUserTeam(formData: FormData) {
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const parsedSlots = ["slot_1", "slot_2", "slot_3", "slot_4"]
-    .map((field) => latestFieldValue(formData, field))
+  const parsedSlots = [1, 2, 3, 4]
+    .map((slotNumber) => resolveSlotFieldValue(formData, slotNumber))
     .filter(Boolean)
     .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
@@ -319,8 +325,8 @@ export async function updateUserTeam(formData: FormData) {
   const id = requireText(formData.get("id"), "Team id");
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const parsedSlots = ["slot_1", "slot_2", "slot_3", "slot_4"]
-    .map((field) => latestFieldValue(formData, field))
+  const parsedSlots = [1, 2, 3, 4]
+    .map((slotNumber) => resolveSlotFieldValue(formData, slotNumber))
     .filter(Boolean)
     .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
