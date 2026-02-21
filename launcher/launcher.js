@@ -275,13 +275,37 @@ async function ensureEnvLocalTemplate() {
 function parseRuntimeConfig(raw) {
   try {
     const parsed = JSON.parse(String(raw || ""));
-    const supabaseUrl = String(parsed?.supabaseUrl || "").trim();
-    const supabaseAnonKey = String(parsed?.supabaseAnonKey || "").trim();
+    const supabaseUrl = String(
+      parsed?.supabaseUrl || parsed?.NEXT_PUBLIC_SUPABASE_URL || ""
+    ).trim();
+    const supabaseAnonKey = String(
+      parsed?.supabaseAnonKey || parsed?.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    ).trim();
     if (!supabaseUrl || !supabaseAnonKey) return null;
     return { supabaseUrl, supabaseAnonKey };
   } catch {
     return null;
   }
+}
+
+function parseEnvValue(envContent, key) {
+  const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.*)\\s*$`, "m");
+  const match = String(envContent || "").match(pattern);
+  if (!match) return "";
+  const value = String(match[1] || "").trim();
+  return value.replace(/^"|"$/g, "").replace(/^'|'$/g, "").trim();
+}
+
+async function readSupabaseEnvState() {
+  if (!fs.existsSync(ENV_LOCAL_PATH)) {
+    return { exists: false, configured: false, url: "", anonKey: "" };
+  }
+
+  const raw = await fsp.readFile(ENV_LOCAL_PATH, "utf8");
+  const url = parseEnvValue(raw, "NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = parseEnvValue(raw, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const configured = Boolean(url && anonKey);
+  return { exists: true, configured, url, anonKey };
 }
 
 async function applyRuntimeConfigFromRelease(release, tempDir) {
@@ -396,31 +420,34 @@ async function launchApp() {
     return "not-installed";
   }
 
-  if (!fs.existsSync(ENV_LOCAL_PATH)) {
+  let envState = await readSupabaseEnvState();
+
+  if (!envState.configured) {
     const release = await fetchLatestRelease();
     const tempDir = path.join(INSTALL_ROOT, "_tmp");
     ensureDirSync(tempDir);
     const configuredFromRelease = await applyRuntimeConfigFromRelease(release, tempDir).catch(() => false);
-    if (configuredFromRelease) {
-      await fsp.rm(tempDir, { recursive: true, force: true });
-    }
+    await fsp.rm(tempDir, { recursive: true, force: true });
 
-    if (!fs.existsSync(ENV_LOCAL_PATH)) {
-      if (fs.existsSync(ENV_EXAMPLE_PATH)) {
+    envState = await readSupabaseEnvState();
+    if (!envState.configured) {
+      if (!envState.exists && fs.existsSync(ENV_EXAMPLE_PATH)) {
         await fsp.copyFile(ENV_EXAMPLE_PATH, ENV_LOCAL_PATH);
         console.log("\nCreated app/.env.local from .env.example");
-        console.log("Please fill Supabase values in:");
-        console.log(`  ${ENV_LOCAL_PATH}`);
-        await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
-        return "needs-env";
+      } else if (!envState.exists) {
+        await ensureEnvLocalTemplate();
+        console.log("\nCreated app/.env.local template (no .env.example found in bundle).");
       }
 
-      await ensureEnvLocalTemplate();
-      console.log("\nCreated app/.env.local template (no .env.example found in bundle).");
+      console.log("\nSupabase not configured yet.");
       console.log("Please fill Supabase values in:");
       console.log(`  ${ENV_LOCAL_PATH}`);
       await runCommand("notepad", [ENV_LOCAL_PATH], APP_PATH).catch(() => {});
       return "needs-env";
+    }
+
+    if (configuredFromRelease) {
+      console.log("Supabase configuration found and applied from release runtime config.");
     }
   }
 
