@@ -16,9 +16,14 @@ type HeroBrowserFiltersProps = {
   aliasOptions?: HeroTypeaheadAliasOption[];
   weaponOptions: string[];
   moveOptions: string[];
+  tagOptions: string[];
   initialQuery: string;
   initialWeapon: string;
   initialMove: string;
+  initialTag: string;
+  initialMinTier: string;
+  initialFavoriteOnly: boolean;
+  initialSort: string;
   ownedHeroSlugs?: string[];
 };
 
@@ -27,9 +32,14 @@ export function HeroBrowserFilters({
   aliasOptions = [],
   weaponOptions,
   moveOptions,
+  tagOptions,
   initialQuery,
   initialWeapon,
   initialMove,
+  initialTag,
+  initialMinTier,
+  initialFavoriteOnly,
+  initialSort,
   ownedHeroSlugs = [],
 }: HeroBrowserFiltersProps) {
   const [query, setQuery] = useState(initialQuery);
@@ -53,7 +63,81 @@ export function HeroBrowserFilters({
   );
 
   return (
-    <form method="GET" className="mt-6 grid gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-4">
+    <form method="GET" className="mt-6 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
+        <select
+          name="weapon"
+          defaultValue={initialWeapon}
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+        >
+          <option value="">All weapons</option>
+          {weaponOptions.map((w) => (
+            <option key={w} value={w || ""}>
+              {w}
+            </option>
+          ))}
+        </select>
+
+        <select
+          name="move"
+          defaultValue={initialMove}
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+        >
+          <option value="">All move types</option>
+          {moveOptions.map((m) => (
+            <option key={m} value={m || ""}>
+              {m}
+            </option>
+          ))}
+        </select>
+
+        <select
+          name="tag"
+          defaultValue={initialTag}
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+        >
+          <option value="">All tags</option>
+          {tagOptions.map((t) => (
+            <option key={t} value={t || ""}>
+              {t}
+            </option>
+          ))}
+        </select>
+
+        <input
+          name="minTier"
+          type="number"
+          step="0.1"
+          min={0}
+          max={10}
+          defaultValue={initialMinTier}
+          placeholder="Min tier"
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+        />
+
+        <select
+          name="sort"
+          defaultValue={initialSort}
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+        >
+          <option value="tier_desc">Tier: High → Low (default)</option>
+          <option value="name_asc">Name: A → Z</option>
+          <option value="updated_desc">Recently updated</option>
+        </select>
+
+        <label className="flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm">
+          <input type="checkbox" name="favorite" value="1" defaultChecked={initialFavoriteOnly} />
+          Favorites only
+        </label>
+
+        <button
+          type="submit"
+          className="rounded bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-400"
+        >
+          Apply filters
+        </button>
+      </div>
+
       <div className="relative">
         <input
           name="q"
@@ -125,39 +209,6 @@ export function HeroBrowserFilters({
           </div>
         ) : null}
       </div>
-
-      <select
-        name="weapon"
-        defaultValue={initialWeapon}
-        className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-      >
-        <option value="">All weapons</option>
-        {weaponOptions.map((w) => (
-          <option key={w} value={w || ""}>
-            {w}
-          </option>
-        ))}
-      </select>
-
-      <select
-        name="move"
-        defaultValue={initialMove}
-        className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-      >
-        <option value="">All move types</option>
-        {moveOptions.map((m) => (
-          <option key={m} value={m || ""}>
-            {m}
-          </option>
-        ))}
-      </select>
-
-      <button
-        type="submit"
-        className="rounded bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-400"
-      >
-        Apply filters
-      </button>
     </form>
   );
 }

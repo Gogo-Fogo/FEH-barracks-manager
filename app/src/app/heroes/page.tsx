@@ -18,6 +18,10 @@ type HeroesPageProps = {
     q?: string;
     weapon?: string;
     move?: string;
+    tag?: string;
+    minTier?: string;
+    favorite?: string;
+    sort?: string;
     notice?: string;
     tone?: string;
   }>;
@@ -66,6 +70,12 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   const q = (params.q || "").trim();
   const weapon = (params.weapon || "").trim();
   const move = (params.move || "").trim();
+  const tag = (params.tag || "").trim();
+  const minTierRaw = (params.minTier || "").trim();
+  const minTierParsed = Number(minTierRaw);
+  const minTier = Number.isFinite(minTierParsed) ? minTierParsed : null;
+  const favoriteOnly = params.favorite === "1";
+  const sort = (params.sort || "tier_desc").trim();
   const notice = (params.notice || "").trim();
   const tone = (params.tone || "success").trim();
 
@@ -78,32 +88,44 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     redirect("/login");
   }
 
-  const currentPath = `/heroes?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&move=${encodeURIComponent(move)}`;
+  const currentQuery = new URLSearchParams();
+  if (q) currentQuery.set("q", q);
+  if (weapon) currentQuery.set("weapon", weapon);
+  if (move) currentQuery.set("move", move);
+  if (tag) currentQuery.set("tag", tag);
+  if (minTierRaw) currentQuery.set("minTier", minTierRaw);
+  if (favoriteOnly) currentQuery.set("favorite", "1");
+  if (sort && sort !== "tier_desc") currentQuery.set("sort", sort);
+  const currentPath = `/heroes${currentQuery.toString() ? `?${currentQuery.toString()}` : ""}`;
   const localRarityBySlug = await loadLocalRarityBySlug();
 
   const buildHeroesQueryWithRarity = () => {
     let query = supabase
       .from("heroes")
-      .select("hero_slug,name,rarity,weapon,move,tier")
+      .select("hero_slug,name,rarity,weapon,move,tier,tag,updated_at")
       .order("hero_slug", { ascending: true })
       .range(0, HERO_QUERY_MAX_ROWS - 1);
 
     if (q) query = query.ilike("name", `%${q}%`);
     if (weapon) query = query.eq("weapon", weapon);
     if (move) query = query.eq("move", move);
+    if (tag) query = query.eq("tag", tag);
+    if (minTier != null) query = query.gte("tier", minTier);
     return query;
   };
 
   const buildHeroesQueryWithoutRarity = () => {
     let query = supabase
       .from("heroes")
-      .select("hero_slug,name,weapon,move,tier")
+      .select("hero_slug,name,weapon,move,tier,tag,updated_at")
       .order("hero_slug", { ascending: true })
       .range(0, HERO_QUERY_MAX_ROWS - 1);
 
     if (q) query = query.ilike("name", `%${q}%`);
     if (weapon) query = query.eq("weapon", weapon);
     if (move) query = query.eq("move", move);
+    if (tag) query = query.eq("tag", tag);
+    if (minTier != null) query = query.gte("tier", minTier);
     return query;
   };
 
@@ -115,6 +137,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     weapon: string | null;
     move: string | null;
     tier: number | null;
+    tag: string | null;
+    updated_at: string | null;
   }> = [];
 
   if (heroesResult.error?.message.includes("rarity")) {
@@ -126,6 +150,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,
+      tag: h.tag,
+      updated_at: h.updated_at,
     }));
   } else {
     heroRows = (heroesResult.data || []).map((h) => ({
@@ -135,6 +161,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       weapon: h.weapon,
       move: h.move,
       tier: h.tier,
+      tag: h.tag,
+      updated_at: h.updated_at,
     }));
   }
 
@@ -160,7 +188,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   if (q && aliasSlug) {
     const aliasResultWithRarity = await supabase
       .from("heroes")
-      .select("hero_slug,name,rarity,weapon,move,tier")
+      .select("hero_slug,name,rarity,weapon,move,tier,tag,updated_at")
       .eq("hero_slug", aliasSlug)
       .maybeSingle();
 
@@ -171,12 +199,14 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       weapon: string | null;
       move: string | null;
       tier: number | null;
+      tag: string | null;
+      updated_at: string | null;
     } | null = null;
 
     if (aliasResultWithRarity.error?.message.includes("rarity")) {
       const aliasFallback = await supabase
         .from("heroes")
-        .select("hero_slug,name,weapon,move,tier")
+        .select("hero_slug,name,weapon,move,tier,tag,updated_at")
         .eq("hero_slug", aliasSlug)
         .maybeSingle();
 
@@ -188,6 +218,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
           weapon: aliasFallback.data.weapon,
           move: aliasFallback.data.move,
           tier: aliasFallback.data.tier,
+          tag: aliasFallback.data.tag,
+          updated_at: aliasFallback.data.updated_at,
         };
       }
     } else if (aliasResultWithRarity.data) {
@@ -198,6 +230,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
         weapon: aliasResultWithRarity.data.weapon,
         move: aliasResultWithRarity.data.move,
         tier: aliasResultWithRarity.data.tier,
+        tag: aliasResultWithRarity.data.tag,
+        updated_at: aliasResultWithRarity.data.updated_at,
       };
     }
 
@@ -206,9 +240,10 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     }
   }
 
-  const [{ data: weapons }, { data: moves }, { data: favorites }, { data: barracks }] = await Promise.all([
+  const [{ data: weapons }, { data: moves }, { data: tags }, { data: favorites }, { data: barracks }] = await Promise.all([
     supabase.from("heroes").select("weapon").not("weapon", "is", null),
     supabase.from("heroes").select("move").not("move", "is", null),
+    supabase.from("heroes").select("tag").not("tag", "is", null),
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
     supabase.from("user_barracks").select("hero_slug").eq("user_id", user.id),
   ]);
@@ -219,18 +254,32 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   const moveOptions = Array.from(
     new Set((moves || []).map((r) => r.move).filter((value): value is string => Boolean(value?.trim())))
   ).sort((a, b) => a.localeCompare(b));
+  const tagOptions = Array.from(
+    new Set((tags || []).map((r) => r.tag).filter((value): value is string => Boolean(value?.trim())))
+  ).sort((a, b) => a.localeCompare(b));
   const dedupedHeroes = Array.from(
     new Map(heroRows.map((hero) => [hero.hero_slug, hero])).values()
   );
-  const heroesList = dedupedHeroes.sort((a, b) => {
-    if (a.hero_slug < b.hero_slug) return -1;
-    if (a.hero_slug > b.hero_slug) return 1;
-    return 0;
-  });
+  const favoriteSlugs = (favorites || []).map((f) => f.hero_slug);
+  const favoriteSet = new Set(favoriteSlugs);
+  const heroesList = dedupedHeroes
+    .filter((hero) => (favoriteOnly ? favoriteSet.has(hero.hero_slug) : true))
+    .sort((a, b) => {
+      if (sort === "name_asc") return a.name.localeCompare(b.name);
+      if (sort === "updated_desc") {
+        const at = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bt = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bt - at;
+      }
+
+      const at = a.tier ?? -999;
+      const bt = b.tier ?? -999;
+      if (bt !== at) return bt - at;
+      return a.name.localeCompare(b.name);
+    });
   const heroAliasOptions = await listHeroAliasOptionsBySlug(
     new Set(heroesList.map((hero) => hero.hero_slug))
   );
-  const favoriteSlugs = (favorites || []).map((f) => f.hero_slug);
   const ownedHeroSlugs = Array.from(new Set((barracks || []).map((b) => b.hero_slug).filter(Boolean)));
 
   return (
@@ -266,9 +315,14 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
           aliasOptions={heroAliasOptions}
           weaponOptions={weaponOptions}
           moveOptions={moveOptions}
+          tagOptions={tagOptions}
           initialQuery={q}
           initialWeapon={weapon}
           initialMove={move}
+          initialTag={tag}
+          initialMinTier={minTierRaw}
+          initialFavoriteOnly={favoriteOnly}
+          initialSort={sort}
           ownedHeroSlugs={ownedHeroSlugs}
         />
 
