@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
 import { AuthSignOutButton } from "@/components/auth-signout-button";
+import { TeamSlotTypeahead } from "@/components/team-slot-typeahead";
 import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -203,6 +204,16 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
   const heroMetaBySlug = new Map(heroes.map((h) => [h.hero_slug, h]));
+  const teamSlotHeroOptions = (barracks || []).map((entry) => {
+    const meta = heroMetaBySlug.get(entry.hero_slug);
+    return {
+      hero_slug: entry.hero_slug,
+      hero_name: entry.hero_name,
+      weapon: meta?.weapon ?? null,
+      move: meta?.move ?? null,
+      tier: meta?.tier ?? null,
+    };
+  });
   const barracksNameBySlug = new Map((barracks || []).map((entry) => [entry.hero_slug, entry.hero_name]));
   const resolveTeamHeroName = (heroSlug: string) =>
     barracksNameBySlug.get(heroSlug) || heroMetaBySlug.get(heroSlug)?.name || heroSlug;
@@ -546,21 +557,13 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               />
               <div className="grid gap-2 md:grid-cols-2">
                 {[1, 2, 3, 4].map((slot) => (
-                  <label key={`new_team_slot_${slot}`} className="grid gap-1">
-                    <span className="text-[11px] text-zinc-400">Slot {slot}</span>
-                    <select
-                      name={`slot_${slot}`}
-                      defaultValue=""
-                      className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                    >
-                      <option value="">Empty</option>
-                      {barracksSlugOptions.map((b) => (
-                        <option key={`create_${slot}_${b.hero_slug}`} value={b.hero_slug}>
-                          {b.hero_name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <TeamSlotTypeahead
+                    key={`new_team_slot_${slot}`}
+                    inputName={`slot_${slot}`}
+                    label={`Slot ${slot}`}
+                    heroes={teamSlotHeroOptions}
+                    placeholder="Search your owned heroes"
+                  />
                 ))}
               </div>
               <input
@@ -665,6 +668,15 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                           </span>
                                         </Link>
 
+                                        <div className="mt-2 max-w-md">
+                                          <TeamSlotTypeahead
+                                            inputName={`slot_${index + 1}`}
+                                            heroes={teamSlotHeroOptions}
+                                            initialSlug={slot}
+                                            placeholder="Type to search owned heroes"
+                                          />
+                                        </div>
+
                                         <details className="mt-1">
                                           <summary className="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-200">▾ Change hero</summary>
                                           <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950/80 p-1">
@@ -734,6 +746,16 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                     );
                                   })()
                                 ) : (
+                                  <>
+                                    <div className="max-w-md">
+                                      <TeamSlotTypeahead
+                                        inputName={`slot_${index + 1}`}
+                                        heroes={teamSlotHeroOptions}
+                                        initialSlug={slot}
+                                        placeholder="Type to search owned heroes"
+                                      />
+                                    </div>
+
                                   <details>
                                     <summary className="cursor-pointer text-zinc-500 hover:text-zinc-300">Empty (click to choose)</summary>
                                     <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950/80 p-1">
@@ -790,6 +812,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                       })}
                                     </div>
                                   </details>
+                                  </>
                                 )}
                               </td>
                             </tr>

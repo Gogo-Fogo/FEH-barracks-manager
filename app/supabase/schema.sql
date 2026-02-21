@@ -17,6 +17,11 @@ create table if not exists public.heroes (
   updated_at timestamptz not null default now()
 );
 
+-- Backward-compat guardrail for older projects that were created
+-- before `heroes.rarity` existed.
+alter table public.heroes
+  add column if not exists rarity text;
+
 create index if not exists heroes_name_idx on public.heroes (name);
 create index if not exists heroes_weapon_idx on public.heroes (weapon);
 create index if not exists heroes_move_idx on public.heroes (move);
