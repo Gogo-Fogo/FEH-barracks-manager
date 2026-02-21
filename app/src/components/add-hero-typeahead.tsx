@@ -1,37 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  buildAliasLookup,
+  buildAliasTermsBySlug,
+  DEFAULT_MAX_TYPEAHEAD_RESULTS,
+  normalizeHeroSearchText,
+  normalizeHeroSlugSearchText,
+  rankHeroSuggestions,
+  type HeroTypeaheadAliasOption,
+  type HeroTypeaheadOption,
+} from "@/lib/hero-typeahead";
 
-type HeroOption = {
-  hero_slug: string;
-  name: string;
-  weapon: string | null;
-  move: string | null;
-  tier: number | null;
-};
-
-type HeroAliasOption = {
-  alias: string;
-  hero_slug: string;
-};
+type HeroOption = HeroTypeaheadOption;
+type HeroAliasOption = HeroTypeaheadAliasOption;
 
 type AddHeroTypeaheadProps = {
   heroes: HeroOption[];
   aliasOptions?: HeroAliasOption[];
+  ownedHeroSlugs?: string[];
   redirectTo: string;
   addAction: (formData: FormData) => void | Promise<void>;
 };
 
-function normalizeAlias(value: string) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
 export function AddHeroTypeahead({
   heroes,
   aliasOptions = [],
+  ownedHeroSlugs = [],
   redirectTo,
   addAction,
 }: AddHeroTypeaheadProps) {
@@ -39,45 +34,44 @@ export function AddHeroTypeahead({
   const [selectedSlug, setSelectedSlug] = useState("");
   const [open, setOpen] = useState(false);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const aliasLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const option of aliasOptions) {
-      const key = normalizeAlias(option.alias);
-      if (key && !map.has(key)) {
-        map.set(key, option.hero_slug);
-      }
-    }
-    return map;
-  }, [aliasOptions]);
+  const normalizedQuery = normalizeHeroSearchText(query);
+  const normalizedSlugQuery = normalizeHeroSlugSearchText(query);
 
-  const filteredHeroes = useMemo(() => {
-    if (!normalizedQuery) return heroes.slice(0, 10);
+  const aliasLookup = useMemo(() => buildAliasLookup(aliasOptions), [aliasOptions]);
 
-    return heroes
-      .filter((hero) => {
-        const name = hero.name.toLowerCase();
-        const slug = hero.hero_slug.toLowerCase();
-        return name.includes(normalizedQuery) || slug.includes(normalizedQuery);
-      })
-      .slice(0, 10);
-  }, [heroes, normalizedQuery]);
+  const aliasTermsBySlug = useMemo(() => buildAliasTermsBySlug(aliasOptions), [aliasOptions]);
+
+  const ownedHeroSlugSet = useMemo(() => new Set(ownedHeroSlugs), [ownedHeroSlugs]);
+
+  const { filteredHeroes, totalMatches } = useMemo(
+    () =>
+      rankHeroSuggestions(
+        heroes,
+        aliasTermsBySlug,
+        normalizedQuery,
+        normalizedSlugQuery,
+        DEFAULT_MAX_TYPEAHEAD_RESULTS
+      ),
+    [aliasTermsBySlug, heroes, normalizedQuery, normalizedSlugQuery]
+  );
 
   const exactMatch = useMemo(
     () =>
       heroes.find(
         (hero) =>
-          hero.name.toLowerCase() === normalizedQuery || hero.hero_slug.toLowerCase() === normalizedQuery
+          normalizeHeroSearchText(hero.name) === normalizedQuery ||
+          hero.hero_slug.toLowerCase() === normalizedSlugQuery
       ),
-    [heroes, normalizedQuery]
+    [heroes, normalizedQuery, normalizedSlugQuery]
   );
 
   const aliasMatchSlug = useMemo(() => {
     if (!query.trim()) return "";
-    return aliasLookup.get(normalizeAlias(query)) || "";
+    return aliasLookup.get(normalizeHeroSearchText(query)) || "";
   }, [aliasLookup, query]);
 
-  const resolvedSlug = selectedSlug || exactMatch?.hero_slug || aliasMatchSlug || "";
+  const singleMatchSlug = filteredHeroes.length === 1 ? filteredHeroes[0]?.hero_slug || "" : "";
+  const resolvedSlug = selectedSlug || exactMatch?.hero_slug || aliasMatchSlug || singleMatchSlug || "";
 
   return (
     <form action={addAction} className="mt-4 flex flex-wrap items-end gap-3">
@@ -105,34 +99,61 @@ export function AddHeroTypeahead({
           className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100"
         />
 
-        {open && filteredHeroes.length ? (
+        {open ? (
           <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
-            {filteredHeroes.map((hero) => (
-              <button
-                key={hero.hero_slug}
-                type="button"
-                onClick={() => {
-                  setQuery(hero.name);
-                  setSelectedSlug(hero.hero_slug);
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-2 border-b border-zinc-800 px-2 py-2 text-left hover:bg-zinc-800"
-              >
-                <img
-                  src={`/api/headshots/${hero.hero_slug}`}
-                  alt={`${hero.name} headshot`}
-                  className="h-8 w-8 rounded-md border border-zinc-700 object-cover"
-                  loading="lazy"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm text-zinc-100">{hero.name}</span>
-                  <span className="block truncate text-xs text-zinc-400">
-                    {hero.weapon || "-"} • {hero.move || "-"}
-                    {hero.tier != null ? ` • T${hero.tier}` : ""}
-                  </span>
-                </span>
-              </button>
-            ))}
+            {filteredHeroes.length ? (
+              <>
+                {filteredHeroes.map((hero) => {
+                  const isOwned = ownedHeroSlugSet.has(hero.hero_slug);
+
+                  return (
+                  <button
+                    key={hero.hero_slug}
+                    type="button"
+                    onClick={() => {
+                      setQuery(hero.name);
+                      setSelectedSlug(hero.hero_slug);
+                      setOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 border-b border-zinc-800 px-2 py-2 text-left hover:bg-zinc-800 ${
+                      isOwned ? "bg-emerald-950/25 ring-1 ring-inset ring-emerald-700/50" : ""
+                    }`}
+                  >
+                    <img
+                      src={`/api/headshots/${hero.hero_slug}`}
+                      alt={`${hero.name} headshot`}
+                      className="h-8 w-8 rounded-md border border-zinc-700 object-cover"
+                      loading="lazy"
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 truncate text-base text-zinc-100">
+                        <span className="truncate">{hero.name}</span>
+                        {isOwned ? (
+                          <span className="rounded border border-emerald-700 bg-emerald-950/50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                            In Barracks
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="block truncate text-sm text-zinc-400">
+                        {hero.weapon || "-"} • {hero.move || "-"}
+                        {hero.tier != null ? ` • T${hero.tier}` : ""}
+                      </span>
+                    </span>
+                  </button>
+                  );
+                })}
+
+                {totalMatches > filteredHeroes.length ? (
+                  <p className="px-2 py-2 text-sm text-zinc-400">
+                    Showing first {filteredHeroes.length} matches out of {totalMatches}. Keep typing to narrow.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="px-2 py-2 text-sm text-zinc-400">
+                No heroes found for “{query.trim()}”.
+              </p>
+            )}
           </div>
         ) : null}
       </div>

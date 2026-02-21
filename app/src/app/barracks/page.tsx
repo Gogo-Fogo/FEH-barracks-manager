@@ -22,6 +22,12 @@ import {
   updateUserTeam,
 } from "./actions";
 
+const HERO_QUERY_MAX_ROWS = 5000;
+
+function looksLikeGuideTitle(name: string) {
+  return /\b(builds?|best\s+refine|best\s+build|tier\s+list|ratings?)\b/i.test(name);
+}
+
 async function loadLocalRarityBySlug() {
   const candidates = [
     path.join(process.cwd(), "db", "index.json"),
@@ -76,15 +82,15 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     supabase
       .from("heroes")
       .select("hero_slug,name,rarity,weapon,move,tier")
-      .order("name", { ascending: true })
-      .limit(3000);
+      .order("hero_slug", { ascending: true })
+      .range(0, HERO_QUERY_MAX_ROWS - 1);
 
   const fetchHeroesWithoutRarity = async () =>
     supabase
       .from("heroes")
       .select("hero_slug,name,weapon,move,tier")
-      .order("name", { ascending: true })
-      .limit(3000);
+      .order("hero_slug", { ascending: true })
+      .range(0, HERO_QUERY_MAX_ROWS - 1);
 
   const heroesResult = await fetchHeroesWithRarity();
   const localRarityBySlug = await loadLocalRarityBySlug();
@@ -117,6 +123,27 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       tier: h.tier,
     }));
   }
+
+  heroRows = Array.from(
+    new Map(
+      heroRows.map((hero) => {
+        const patchedName = looksLikeGuideTitle(hero.name)
+          ? hero.name
+              .replace(/\bBuilds?\s+and\s+Best\s+Refine\b/gi, "")
+              .replace(/\s+/g, " ")
+              .trim()
+          : hero.name;
+
+        return [
+          hero.hero_slug,
+          {
+            ...hero,
+            name: patchedName || hero.name,
+          },
+        ] as const;
+      })
+    ).values()
+  ).sort((a, b) => a.hero_slug.localeCompare(b.hero_slug));
 
   const missingRaritySlugs = heroRows
     .filter((hero) => !hero.rarity)
@@ -157,6 +184,9 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   const heroes = heroRows;
   const heroSlugSet = new Set(heroes.map((h) => h.hero_slug));
   const heroAliasOptions = await listHeroAliasOptionsBySlug(heroSlugSet);
+  const ownedHeroSlugs = Array.from(
+    new Set((barracks || []).map((entry) => entry.hero_slug).filter(Boolean))
+  );
 
   const favoriteSet = new Set((favorites || []).map((f) => f.hero_slug));
   const barracksSlugOptions = (barracks || []).map((b) => ({ hero_slug: b.hero_slug, hero_name: b.hero_name }));
@@ -223,6 +253,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             <AddHeroTypeahead
               heroes={heroes}
               aliasOptions={heroAliasOptions}
+              ownedHeroSlugs={ownedHeroSlugs}
               redirectTo="/barracks"
               addAction={addToBarracks}
             />

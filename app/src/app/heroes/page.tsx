@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { HeroesListClient } from "@/components/heroes-list-client";
-import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
+import { HeroBrowserFilters } from "@/components/hero-browser-filters";
+import { listHeroAliasOptionsBySlug, resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 
 export const dynamic = "force-dynamic";
@@ -205,10 +206,11 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     }
   }
 
-  const [{ data: weapons }, { data: moves }, { data: favorites }] = await Promise.all([
+  const [{ data: weapons }, { data: moves }, { data: favorites }, { data: barracks }] = await Promise.all([
     supabase.from("heroes").select("weapon").not("weapon", "is", null),
     supabase.from("heroes").select("move").not("move", "is", null),
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
+    supabase.from("user_barracks").select("hero_slug").eq("user_id", user.id),
   ]);
 
   const weaponOptions = Array.from(
@@ -225,7 +227,11 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     if (a.hero_slug > b.hero_slug) return 1;
     return 0;
   });
+  const heroAliasOptions = await listHeroAliasOptionsBySlug(
+    new Set(heroesList.map((hero) => hero.hero_slug))
+  );
   const favoriteSlugs = (favorites || []).map((f) => f.hero_slug);
+  const ownedHeroSlugs = Array.from(new Set((barracks || []).map((b) => b.hero_slug).filter(Boolean)));
 
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
@@ -255,47 +261,16 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
           </p>
         ) : null}
 
-        <form className="mt-6 grid gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-4">
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Search hero name"
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          />
-
-          <select
-            name="weapon"
-            defaultValue={weapon}
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          >
-            <option value="">All weapons</option>
-            {weaponOptions.map((w) => (
-              <option key={w} value={w || ""}>
-                {w}
-              </option>
-            ))}
-          </select>
-
-          <select
-            name="move"
-            defaultValue={move}
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          >
-            <option value="">All move types</option>
-            {moveOptions.map((m) => (
-              <option key={m} value={m || ""}>
-                {m}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="submit"
-            className="rounded bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-400"
-          >
-            Apply filters
-          </button>
-        </form>
+        <HeroBrowserFilters
+          heroes={heroesList}
+          aliasOptions={heroAliasOptions}
+          weaponOptions={weaponOptions}
+          moveOptions={moveOptions}
+          initialQuery={q}
+          initialWeapon={weapon}
+          initialMove={move}
+          ownedHeroSlugs={ownedHeroSlugs}
+        />
 
         <div className="mt-6 space-y-2">
           <HeroesListClient heroesList={heroesList} favoriteSlugs={favoriteSlugs} currentPath={currentPath} />
