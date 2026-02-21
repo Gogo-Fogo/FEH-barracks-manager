@@ -188,6 +188,29 @@ function runCommand(command, args, cwd) {
   });
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function stopRunningAppNodeProcesses() {
+  if (process.platform !== "win32") return;
+
+  const escapedAppPath = APP_PATH.replace(/'/g, "''");
+  const script = [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    "$procs = Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Where-Object { $_.CommandLine -and $_.CommandLine -like '*",
+    escapedAppPath,
+    "*' }",
+    "if ($procs) { $procs | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } }",
+  ].join("");
+
+  try {
+    await runCommand("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], INSTALL_ROOT);
+  } catch {
+    // best effort only; continue with install retries below
+  }
+}
+
 async function resolveNpmCommand() {
   try {
     await runCommand("npm", ["--version"], APP_PATH);
@@ -388,11 +411,23 @@ async function installOrUpdateFromRelease(release) {
   }
 
   console.log("Installing app dependencies...");
+  await stopRunningAppNodeProcesses();
+
   try {
     await runNpm(["ci"], APP_PATH);
   } catch (ciErr) {
-    console.log(`npm ci failed (${ciErr.message}). Retrying with npm install...`);
-    await runNpm(["install"], APP_PATH);
+    console.log(`npm ci failed (${ciErr.message}). Attempting lock-safe retry...`);
+    await stopRunningAppNodeProcesses();
+    await sleep(1500);
+
+    try {
+      await runNpm(["ci"], APP_PATH);
+    } catch (retryErr) {
+      console.log(`npm ci retry failed (${retryErr.message}). Retrying with npm install...`);
+      await stopRunningAppNodeProcesses();
+      await sleep(1500);
+      await runNpm(["install"], APP_PATH);
+    }
   }
 
   const existing = await readMeta();
