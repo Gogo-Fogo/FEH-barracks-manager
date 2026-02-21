@@ -188,6 +188,34 @@ function runCommand(command, args, cwd) {
   });
 }
 
+function runCommandCapture(command, args, cwd) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32",
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk || "");
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk || "");
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(new Error(`${command} ${args.join(" ")} failed with code ${code}${stderr ? `: ${stderr}` : ""}`));
+      }
+    });
+  });
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -208,6 +236,32 @@ async function stopRunningAppNodeProcesses() {
     await runCommand("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], INSTALL_ROOT);
   } catch {
     // best effort only; continue with install retries below
+  }
+}
+
+async function isAppDevServerAlreadyRunning() {
+  if (process.platform !== "win32") return false;
+
+  const escapedAppPath = APP_PATH.replace(/'/g, "''");
+  const script = [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    "$procs = Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Where-Object {",
+    "  $_.CommandLine -and $_.CommandLine -like '*",
+    escapedAppPath,
+    "*' -and $_.CommandLine -like '*next*dev*'",
+    "}",
+    "if ($procs) { 'RUNNING' } else { 'NOT_RUNNING' }",
+  ].join("");
+
+  try {
+    const { stdout } = await runCommandCapture(
+      "powershell",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+      INSTALL_ROOT
+    );
+    return String(stdout || "").includes("RUNNING");
+  } catch {
+    return false;
   }
 }
 
@@ -453,6 +507,13 @@ async function launchApp() {
   if (!fs.existsSync(path.join(APP_PATH, "package.json"))) {
     console.log("App is not installed yet. Run Install/Update first.");
     return "not-installed";
+  }
+
+  if (await isAppDevServerAlreadyRunning()) {
+    console.log("\nFEH Barracks app is already running. Reusing existing dev server.");
+    console.log("App URL: http://localhost:3000");
+    runCommand("cmd", ["/c", "start", "", "http://localhost:3000"], APP_PATH).catch(() => {});
+    return "already-running";
   }
 
   let envState = await readSupabaseEnvState();

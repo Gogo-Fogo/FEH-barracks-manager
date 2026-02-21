@@ -668,71 +668,14 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                           />
                                         </div>
 
-                                        <details className="mt-1">
-                                          <summary className="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-200">▾ Change hero</summary>
-                                          <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950/80 p-1">
-                                            <button
-                                              type="submit"
-                                              name={`clear_slot_${index + 1}`}
-                                              value="1"
-                                              className="mb-1 w-full rounded border border-rose-900/70 px-2 py-1 text-left text-[11px] text-rose-300 hover:bg-rose-950/50"
-                                            >
-                                              Remove from slot
-                                            </button>
-
-                                            {(barracks || []).map((entry) => {
-                                              const pickMeta = heroMetaBySlug.get(entry.hero_slug);
-                                              const pickRarityIcon = rarityIconName(pickMeta?.rarity || null);
-                                              const pickWeaponIcon = weaponIconName(pickMeta?.weapon || null);
-                                              const pickMoveIcon = moveIconName(pickMeta?.move || null);
-
-                                              return (
-                                                <button
-                                                  key={`${team.id}_${index + 1}_pick_${entry.hero_slug}`}
-                                                  type="submit"
-                                                  name={`slot_${index + 1}`}
-                                                  value={entry.hero_slug}
-                                                  className="mb-1 flex w-full items-center gap-2 rounded border border-zinc-800 px-2 py-1 text-left hover:bg-zinc-800"
-                                                >
-                                                  <img
-                                                    src={`/api/headshots/${entry.hero_slug}`}
-                                                    alt={`${entry.hero_name} headshot`}
-                                                    className="h-6 w-6 rounded border border-zinc-700 object-cover"
-                                                    loading="lazy"
-                                                  />
-                                                  <span className="min-w-0 text-[11px] text-zinc-200">
-                                                    <span className="block truncate">{entry.hero_name}</span>
-                                                    <span className="mt-0.5 flex items-center gap-1 text-zinc-400">
-                                                      {pickRarityIcon ? (
-                                                        <img
-                                                          src={`/api/shared-icons/rarity?name=${encodeURIComponent(pickRarityIcon)}`}
-                                                          alt={`${pickMeta?.rarity || "Rarity"} icon`}
-                                                          className="h-3 w-3 rounded-sm"
-                                                        />
-                                                      ) : null}
-                                                      <span>{rarityStarsText(pickMeta?.rarity || null)}</span>
-                                                      {pickWeaponIcon ? (
-                                                        <img
-                                                          src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(pickWeaponIcon)}`}
-                                                          alt={`${pickMeta?.weapon || "Weapon"} icon`}
-                                                          className="h-3 w-3 rounded-sm"
-                                                        />
-                                                      ) : null}
-                                                      {pickMoveIcon ? (
-                                                        <img
-                                                          src={`/api/shared-icons/move?name=${encodeURIComponent(pickMoveIcon)}`}
-                                                          alt={`${pickMeta?.move || "Move"} icon`}
-                                                          className="h-3 w-3 rounded-sm"
-                                                        />
-                                                      ) : null}
-                                                      <span>{pickMeta?.tier != null ? `T${pickMeta.tier}` : "T-"}</span>
-                                                    </span>
-                                                  </span>
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-                                        </details>
+                                        <button
+                                          type="submit"
+                                          name={`clear_slot_${index + 1}`}
+                                          value="1"
+                                          className="mt-2 rounded border border-rose-900/70 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-950/50"
+                                        >
+                                          Remove from slot
+                                        </button>
                                       </div>
                                     );
                                   })()
@@ -746,63 +689,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                         placeholder="Type to search owned heroes"
                                       />
                                     </div>
-
-                                  <details>
-                                    <summary className="cursor-pointer text-zinc-500 hover:text-zinc-300">Empty (click to choose)</summary>
-                                    <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950/80 p-1">
-                                      {(barracks || []).map((entry) => {
-                                        const pickMeta = heroMetaBySlug.get(entry.hero_slug);
-                                        const pickRarityIcon = rarityIconName(pickMeta?.rarity || null);
-                                        const pickWeaponIcon = weaponIconName(pickMeta?.weapon || null);
-                                        const pickMoveIcon = moveIconName(pickMeta?.move || null);
-
-                                        return (
-                                          <button
-                                            key={`${team.id}_${index + 1}_empty_pick_${entry.hero_slug}`}
-                                            type="submit"
-                                            name={`slot_${index + 1}`}
-                                            value={entry.hero_slug}
-                                            className="mb-1 flex w-full items-center gap-2 rounded border border-zinc-800 px-2 py-1 text-left hover:bg-zinc-800"
-                                          >
-                                            <img
-                                              src={`/api/headshots/${entry.hero_slug}`}
-                                              alt={`${entry.hero_name} headshot`}
-                                              className="h-6 w-6 rounded border border-zinc-700 object-cover"
-                                              loading="lazy"
-                                            />
-                                            <span className="min-w-0 text-[11px] text-zinc-200">
-                                              <span className="block truncate">{entry.hero_name}</span>
-                                              <span className="mt-0.5 flex items-center gap-1 text-zinc-400">
-                                                {pickRarityIcon ? (
-                                                  <img
-                                                    src={`/api/shared-icons/rarity?name=${encodeURIComponent(pickRarityIcon)}`}
-                                                    alt={`${pickMeta?.rarity || "Rarity"} icon`}
-                                                    className="h-3 w-3 rounded-sm"
-                                                  />
-                                                ) : null}
-                                                <span>{rarityStarsText(pickMeta?.rarity || null)}</span>
-                                                {pickWeaponIcon ? (
-                                                  <img
-                                                    src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(pickWeaponIcon)}`}
-                                                    alt={`${pickMeta?.weapon || "Weapon"} icon`}
-                                                    className="h-3 w-3 rounded-sm"
-                                                  />
-                                                ) : null}
-                                                {pickMoveIcon ? (
-                                                  <img
-                                                    src={`/api/shared-icons/move?name=${encodeURIComponent(pickMoveIcon)}`}
-                                                    alt={`${pickMeta?.move || "Move"} icon`}
-                                                    className="h-3 w-3 rounded-sm"
-                                                  />
-                                                ) : null}
-                                                <span>{pickMeta?.tier != null ? `T${pickMeta.tier}` : "T-"}</span>
-                                              </span>
-                                            </span>
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </details>
+                                    <p className="mt-2 text-[11px] text-zinc-500">Empty slot — use search above to assign a hero.</p>
                                   </>
                                 )}
                               </td>
