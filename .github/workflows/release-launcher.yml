@@ -32,6 +32,11 @@ jobs:
         run: npm run build --prefix launcher
 
       - name: Prepare release bundles
+        env:
+          VAR_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          VAR_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SECRET_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SECRET_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           mkdir -p release_build/app
 
@@ -40,6 +45,26 @@ jobs:
             --exclude .next \
             --exclude .env.local \
             app/ release_build/app/app/
+
+          SUPABASE_URL="$VAR_SUPABASE_URL"
+          SUPABASE_ANON_KEY="$VAR_SUPABASE_ANON_KEY"
+
+          if [ -z "$SUPABASE_URL" ]; then
+            SUPABASE_URL="$SECRET_SUPABASE_URL"
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            SUPABASE_ANON_KEY="$SECRET_SUPABASE_ANON_KEY"
+          fi
+
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            cat > release_build/app/app/.env.local <<ENV
+          NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          ENV
+            echo "Embedded Supabase runtime values into app bundle .env.local for launcher compatibility."
+          else
+            echo "Supabase runtime values missing in repo vars/secrets; app bundle .env.local not embedded."
+          fi
 
           cd release_build/app
           zip -r ../../feh-app-bundle.zip app
