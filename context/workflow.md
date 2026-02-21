@@ -69,6 +69,17 @@ Notes:
 - This protocol updates shared hero/catalog data; it does not modify user-owned profile/barracks data.
 - Keep Game8 identity canonical; never rename unit identity from Fandom labels.
 
+## P0 Stability Rule (Command Execution)
+- **Do not use long `node -e` one-liners for maintenance/audit tasks in this repo.**
+- Prefer committed scripts in `scripts/` for repeatable checks.
+- If a quick check is needed and no script exists yet, use temporary script files:
+  1. create `scripts/temp_<task>.js`
+  2. run `node scripts/temp_<task>.js`
+  3. verify output
+  4. delete temp script immediately
+- If a command pattern hangs once, immediately switch to script-file execution (do not retry the same brittle one-liner pattern).
+- Treat repeated terminal hangs as a blocking incident and prioritize workflow hardening before feature work.
+
 ## Legacy Title / Canonical Name Mismatch (Important)
 - Game8 remains the canonical identity source for hero names and URLs.
 - If a requested hero title is historical/community wording (or a prior alias), it may not appear in the current Game8 tier-list feed under that exact title even after a full refresh.

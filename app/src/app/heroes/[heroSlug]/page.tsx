@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
 import {
+  extractIllustratorFromRawText,
   loadFandomFullbodyPosesBySlug,
   loadFandomQuoteTextBySlug,
   loadUnitRarityBySlugs,
@@ -65,7 +66,7 @@ type QuotesFile = {
 };
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
-const ARTIST_REFERENCE_URL = "https://feheroes.fandom.com/wiki/List_of_artists";
+const ARTIST_LIST_URL = "https://feheroes.fandom.com/wiki/List_of_artists";
 const BUILD_KEY_ORDER = [
   "weapon",
   "assist",
@@ -314,44 +315,6 @@ async function loadInheritableSkillSources() {
   return inheritableSkillSourcesPromise;
 }
 
-function extractIllustratorName(rawText?: string) {
-  const compact = normalizeGuideText(rawText);
-  if (!compact) return null;
-
-  const matches = Array.from(
-    compact.matchAll(/Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,140})/gi)
-  );
-
-  for (let i = matches.length - 1; i >= 0; i -= 1) {
-    let candidate = (matches[i]?.[1] || "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const nestedIllustratorMatches = Array.from(
-      candidate.matchAll(/Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,80})/gi)
-    );
-    if (nestedIllustratorMatches.length) {
-      candidate = (nestedIllustratorMatches[nestedIllustratorMatches.length - 1]?.[1] || "").trim();
-    }
-
-    candidate = candidate
-      .replace(/\s+(Appears In|Illustration|FEH:|Related Guides)\b[\s\S]*$/i, "")
-      .replace(/\s*\([^)]*$/, "")
-      .trim();
-
-    if (
-      candidate &&
-      candidate.length <= 80 &&
-      !/\b(voice actor|information|english)\b/i.test(candidate) &&
-      !/^information$/i.test(candidate)
-    ) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
-
 function deriveSpecialFromRawText(rawText?: string) {
   const compact = normalizeGuideText(rawText);
   if (!compact) return null;
@@ -389,16 +352,13 @@ function SkillValueWithTooltip({
   return (
     <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
       <span
-        tabIndex={0}
-        title={tooltipText}
-        aria-label={`${skillName}: ${tooltipText}`}
-        className="inline-flex max-w-full cursor-help items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-1.5 py-0.5 text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
+        className="inline-flex max-w-full cursor-help items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         <span className="truncate">{skillName}</span>
-        <span className="text-[10px] text-indigo-300">ⓘ</span>
+        <span className="text-sm text-indigo-300">ⓘ</span>
       </span>
 
-      <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(34rem,82vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-3 text-xs leading-relaxed text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block group-focus-within:block">
+      <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
         {tooltipText}
       </span>
     </span>
@@ -426,6 +386,14 @@ function normalizeGuideText(raw?: string | null) {
     .replace(/\s+/g, " ")
     .replace(/\s([,.!?;:])/g, "$1")
     .trim();
+}
+
+function buildArtistProfileUrl(artistName?: string | null) {
+  const value = String(artistName || "").trim();
+  if (!value) return ARTIST_LIST_URL;
+
+  const title = value.replace(/\s+/g, "_");
+  return `https://feheroes.fandom.com/wiki/${encodeURIComponent(title)}`;
 }
 
 function pickMatches(sentences: string[], patterns: RegExp[], limit = 3) {
@@ -790,7 +758,7 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   ).then((entries) => entries.filter((entry): entry is BuildEntryDetail => Boolean(entry)));
 
   const isSpecialMissing = !buildEntriesDetailed.some((entry) => entry.key === "special");
-  const artistName = extractIllustratorName(unitFile?.raw_text_data);
+  const artistName = extractIllustratorFromRawText(unitFile?.raw_text_data);
   const highlights = buildGuideHighlights(unitFile?.raw_text_data);
   const hasAnyHighlight =
     highlights.role.length ||
@@ -845,22 +813,19 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
             <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-300">
               <span className="text-zinc-400">Banner art illustrator:</span>{" "}
               {artistName ? (
-                <>
-                  {artistName}{" "}
-                  <a
-                    href={ARTIST_REFERENCE_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-indigo-300 hover:underline"
-                  >
-                    (artist list)
-                  </a>
-                </>
+                <a
+                  href={buildArtistProfileUrl(artistName)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-300 hover:underline"
+                >
+                  {artistName}
+                </a>
               ) : (
                 <>
                   Unknown{" "}
                   <a
-                    href={ARTIST_REFERENCE_URL}
+                    href={ARTIST_LIST_URL}
                     target="_blank"
                     rel="noreferrer"
                     className="text-indigo-300 hover:underline"

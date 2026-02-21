@@ -608,6 +608,85 @@ export function parseRarityFromRawText(rawText?: string | null) {
   return normalizeRarityTokens(collectRarityTokens(compact.slice(0, 260)));
 }
 
+function normalizeArtistText(raw?: string | null) {
+  return String(raw || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s([,.!?;:])/g, "$1")
+    .trim();
+}
+
+function cleanArtistCandidate(value?: string | null) {
+  let candidate = String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s:：\-–—|]+/, "")
+    .trim();
+
+  candidate = candidate
+    .replace(
+      /\s+(Appears In|Illustration|How to Get|Voice Actor(?:\s*\(English\))?|Quotes?|FEH:|Related Guides|Attire|Distribution Date|Starts|Ends|Obtain(?:ed)? Through)\b[\s\S]*$/i,
+      ""
+    )
+    .replace(/\s*\([^)]*$/, "")
+    .replace(/[|•]+$/g, "")
+    .trim();
+
+  if (!candidate) return null;
+  if (candidate.length > 100) return null;
+  if (/^(none|unknown|n\/?a|information)$/i.test(candidate)) return null;
+  if (!/[\p{L}\p{N}]/u.test(candidate)) return null;
+  return candidate;
+}
+
+function extractLegacyIllustratorFromRawText(rawText?: string | null) {
+  const compact = normalizeArtistText(rawText);
+  if (!compact) return null;
+
+  const matches = Array.from(
+    compact.matchAll(/Illustrator\s+([A-Za-z0-9'’().,&\- ]{2,140})/gi)
+  );
+
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const cleaned = cleanArtistCandidate(matches[i]?.[1]);
+    if (cleaned) return cleaned;
+  }
+
+  return null;
+}
+
+export function extractIllustratorFromRawText(rawText?: string | null) {
+  const compact = normalizeArtistText(rawText);
+  if (!compact) return null;
+
+  const markers =
+    "Appears In|Illustration|FEH:|Related Guides|How to Get|Voice Actor(?:\\s*\\(English\\))?|Quotes?|Attire|Distribution Date|Starts|Ends|Obtain(?:ed)? Through";
+
+  const patterns = [
+    new RegExp(
+      `Voice Actor(?:\\s*\\(English\\))?\\s+.{1,120}?\\s+Illustrator\\s*[:：\\-]?\\s*(.{1,140}?)(?=\\s+(?:${markers})|$)`,
+      "gi"
+    ),
+    new RegExp(
+      `Illustrator\\s*[:：\\-]?\\s*(.{1,160}?)(?=\\s+(?:${markers})|$)`,
+      "gi"
+    ),
+  ];
+
+  const candidates: string[] = [];
+  for (const pattern of patterns) {
+    for (const match of compact.matchAll(pattern)) {
+      const captured = String(match?.[1] || "");
+      if (captured) candidates.push(captured);
+    }
+  }
+
+  for (let i = candidates.length - 1; i >= 0; i -= 1) {
+    const cleaned = cleanArtistCandidate(candidates[i]);
+    if (cleaned) return cleaned;
+  }
+
+  return extractLegacyIllustratorFromRawText(rawText);
+}
+
 export async function loadUnitRecordBySlug(heroSlug: string) {
   const normalized = normalizeSlug(heroSlug);
   if (!normalized) return null;

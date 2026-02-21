@@ -105,6 +105,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ---
 
 ## Incident Hardening (2026-02-20)
+- [ ] P0: Enforce script-first anti-stuck execution for maintenance/audits (no long `node -e` one-liners; use committed `scripts/*.js` or temp script workflow)
 - [ ] Add post-change art endpoint smoke test to release checklist:
   - `curl -I "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
   - `curl -I "http://localhost:3022/api/headshots/<heroSlug>"`
