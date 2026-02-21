@@ -331,6 +331,23 @@ Implementation notes (current repo):
   - `git --no-pager diff -- <path>`
   - `git --no-pager status --short`
 
+### Incident Note (2026-02-20 late): Team Builder UI edit repeatedly appeared "stuck"
+- Symptom:
+  - Multiple edit attempts against `app/src/app/barracks/page.tsx` looked stuck or partially applied.
+  - Tool responses intermittently returned unconfirmed edit status, causing repeated retries.
+- Root cause pattern:
+  - Large JSX block replacement with fragile patch contexts increased failure risk.
+  - Re-running similar patch attempts without deterministic verification loop created churn.
+- Stable recovery that worked:
+  1. Use one deterministic replacement pass for the Team Builder saved-team rendering block.
+  2. Confirm concrete UI markers in-file before next step (table rows + headshot path usage).
+  3. Run `npm --prefix app run build` immediately after edit.
+  4. Restart with `npm --prefix app run start -- --port 3022` and validate in browser.
+- UI outcome shipped in this recovery:
+  - Saved teams now render in a table-style layout.
+  - Each slot row shows headshot image, hero label, and editable hero ID input.
+  - Team save/delete flows remain unchanged.
+
 ### Local Smoke-Test Server (Quick Run)
 - When validating hero pages quickly on this machine, use:
   - `npm --prefix app run start -- --port 3022`

@@ -259,12 +259,15 @@ export async function removeUserNote(formData: FormData) {
   redirect(withNotice(redirectTo, "Note removed.", "warn"));
 }
 
-function parseSlots(raw: string) {
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean)
-    .slice(0, 4);
+function latestFieldValue(formData: FormData, field: string) {
+  const values = formData.getAll(field);
+  for (let i = values.length - 1; i >= 0; i -= 1) {
+    const value = values[i];
+    if (typeof value === "string") {
+      return value.trim();
+    }
+  }
+  return "";
 }
 
 function normalizeTeamSlots(raw: string[]) {
@@ -283,12 +286,10 @@ function normalizeTeamSlots(raw: string[]) {
 export async function createUserTeam(formData: FormData) {
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const parsedSlots = parseSlots(
-    ["slot_1", "slot_2", "slot_3", "slot_4"]
-      .map((field) => optionalText(formData.get(field)))
-      .filter(Boolean)
-      .join(",")
-  );
+  const parsedSlots = ["slot_1", "slot_2", "slot_3", "slot_4"]
+    .map((field) => latestFieldValue(formData, field))
+    .filter(Boolean)
+    .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
@@ -299,7 +300,7 @@ export async function createUserTeam(formData: FormData) {
   if (!user) throw new Error("You must be logged in.");
 
   if (!slots.length) {
-    redirect(withNotice(redirectTo, "Team must include at least one hero ID.", "warn"));
+    redirect(withNotice(redirectTo, "Team must include at least one hero.", "warn"));
   }
 
   const { error } = await supabase.from("user_teams").insert({
@@ -318,12 +319,10 @@ export async function updateUserTeam(formData: FormData) {
   const id = requireText(formData.get("id"), "Team id");
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
-  const parsedSlots = parseSlots(
-    ["slot_1", "slot_2", "slot_3", "slot_4"]
-      .map((field) => optionalText(formData.get(field)))
-      .filter(Boolean)
-      .join(",")
-  );
+  const parsedSlots = ["slot_1", "slot_2", "slot_3", "slot_4"]
+    .map((field) => latestFieldValue(formData, field))
+    .filter(Boolean)
+    .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
@@ -334,7 +333,7 @@ export async function updateUserTeam(formData: FormData) {
   if (!user) throw new Error("You must be logged in.");
 
   if (!slots.length) {
-    redirect(withNotice(redirectTo, "Team must include at least one hero ID.", "warn"));
+    redirect(withNotice(redirectTo, "Team must include at least one hero.", "warn"));
   }
 
   const { error } = await supabase

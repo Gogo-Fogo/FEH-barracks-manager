@@ -123,3 +123,8 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [x] Add short post-incident runbook note for Windows-safe anti-stuck execution (temp script pattern)
 - [x] Add deterministic index reconciliation utility for missing canonical units + explicit archive URL seeds (`scripts/reconcile-index-from-units.js`)
 - [x] Verify recovery for missing archive URL `267116` (`tiki___naga_s_voice`) through index + Supabase import
+- [x] Stabilize Team Builder edit workflow after repeated stuck patch attempts:
+  - applied deterministic replacement for saved-team section in `app/src/app/barracks/page.tsx`
+  - switched saved teams to table-style slot rows with headshots + editable hero IDs
+  - validated with `npm --prefix app run build`
+  - verified local serve on `http://localhost:3022`
