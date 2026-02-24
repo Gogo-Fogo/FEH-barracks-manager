@@ -633,12 +633,17 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                               <span className="text-[10px] text-zinc-600">—</span>
                             )}
                             {slug ? (
-                              <img
-                                src={`/api/headshots/${slug}`}
-                                alt={resolveTeamHeroName(slug)}
-                                className="h-12 w-12 rounded-lg border border-zinc-700 object-cover"
-                                loading="lazy"
-                              />
+                              <Link
+                                href={`/heroes/${slug}`}
+                                className="block rounded-lg ring-offset-zinc-900 hover:ring-2 hover:ring-indigo-500 hover:ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                              >
+                                <img
+                                  src={`/api/headshots/${slug}`}
+                                  alt={resolveTeamHeroName(slug)}
+                                  className="h-12 w-12 rounded-lg border border-zinc-700 object-cover transition-opacity hover:opacity-85"
+                                  loading="lazy"
+                                />
+                              </Link>
                             ) : (
                               <div className="h-12 w-12 rounded-lg border border-dashed border-zinc-700 bg-zinc-900" />
                             )}
