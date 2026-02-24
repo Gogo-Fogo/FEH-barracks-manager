@@ -289,6 +289,14 @@ function normalizeTeamSlots(raw: string[]) {
   return slots;
 }
 
+function normalizeTeamLabels(raw: string[]): string[] {
+  const result = ["", "", "", ""];
+  for (let i = 0; i < 4 && i < raw.length; i++) {
+    result[i] = (raw[i] ?? "").trim().slice(0, 32);
+  }
+  return result;
+}
+
 export async function createUserTeam(formData: FormData) {
   const name = requireText(formData.get("name"), "Team name");
   const description = optionalText(formData.get("description"));
@@ -297,6 +305,8 @@ export async function createUserTeam(formData: FormData) {
     .filter(Boolean)
     .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
+  const rawLabels = [1, 2, 3, 4].map((n) => optionalText(formData.get(`label_${n}`)));
+  const slot_labels = normalizeTeamLabels(rawLabels);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const supabase = await createClient();
@@ -314,6 +324,7 @@ export async function createUserTeam(formData: FormData) {
     name,
     description,
     slots,
+    slot_labels,
   });
   if (error) throw new Error(error.message);
 
@@ -330,6 +341,8 @@ export async function updateUserTeam(formData: FormData) {
     .filter(Boolean)
     .slice(0, 4);
   const slots = normalizeTeamSlots(parsedSlots);
+  const rawLabels = [1, 2, 3, 4].map((n) => optionalText(formData.get(`label_${n}`)));
+  const slot_labels = normalizeTeamLabels(rawLabels);
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const supabase = await createClient();
@@ -348,6 +361,7 @@ export async function updateUserTeam(formData: FormData) {
       name,
       description,
       slots,
+      slot_labels,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

@@ -66,6 +66,18 @@ function normalizeTeamSlotsForDisplay(rawSlots: unknown) {
   return slots;
 }
 
+function zipSlotsWithLabels(
+  rawSlots: unknown,
+  rawLabels: unknown
+): { slug: string; label: string }[] {
+  const slugs = Array.isArray(rawSlots) ? (rawSlots as string[]) : [];
+  const labels = Array.isArray(rawLabels) ? (rawLabels as string[]) : [];
+  return Array.from({ length: 4 }, (_, i) => ({
+    slug: String(slugs[i] || "").trim(),
+    label: String(labels[i] || "").trim(),
+  }));
+}
+
 type BarracksPageProps = {
   searchParams: Promise<{
     notice?: string;
@@ -188,7 +200,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       .limit(20),
     supabase
       .from("user_teams")
-      .select("id,name,description,slots,updated_at")
+      .select("id,name,description,slots,slot_labels,updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(20),
@@ -547,6 +559,16 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               ))}
             </datalist>
 
+            <datalist id="slot-role-suggestions">
+              <option value="Leader" />
+              <option value="Support" />
+              <option value="Bonus" />
+              <option value="Flex" />
+              <option value="Tank" />
+              <option value="Healer" />
+              <option value="Dancer" />
+            </datalist>
+
             <form action={createUserTeam} className="mt-3 grid gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
               <input type="hidden" name="redirect_to" value="/barracks" readOnly />
               <input
@@ -557,13 +579,22 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               />
               <div className="grid gap-2 md:grid-cols-2">
                 {[1, 2, 3, 4].map((slot) => (
-                  <TeamSlotTypeahead
-                    key={`new_team_slot_${slot}`}
-                    inputName={`slot_${slot}`}
-                    label={`Slot ${slot}`}
-                    heroes={teamSlotHeroOptions}
-                    placeholder="Search your owned heroes"
-                  />
+                  <div key={`new_team_slot_${slot}`} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-zinc-500">Slot {slot}</span>
+                      <input
+                        name={`label_${slot}`}
+                        placeholder="Role (optional)"
+                        list="slot-role-suggestions"
+                        className="w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs"
+                      />
+                    </div>
+                    <TeamSlotTypeahead
+                      inputName={`slot_${slot}`}
+                      heroes={teamSlotHeroOptions}
+                      placeholder="Search your owned heroes"
+                    />
+                  </div>
                 ))}
               </div>
               <input
@@ -581,143 +612,111 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
 
             <div className="mt-3 space-y-3">
               {(teams || []).map((team) => {
-                const slots = normalizeTeamSlotsForDisplay(team.slots);
+                const slotPairs = zipSlotsWithLabels(team.slots, team.slot_labels);
 
                 return (
-                  <form key={team.id} action={updateUserTeam} className="rounded-xl border border-zinc-700 bg-zinc-900/70 p-3">
-                    <input type="hidden" name="id" value={team.id} readOnly />
-                    <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+                  <details key={team.id} className="rounded-xl border border-zinc-700 bg-zinc-900/70">
+                    {/* Compact summary card — always visible */}
+                    <summary className="flex cursor-pointer select-none list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{team.name}</span>
+                        <span className="text-[11px] text-zinc-500">
+                          {team.updated_at ? new Date(team.updated_at).toLocaleString() : "-"} · Edit ▾
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {slotPairs.map(({ slug, label }, i) => (
+                          <div key={`${team.id}_summary_${i}`} className="flex flex-col items-center gap-1">
+                            {label ? (
+                              <span className="text-[10px] uppercase tracking-wide text-zinc-400">{label}</span>
+                            ) : (
+                              <span className="text-[10px] text-zinc-600">—</span>
+                            )}
+                            {slug ? (
+                              <img
+                                src={`/api/headshots/${slug}`}
+                                alt={resolveTeamHeroName(slug)}
+                                className="h-12 w-12 rounded-lg border border-zinc-700 object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="h-12 w-12 rounded-lg border border-dashed border-zinc-700 bg-zinc-900" />
+                            )}
+                            <span className="max-w-[72px] truncate text-center text-[10px] text-zinc-400">
+                              {slug ? resolveTeamHeroName(slug) : "Empty"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </summary>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    {/* Expanded edit form */}
+                    <form action={updateUserTeam} className="border-t border-zinc-800 p-3">
+                      <input type="hidden" name="id" value={team.id} readOnly />
+                      <input type="hidden" name="redirect_to" value="/barracks" readOnly />
+
                       <input
                         name="name"
                         defaultValue={team.name}
                         required
-                        className="min-w-[220px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
                       />
-                      <span className="text-[11px] text-zinc-500">
-                        {team.updated_at ? new Date(team.updated_at).toLocaleString() : "-"}
-                      </span>
-                    </div>
 
-                    <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-800">
-                      <table className="w-full min-w-[560px] text-sm">
-                        <thead className="bg-zinc-950/80 text-zinc-400">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-[11px] uppercase">Slot</th>
-                            <th className="px-3 py-2 text-left text-[11px] uppercase">Hero</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {slots.map((slot, index) => (
-                            <tr key={`${team.id}_slot_${index + 1}`} className="border-t border-zinc-800">
-                              <td className="px-3 py-2 text-zinc-300">{index + 1}</td>
-                              <td className="px-3 py-2">
-                                {slot ? (
-                                  (() => {
-                                    const meta = heroMetaBySlug.get(slot);
-                                    const rarityIcon = rarityIconName(meta?.rarity || null);
-                                    const weaponIcon = weaponIconName(meta?.weapon || null);
-                                    const moveIcon = moveIconName(meta?.move || null);
+                      <div className="mt-3 space-y-2">
+                        {slotPairs.map(({ slug, label }, index) => (
+                          <div key={`${team.id}_slot_${index + 1}`} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="w-10 shrink-0 text-[11px] text-zinc-500">Slot {index + 1}</span>
+                              <input
+                                name={`label_${index + 1}`}
+                                defaultValue={label}
+                                placeholder="Role (Leader, Support…)"
+                                list="slot-role-suggestions"
+                                className="w-36 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs"
+                              />
+                            </div>
+                            <div className="mt-2">
+                              <TeamSlotTypeahead
+                                inputName={`slot_${index + 1}`}
+                                heroes={teamSlotHeroOptions}
+                                initialSlug={slug}
+                                placeholder="Type to search owned heroes"
+                              />
+                            </div>
+                            {slug ? (
+                              <button
+                                type="submit"
+                                name={`clear_slot_${index + 1}`}
+                                value="1"
+                                className="mt-1.5 rounded border border-rose-900/70 px-2 py-0.5 text-[11px] text-rose-300 hover:bg-rose-950/50"
+                              >
+                                Remove from slot
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
 
-                                    return (
-                                      <div>
-                                        <Link href={`/heroes/${slot}`} className="group inline-flex min-w-0 items-center gap-2 hover:text-indigo-300">
-                                          <img
-                                            src={`/api/headshots/${slot}`}
-                                            alt={`${resolveTeamHeroName(slot)} headshot`}
-                                            className="h-8 w-8 rounded-md border border-zinc-700 object-cover"
-                                            loading="lazy"
-                                          />
-                                          <span className="min-w-0">
-                                            <span className="block truncate">{resolveTeamHeroName(slot)}</span>
-                                            <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400 group-hover:text-zinc-300">
-                                              {rarityIcon ? (
-                                                <img
-                                                  src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIcon)}`}
-                                                  alt={`${meta?.rarity || "Rarity"} icon`}
-                                                  className="h-3.5 w-3.5 rounded-sm"
-                                                />
-                                              ) : null}
-                                              <span>{rarityStarsText(meta?.rarity || null)}</span>
-                                              {weaponIcon ? (
-                                                <img
-                                                  src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIcon)}`}
-                                                  alt={`${meta?.weapon || "Weapon"} icon`}
-                                                  className="h-3.5 w-3.5 rounded-sm"
-                                                />
-                                              ) : null}
-                                              {moveIcon ? (
-                                                <img
-                                                  src={`/api/shared-icons/move?name=${encodeURIComponent(moveIcon)}`}
-                                                  alt={`${meta?.move || "Move"} icon`}
-                                                  className="h-3.5 w-3.5 rounded-sm"
-                                                />
-                                              ) : null}
-                                              <span>{meta?.tier != null ? `T${meta.tier}` : "T-"}</span>
-                                            </span>
-                                          </span>
-                                        </Link>
-
-                                        <div className="mt-2 max-w-md">
-                                          <TeamSlotTypeahead
-                                            inputName={`slot_${index + 1}`}
-                                            heroes={teamSlotHeroOptions}
-                                            initialSlug={slot}
-                                            placeholder="Type to search owned heroes"
-                                          />
-                                        </div>
-
-                                        <button
-                                          type="submit"
-                                          name={`clear_slot_${index + 1}`}
-                                          value="1"
-                                          className="mt-2 rounded border border-rose-900/70 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-950/50"
-                                        >
-                                          Remove from slot
-                                        </button>
-                                      </div>
-                                    );
-                                  })()
-                                ) : (
-                                  <>
-                                    <div className="max-w-md">
-                                      <TeamSlotTypeahead
-                                        inputName={`slot_${index + 1}`}
-                                        heroes={teamSlotHeroOptions}
-                                        initialSlug={slot}
-                                        placeholder="Type to search owned heroes"
-                                      />
-                                    </div>
-                                    <p className="mt-2 text-[11px] text-zinc-500">Empty slot — use search above to assign a hero.</p>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <input
-                      name="description"
-                      defaultValue={team.description ?? ""}
-                      placeholder="Description"
-                      className="mt-3 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                    />
-                    <div className="mt-3 flex gap-2">
-                      <button type="submit" className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800">
-                        Save changes
-                      </button>
-                      <button
-                        type="submit"
-                        formAction={removeUserTeam}
-                        className="rounded border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
-                      >
-                        Delete team
-                      </button>
-                    </div>
-                  </form>
+                      <input
+                        name="description"
+                        defaultValue={team.description ?? ""}
+                        placeholder="Description"
+                        className="mt-3 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                      />
+                      <div className="mt-3 flex gap-2">
+                        <button type="submit" className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800">
+                          Save changes
+                        </button>
+                        <button
+                          type="submit"
+                          formAction={removeUserTeam}
+                          className="rounded border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
+                        >
+                          Delete team
+                        </button>
+                      </div>
+                    </form>
+                  </details>
                 );
               })}
             </div>

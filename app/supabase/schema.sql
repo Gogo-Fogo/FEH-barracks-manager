@@ -76,6 +76,7 @@ create table if not exists public.user_teams (
   name text not null,
   description text,
   slots jsonb not null default '[]'::jsonb,
+  slot_labels jsonb not null default '["","","",""]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
