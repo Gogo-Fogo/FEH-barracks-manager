@@ -2,18 +2,49 @@
   "name": "feh-launcher",
   "version": "0.1.0",
   "private": true,
-  "description": "Windows launcher/updater for FEH Barracks Manager",
+  "description": "GUI launcher/updater for FEH Barracks Manager",
   "type": "commonjs",
-  "bin": {
-    "feh-launcher": "launcher.js"
-  },
+  "main": "main.js",
   "scripts": {
-    "build": "pkg launcher.js --targets node18-win-x64 --output ../dist/FEH-Barracks-Launcher.exe --icon assets/gullveig.ico"
+    "start": "electron .",
+    "build": "electron-builder --win portable --x64"
   },
   "dependencies": {
     "adm-zip": "^0.5.16"
   },
   "devDependencies": {
-    "pkg": "^5.8.1"
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.gogo-fogo.feh-barracks-launcher",
+    "productName": "FEH-Barracks-Launcher",
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "launcher-core.js",
+      "renderer/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/"
+      }
+    ],
+    "win": {
+      "icon": "assets/gullveig.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "FEH-Barracks-Launcher.exe"
+    }
   }
 }

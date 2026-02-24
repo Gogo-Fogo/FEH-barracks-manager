@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>FEH Barracks Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="bg"></div>
+  <div id="overlay"></div>
+
+  <div id="ui">
+    <div id="header">
+      <span id="title">FEH Barracks Manager</span>
+      <span id="version"></span>
+    </div>
+
+    <div id="log-area"></div>
+
+    <!-- Token input — hidden until needed -->
+    <div id="token-section" class="hidden">
+      <p id="token-prompt">Repository appears private. Enter a GitHub token:</p>
+      <div id="token-row">
+        <input id="token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" spellcheck="false" />
+        <button id="token-submit">Submit</button>
+      </div>
+    </div>
+
+    <div id="progress-wrap">
+      <div id="progress-bar"></div>
+      <div id="progress-label">Initializing...</div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
