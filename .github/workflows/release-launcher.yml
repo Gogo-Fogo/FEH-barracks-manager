@@ -28,6 +28,9 @@ jobs:
       - name: Install launcher dependencies
         run: npm ci --prefix launcher
 
+      - name: Convert launcher icon PNG to ICO
+        run: convert launcher/assets/gullveig.png -define icon:auto-resize=256,128,64,48,32,16 launcher/assets/gullveig.ico
+
       - name: Build launcher executable
         run: npm run build --prefix launcher
 
@@ -121,6 +124,13 @@ jobs:
           echo "Built feh-assets-bundle.zip from repo-tracked data only." >> RELEASE_NOTES.txt
           echo "For full local art assets, run: npm run build:local-assets-bundle on maintainer machine and upload replacement asset zip." >> RELEASE_NOTES.txt
 
+      - name: Create release body with banner
+        run: |
+          cat > RELEASE_BODY.md << 'EOF'
+          ![](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner.webp)
+
+          EOF
+
       - name: Validate release target token requirements
         if: env.DISTRO_REPO != '' && env.DISTRO_REPO != github.repository && env.DISTRO_REPO_TOKEN == ''
         run: |
@@ -135,6 +145,7 @@ jobs:
           repository: ${{ github.repository }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body_path: RELEASE_BODY.md
           files: |
             dist/FEH-Barracks-Launcher.exe
             feh-app-bundle.zip
@@ -151,6 +162,7 @@ jobs:
           repository: ${{ env.DISTRO_REPO }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          body_path: RELEASE_BODY.md
           files: |
             dist/FEH-Barracks-Launcher.exe
             feh-app-bundle.zip
