@@ -197,10 +197,14 @@ function createCore({ logger, isPackaged = false, execPath = "" } = {}) {
 
   function runCommand(command, args, cwd) {
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+      const isWin = process.platform === "win32";
+      // On Windows with shell:true, paths containing spaces must be quoted
+      // or cmd.exe splits them at the first space (e.g. "C:\Users\Juan" → error)
+      const safeCmd = isWin && command.includes(" ") ? `"${command}"` : command;
+      const child = spawn(safeCmd, args, {
         cwd,
         stdio: "inherit",
-        shell: process.platform === "win32",
+        shell: isWin,
       });
       child.on("close", (code) => {
         if (code === 0) resolve();
@@ -216,10 +220,12 @@ function createCore({ logger, isPackaged = false, execPath = "" } = {}) {
 
   function runCommandCapture(command, args, cwd) {
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+      const isWin = process.platform === "win32";
+      const safeCmd = isWin && command.includes(" ") ? `"${command}"` : command;
+      const child = spawn(safeCmd, args, {
         cwd,
         stdio: ["ignore", "pipe", "pipe"],
-        shell: process.platform === "win32",
+        shell: isWin,
       });
       let stdout = "";
       let stderr = "";

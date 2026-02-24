@@ -175,10 +175,12 @@ async function extractZip(zipPath, outDir) {
 
 function runCommand(command, args, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const isWin = process.platform === "win32";
+    const safeCmd = isWin && command.includes(" ") ? `"${command}"` : command;
+    const child = spawn(safeCmd, args, {
       cwd,
       stdio: "inherit",
-      shell: process.platform === "win32",
+      shell: isWin,
     });
 
     child.on("close", (code) => {
@@ -190,10 +192,12 @@ function runCommand(command, args, cwd) {
 
 function runCommandCapture(command, args, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const isWin = process.platform === "win32";
+    const safeCmd = isWin && command.includes(" ") ? `"${command}"` : command;
+    const child = spawn(safeCmd, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
+      shell: isWin,
     });
 
     let stdout = "";
