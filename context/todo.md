@@ -93,7 +93,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [x] Run index-to-unit coverage sanity check before import:
   - `npm run reconcile:index`
 - [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
-- [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
+- [x] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
 - [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker, moved above Notes)
 - [x] Polish Notes/Favorites UX (empty states, quick actions, consistency with heroes page, long-list scroll)
 - [x] Implement password reset flow
