@@ -13,8 +13,29 @@ export type HeroTypeaheadAliasOption = {
 
 export const DEFAULT_MAX_TYPEAHEAD_RESULTS = 50;
 
+// Characters that don't decompose via NFD but have common ASCII approximations.
+const SPECIAL_CHAR_MAP: Record<string, string> = {
+  // Norse/Old English
+  ð: "d", Ð: "d",
+  þ: "th", Þ: "th",
+  æ: "ae", Æ: "ae",
+  ø: "o", Ø: "o",
+  // Other common cases
+  ß: "ss",
+  ł: "l", Ł: "l",
+  đ: "d", Đ: "d",
+};
+
+const SPECIAL_CHAR_REGEX = new RegExp(
+  Object.keys(SPECIAL_CHAR_MAP).map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+  "g"
+);
+
 export function normalizeHeroSearchText(value: string) {
   return String(value || "")
+    .replace(SPECIAL_CHAR_REGEX, (c) => SPECIAL_CHAR_MAP[c] ?? c)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip combining diacritics (é→e, í→i, ö→o, etc.)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
