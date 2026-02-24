@@ -38,6 +38,12 @@ db/failed_build_parser_units.json
 db/banner_pull_guides.json
 db/banner_pull_discovered_urls.json
 
+# --- Next.js build output ---
+.next/
+
+# --- Claude Code worktrees ---
+.claude/worktrees/
+
 # --- AI/editor local artifacts ---
 .clinerules.local
 .clinedata/
