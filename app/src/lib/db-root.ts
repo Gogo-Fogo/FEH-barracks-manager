@@ -25,11 +25,12 @@ export function dbRoot(): string {
     }
   }
 
-  // 2. Walk up from cwd until we find a db/ sibling (max 6 levels)
+  // 2. Walk up from cwd until we find a db/ that contains unit_assets/
+  //    (a plain db/ with only JSON files, e.g. a git worktree checkout, is skipped)
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {
     const candidate = path.join(dir, "db");
-    if (fsSync.existsSync(candidate)) {
+    if (fsSync.existsSync(path.join(candidate, "unit_assets"))) {
       _dbRoot = candidate;
       return _dbRoot;
     }
