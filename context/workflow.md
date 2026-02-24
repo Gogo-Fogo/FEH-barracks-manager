@@ -442,6 +442,30 @@ Interpretation:
 - Manifest:
   - `db/unit_assets_manifest/shared_icons.json`
 
+## GitHub Release: Full Assets Bundle Upload
+
+After publishing a new release tag (or after any scrape that refreshes `db/`):
+
+```
+npm run release:assets
+```
+
+This builds `feh-assets-full-bundle.zip` from the local `db/` folder (includes
+`units/`, `unit_assets/`, `unit_assets_manifest/`, `quotes/`) and uploads it to
+the latest GitHub release, replacing any previous copy automatically (`--clobber`).
+
+Requires `gh` CLI authenticated:
+- Install: `winget install GitHub.cli`
+- Auth: `gh auth login`
+
+Notes:
+- The CI workflow uploads only a minimal `feh-assets-bundle.zip` (just `index.json`).
+  The full 1.8 GB bundle must be uploaded from the maintainer machine using this script.
+- `feh-assets-full-bundle.zip` in the repo root is the last locally-built copy
+  (not committed to git).
+- The launcher fetches `feh-assets-full-bundle.zip` first; falls back to
+  `feh-assets-bundle.zip` if not present.
+
 ## Pre-Push Checklist
 1. Run `git status` and confirm only intended source/config files are staged.
 2. Confirm `db/units/` and failure logs are not staged.
