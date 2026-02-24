@@ -1,6 +1,9 @@
 # --- Dependencies ---
 node_modules/
 dist/
+
+# --- CI-generated launcher assets ---
+launcher/assets/*.ico
 release_local/
 feh-assets-bundle.zip
 feh-assets-full-bundle.zip

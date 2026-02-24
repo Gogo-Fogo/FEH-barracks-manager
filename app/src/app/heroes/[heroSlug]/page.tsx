@@ -630,8 +630,6 @@ async function loadLocalRarityBySlug(heroSlug: string) {
 
   const fallback = await loadUnitRarityBySlugs([heroSlug]);
   return fallback.get(heroSlug) ?? null;
-
-  return null;
 }
 
 export default async function HeroDetailPage({ params }: HeroDetailPageProps) {

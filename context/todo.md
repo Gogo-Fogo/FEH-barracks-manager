@@ -90,8 +90,8 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 - [ ] Run Supabase SQL: `app/supabase/schema.sql` (on dedicated production Supabase project if splitting envs)
 - [x] Fill `app/.env.local` (Supabase URL, anon key, service role key)
 - [x] Re-run hero import: `npm --prefix app run import:heroes` (refresh catalog after latest scraper updates)
-- [ ] Run index-to-unit coverage sanity check before import:
-  - `node -e "const fs=require('fs');const safe=s=>String(s||'').replace(/[^a-z0-9]/gi,'_').toLowerCase();const idx=JSON.parse(fs.readFileSync('db/index.json','utf8'));const idxSet=new Set(idx.map(h=>safe(h.name)).filter(Boolean));const unitSlugs=fs.readdirSync('db/units',{withFileTypes:true}).filter(e=>e.isFile()&&/\.json$/i.test(e.name)).map(e=>e.name.replace(/\.json$/i,'').toLowerCase());const missing=unitSlugs.filter(s=>!idxSet.has(s));console.log('index_rows',idx.length,'unit_files',unitSlugs.length,'missing_from_index',missing.length);if(missing.length)console.log('sample_missing',missing.slice(0,20));"`
+- [x] Run index-to-unit coverage sanity check before import:
+  - `npm run reconcile:index`
 - [ ] Add GitHub Actions repo secrets for scheduled import (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 - [ ] Verify Supabase migration includes newest tables/policies (`user_hero_preferences`, `user_aether_resort_preferences`)
 - [x] Polish Team Builder UX (validation, duplicate-slot guard, better slot picker, moved above Notes)
@@ -105,18 +105,13 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
 ---
 
 ## Incident Hardening (2026-02-20)
-- [ ] P0: Enforce script-first anti-stuck execution for maintenance/audits (no long `node -e` one-liners; use committed `scripts/*.js` or temp script workflow)
-- [ ] Add post-change art endpoint smoke test to release checklist:
-  - `curl -I "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
-  - `curl -I "http://localhost:3022/api/headshots/<heroSlug>"`
-  - `curl -L -o NUL -w "%{http_code} %{content_type} %{size_download}\n" ...` should end as `200 image/*`
-- [ ] Add hydration safety review for hero detail client components:
-  - no `Math.random()` / `Date.now()` / locale-nondeterministic SSR-visible initial render values
-  - preserve valid hook ordering when adding hydration guards
-- [ ] Add weekly alias triage step in maintenance:
-  - run `npm run validate:hero-aliases`
-  - review `db/hero_aliases.json -> unresolved_aliases`
-  - promote confident mappings into `entries[]`
+- [x] P0: Enforce script-first anti-stuck execution for maintenance/audits (documented in workflow.md + CLAUDE.md; weekly protocol now uses `npm run reconcile:index` instead of node -e one-liner)
+- [x] Add post-change art endpoint smoke test to release checklist (added to Pre-Push Checklist in workflow.md)
+- [x] Add hydration safety review for hero detail client components:
+  - FullbodyCarousel uses `isHydrated` guard with proper hook ordering
+  - no `Math.random()` / `Date.now()` in SSR-visible render path
+  - dead unreachable `return null` removed from `loadLocalRarityBySlug`
+- [x] Add weekly alias triage step in maintenance (step 5a added to Manual Weekly Data Refresh Protocol in workflow.md)
 - [x] Resolve current unresolved aliases backlog (16 entries, including `Luke Rowdy Squire`)
 - [x] Backfill/enrich recovered legacy canonical heroes so details are populated (`raw_text_data`, `recommended_build`, `ivs`)
 - [x] Fix Hero Browser catalog truncation (removed restrictive 200-row cap)

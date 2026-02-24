@@ -36,7 +36,8 @@ Use this when you want controlled, human-reviewed updates instead of fully autom
    - `node scraper/Maintenance_Updater.js`
    - `node scraper/build_parser.js`
 2. Run index-to-unit coverage sanity check (prevents hidden catalog omissions):
-   - `node -e "const fs=require('fs');const safe=s=>String(s||'').replace(/[^a-z0-9]/gi,'_').toLowerCase();const idx=JSON.parse(fs.readFileSync('db/index.json','utf8'));const idxSet=new Set(idx.map(h=>safe(h.name)).filter(Boolean));const unitSlugs=fs.readdirSync('db/units',{withFileTypes:true}).filter(e=>e.isFile()&&/\.json$/i.test(e.name)).map(e=>e.name.replace(/\.json$/i,'').toLowerCase());const missing=unitSlugs.filter(s=>!idxSet.has(s));console.log('index_rows',idx.length,'unit_files',unitSlugs.length,'missing_from_index',missing.length);if(missing.length)console.log('sample_missing',missing.slice(0,20));"`
+   - `npm run reconcile:index`
+   - If non-zero `missing_from_index`, investigate before proceeding to import.
 3. Review failures and fix/retry if needed:
    - `db/failed_maintenance_units.json`
    - `db/failed_build_parser_units.json`
@@ -46,6 +47,16 @@ Use this when you want controlled, human-reviewed updates instead of fully autom
    - `node scraper/fandom_quotes_downloader.js`
 5. Validate Fandom source/path isolation:
    - `node -e "const fs=require('fs');const p=['fullbody','headshots','quotes'];for(const d of p){const m=JSON.parse(fs.readFileSync('g:/Workspace/MyTools/FEH-barracks-manager/db/unit_assets_manifest/fandom/'+d+'_manifest.json','utf8'));const bad=(m.items||[]).filter(i=>i.source!=='fandom'||!(i.local_path||'').includes('/fandom/'));console.log(d,'items=',m.items.length,'missing=',(m.missing_mapping||[]).length,'bad=',bad.length);}"`
+5a. Alias triage (weekly):
+   - `npm run validate:hero-aliases`
+   - Review `unresolved_aliases[]` in `db/hero_aliases.json`
+   - Promote confident mappings into `entries[]` when hero identity is confirmed.
+
+5b. Rarity safety check (before every import):
+   - Verify `rarity_key` is non-zero in local index:
+     `node -e "const fs=require('fs');const rows=JSON.parse(fs.readFileSync('db/index.json','utf8'));let has=0;for(const r of rows){if(Object.prototype.hasOwnProperty.call(r,'rarity'))has++;}console.log('rows',rows.length,'rarity_key',has);"`
+   - If `rarity_key` is 0 or very low, run `npm run scrape:fandom-rarities` first.
+
 6. Sync app catalog to Supabase:
    - `npm --prefix app run import:heroes`
 7. Smoke test hosted app (Vercel):
@@ -473,3 +484,11 @@ Notes:
 4. If needed, run focused validation before push:
    - `node scraper/Maintenance_Updater.js`
    - `node scraper/build_parser.js --only=<unit_file>.json`
+5. After any change to API routes or art asset paths, run art endpoint smoke tests:
+   - `curl -I "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
+   - `curl -I "http://localhost:3022/api/headshots/<heroSlug>"`
+   - Response must show `200 OK` and `content-type: image/*` (no redirects)
+   - Full content check: `curl -L -o NUL -w "%{http_code} %{content_type} %{size_download}\n" "http://localhost:3022/api/fullbody/<heroSlug>?pose=portrait"`
+6. After any edit to hero detail or client components, run:
+   - `npm --prefix app run build`
+   - Confirm no hydration warnings in build output.
