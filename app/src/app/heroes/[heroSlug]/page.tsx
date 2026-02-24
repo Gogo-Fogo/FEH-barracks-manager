@@ -44,6 +44,7 @@ type BuildEntryDetail = {
   description: string | null;
   inheritSources: string[];
   isDerivedSpecial: boolean;
+  href: string | null;
 };
 
 type SkillHint =
@@ -338,9 +339,11 @@ function deriveSpecialFromRawText(rawText?: string) {
 function SkillValueWithTooltip({
   skillName,
   description,
+  href,
 }: {
   skillName: string;
   description: string | null;
+  href?: string | null;
 }) {
   if (!skillName || skillName.trim() === "-") {
     return <span>{skillName || "-"}</span>;
@@ -349,20 +352,38 @@ function SkillValueWithTooltip({
   const tooltipText =
     description || "Description not yet extracted from current scraped skill text.";
 
+  const badgeClass =
+    "inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400" +
+    (href ? " cursor-pointer hover:border-indigo-500 hover:bg-indigo-950/60" : " cursor-help");
+
+  const inner = (
+    <>
+      <span className="truncate">{skillName}</span>
+      <span className={`text-sm ${href ? "text-indigo-400" : "text-indigo-300"}`}>
+        {href ? "↗" : "ⓘ"}
+      </span>
+    </>
+  );
+
   return (
     <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
-      <span
-        className="inline-flex max-w-full cursor-help items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400"
-      >
-        <span className="truncate">{skillName}</span>
-        <span className="text-sm text-indigo-300">ⓘ</span>
-      </span>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className={badgeClass}>
+          {inner}
+        </a>
+      ) : (
+        <span className={badgeClass}>{inner}</span>
+      )}
 
       <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
         {tooltipText}
       </span>
     </span>
   );
+}
+
+function skillWikiUrl(skillName: string): string {
+  return `https://feheroes.fandom.com/wiki/${skillName.replace(/ /g, "_")}`;
 }
 
 function buildKeyLabel(key: string) {
@@ -740,12 +761,18 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
         .filter((sourceName) => sourceName !== hero.name)
         .slice(0, 8);
 
+      const href =
+        key === "weapon"
+          ? (hero.source_url || null)
+          : skillWikiUrl(value);
+
       return {
         key,
         value,
         description,
         inheritSources,
         isDerivedSpecial: key === "special" && Boolean(derivedSpecial),
+        href,
       } as BuildEntryDetail;
     })
   ).then((entries) => entries.filter((entry): entry is BuildEntryDetail => Boolean(entry)));
@@ -892,14 +919,14 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
             {buildEntriesDetailed.length ? (
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
                 <h2 className="mb-2 text-base font-semibold">Recommended Build</h2>
-                <p className="mb-2 text-xs text-zinc-400">Hover any skill for effect descriptions.</p>
+                <p className="mb-2 text-xs text-zinc-400">Hover any skill for description · click ↗ to open reference page.</p>
 
                 <div className="grid gap-2 md:grid-cols-2">
                   {buildEntriesDetailed.map((entry) => (
                     <div key={entry.key} className="rounded-md border border-zinc-800 bg-zinc-900/45 p-2">
                       <p>
                         <span className="text-zinc-400">{buildKeyLabel(entry.key)}:</span>{" "}
-                        <SkillValueWithTooltip skillName={entry.value} description={entry.description} />
+                        <SkillValueWithTooltip skillName={entry.value} description={entry.description} href={entry.href} />
                       </p>
 
                       {entry.isDerivedSpecial ? (
