@@ -22,7 +22,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const sha = process.env.NEXT_PUBLIC_COMMIT_SHA ?? "dev";
+  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
+  const sha = process.env.NEXT_PUBLIC_COMMIT_SHA ?? "";
   return (
     <html lang="en">
       <body
@@ -30,7 +31,7 @@ export default function RootLayout({
       >
         {children}
         <div className="fixed bottom-2 right-3 font-mono text-[10px] text-zinc-600 select-none pointer-events-none">
-          {sha}
+          v{version}{sha ? ` · ${sha}` : ""}
         </div>
       </body>
     </html>
