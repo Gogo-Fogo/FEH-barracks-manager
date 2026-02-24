@@ -8,6 +8,7 @@ import { HeroesListClient } from "@/components/heroes-list-client";
 import { HeroBrowserFilters } from "@/components/hero-browser-filters";
 import { listHeroAliasOptionsBySlug, resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
+import { normalizeHeroSearchText } from "@/lib/hero-typeahead";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -106,7 +107,8 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       .order("hero_slug", { ascending: true })
       .range(0, HERO_QUERY_MAX_ROWS - 1);
 
-    if (q) query = query.ilike("name", `%${q}%`);
+    // q is intentionally NOT passed to Supabase — ILIKE is not accent-aware so
+    // "Celine" would miss "Céline". We apply normalizeHeroSearchText in JS below.
     if (weapon) query = query.eq("weapon", weapon);
     if (move) query = query.eq("move", move);
     if (tag) query = query.eq("tag", tag);
@@ -121,7 +123,6 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       .order("hero_slug", { ascending: true })
       .range(0, HERO_QUERY_MAX_ROWS - 1);
 
-    if (q) query = query.ilike("name", `%${q}%`);
     if (weapon) query = query.eq("weapon", weapon);
     if (move) query = query.eq("move", move);
     if (tag) query = query.eq("tag", tag);
@@ -183,6 +184,14 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       rarity: patchedRarity,
     };
   });
+
+  // Accent-safe name filter: applied in JS so "celine" matches "Céline - Love's Aroma"
+  if (q) {
+    const qNorm = normalizeHeroSearchText(q);
+    heroRows = heroRows.filter((h) =>
+      normalizeHeroSearchText(h.name).includes(qNorm)
+    );
+  }
 
   const aliasSlug = q ? await resolveHeroAliasToSlug(q) : null;
   if (q && aliasSlug) {
