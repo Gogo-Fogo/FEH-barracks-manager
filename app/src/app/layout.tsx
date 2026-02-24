@@ -22,12 +22,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const sha = process.env.NEXT_PUBLIC_COMMIT_SHA ?? "dev";
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <div className="fixed bottom-2 right-3 font-mono text-[10px] text-zinc-600 select-none pointer-events-none">
+          {sha}
+        </div>
       </body>
     </html>
   );
