@@ -5,6 +5,7 @@ import {
   loadFandomFullbodyUrlBySlug,
   loadUnitImageUrlBySlug,
 } from "@/lib/local-unit-data";
+import { dbRoot } from "@/lib/db-root";
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
 
@@ -69,8 +70,7 @@ function placeholderSvg(heroSlug: string) {
 
 async function findFullbody(heroSlug: string, pose: string) {
   const roots = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "fullbody"),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "fullbody"),
+    path.join(dbRoot(), "unit_assets", "fandom", "fullbody"),
   ];
 
   for (const root of roots) {

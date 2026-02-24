@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { dbRoot } from "@/lib/db-root";
 
 type UnitFile = {
   name?: string;
@@ -37,8 +38,7 @@ function sanitizeText(value: string | null | undefined) {
 
 async function readUnitFile(heroSlug: string): Promise<UnitFile | null> {
   const candidates = [
-    path.join(process.cwd(), "db", "units", `${heroSlug}.json`),
-    path.join(process.cwd(), "..", "db", "units", `${heroSlug}.json`),
+    path.join(dbRoot(), "units", `${heroSlug}.json`),
   ];
 
   for (const filePath of candidates) {
@@ -70,8 +70,7 @@ function normalizeSlug(value: string) {
 
 async function loadBannerPullGuides(): Promise<BannerPullGuide[]> {
   const candidates = [
-    path.join(process.cwd(), "db", "banner_pull_guides.json"),
-    path.join(process.cwd(), "..", "db", "banner_pull_guides.json"),
+    path.join(dbRoot(), "banner_pull_guides.json"),
   ];
 
   for (const filePath of candidates) {

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { dbRoot } from "@/lib/db-root";
 import { redirect } from "next/navigation";
 import { HeroBrowserFilters } from "@/components/hero-browser-filters";
 import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
@@ -60,8 +61,7 @@ function toNum(value: string | undefined) {
 
 async function loadLocalRarityBySlug() {
   const candidates = [
-    path.join(process.cwd(), "db", "index.json"),
-    path.join(process.cwd(), "..", "db", "index.json"),
+    path.join(dbRoot(), "index.json"),
   ];
 
   for (const filePath of candidates) {

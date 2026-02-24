@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { dbRoot } from "@/lib/db-root";
 
 function normalizeSlug(value: string) {
   return value
@@ -23,8 +24,7 @@ function inferContentType(filePath: string) {
 
 async function findMiniSpriteFile(heroSlug: string) {
   const roots = [
-    path.join(process.cwd(), "db", "unit_assets", "game8", "mini_sprites"),
-    path.join(process.cwd(), "..", "db", "unit_assets", "game8", "mini_sprites"),
+    path.join(dbRoot(), "unit_assets", "game8", "mini_sprites"),
   ];
 
   const normalized = normalizeSlug(heroSlug.replace(/___/g, "_"));

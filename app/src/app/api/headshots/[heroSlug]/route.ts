@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { loadFandomHeadshotUrlBySlug, loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
+import { dbRoot } from "@/lib/db-root";
 
 async function proxyRemoteImage(url: string) {
   try {
@@ -55,8 +56,7 @@ function inferContentType(filePath: string) {
 
 async function findHeadshotFile(heroSlug: string) {
   const roots = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "headshots"),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "headshots"),
+    path.join(dbRoot(), "unit_assets", "fandom", "headshots"),
   ];
 
   const candidateDirs = new Set<string>();

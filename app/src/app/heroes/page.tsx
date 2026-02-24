@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { dbRoot } from "@/lib/db-root";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -36,8 +37,7 @@ function safeSlug(name: string) {
 
 async function loadLocalRarityBySlug() {
   const candidates = [
-    path.join(process.cwd(), "db", "index.json"),
-    path.join(process.cwd(), "..", "db", "index.json"),
+    path.join(dbRoot(), "index.json"),
   ];
 
   for (const filePath of candidates) {

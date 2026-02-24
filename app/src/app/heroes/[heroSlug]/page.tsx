@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { dbRoot } from "@/lib/db-root";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -187,8 +188,7 @@ async function loadUnitSnapshots(): Promise<UnitSnapshot[]> {
 
   unitSnapshotsPromise = (async () => {
     const roots = [
-      path.join(process.cwd(), "db", "units"),
-      path.join(process.cwd(), "..", "db", "units"),
+      path.join(dbRoot(), "units"),
     ];
 
     for (const root of roots) {
@@ -438,8 +438,7 @@ async function loadFullbodyPoses(heroSlug: string) {
   let localPoses: string[] = [];
 
   const roots = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "fullbody", heroSlug),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "fullbody", heroSlug),
+    path.join(dbRoot(), "unit_assets", "fandom", "fullbody", heroSlug),
   ];
 
   for (const root of roots) {
@@ -478,8 +477,7 @@ async function loadFullbodyPoses(heroSlug: string) {
 
 async function loadUnitFile(heroSlug: string): Promise<UnitFile | null> {
   const candidates = [
-    path.join(process.cwd(), "db", "units", `${heroSlug}.json`),
-    path.join(process.cwd(), "..", "db", "units", `${heroSlug}.json`),
+    path.join(dbRoot(), "units", `${heroSlug}.json`),
   ];
 
   for (const filePath of candidates) {
@@ -565,8 +563,7 @@ function extractQuoteCandidates(rawText?: string) {
 
 async function loadHeroQuotes(heroSlug: string) {
   const candidates = [
-    path.join(process.cwd(), "db", "quotes", "fandom", `${heroSlug}.json`),
-    path.join(process.cwd(), "..", "db", "quotes", "fandom", `${heroSlug}.json`),
+    path.join(dbRoot(), "quotes", "fandom", `${heroSlug}.json`),
   ];
 
   for (const filePath of candidates) {
@@ -588,8 +585,7 @@ function parseQuoteTextToCandidates(rawText?: string | null) {
 
 async function loadUnitBackgroundOptions() {
   const roots = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "shared", "unit_backgrounds"),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "shared", "unit_backgrounds"),
+    path.join(dbRoot(), "unit_assets", "fandom", "shared", "unit_backgrounds"),
   ];
 
   for (const root of roots) {
@@ -608,8 +604,7 @@ async function loadUnitBackgroundOptions() {
 
 async function loadLocalRarityBySlug(heroSlug: string) {
   const candidates = [
-    path.join(process.cwd(), "db", "index.json"),
-    path.join(process.cwd(), "..", "db", "index.json"),
+    path.join(dbRoot(), "index.json"),
   ];
 
   for (const filePath of candidates) {

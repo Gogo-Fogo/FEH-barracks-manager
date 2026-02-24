@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { dbRoot } from "@/lib/db-root";
 
 function inferContentType(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
@@ -15,8 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ cate
   if (!name) return new NextResponse("Missing icon name", { status: 400 });
 
   const candidates = [
-    path.join(process.cwd(), "db", "unit_assets", "fandom", "shared", category, name),
-    path.join(process.cwd(), "..", "db", "unit_assets", "fandom", "shared", category, name),
+    path.join(dbRoot(), "unit_assets", "fandom", "shared", category, name),
   ];
 
   for (const filePath of candidates) {

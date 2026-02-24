@@ -2,6 +2,7 @@ import "server-only";
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dbRoot } from "@/lib/db-root";
 
 type UnitRecord = {
   name?: string;
@@ -131,10 +132,7 @@ function normalizeSlug(value: string) {
 }
 
 function unitRootCandidates() {
-  return [
-    path.join(process.cwd(), "db", "units"),
-    path.join(process.cwd(), "..", "db", "units"),
-  ];
+  return [path.join(dbRoot(), "units")];
 }
 
 async function fileExists(filePath: string) {

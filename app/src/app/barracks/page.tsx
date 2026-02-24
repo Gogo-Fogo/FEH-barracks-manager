@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { dbRoot } from "@/lib/db-root";
 import { redirect } from "next/navigation";
 import { AddHeroTypeahead } from "@/components/add-hero-typeahead";
 import { AuthSignOutButton } from "@/components/auth-signout-button";
@@ -31,8 +32,7 @@ function looksLikeGuideTitle(name: string) {
 
 async function loadLocalRarityBySlug() {
   const candidates = [
-    path.join(process.cwd(), "db", "index.json"),
-    path.join(process.cwd(), "..", "db", "index.json"),
+    path.join(dbRoot(), "index.json"),
   ];
 
   for (const filePath of candidates) {

@@ -2,6 +2,7 @@ import "server-only";
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { dbRoot } from "@/lib/db-root";
 
 type HeroAliasEntry = {
   canonical_slug?: string;
@@ -19,8 +20,7 @@ export type HeroAliasOption = {
 };
 
 const ALIAS_FILE_CANDIDATES = [
-  path.join(process.cwd(), "db", "hero_aliases.json"),
-  path.join(process.cwd(), "..", "db", "hero_aliases.json"),
+  path.join(dbRoot(), "hero_aliases.json"),
 ];
 
 let aliasFilePromise: Promise<HeroAliasesFile | null> | null = null;
