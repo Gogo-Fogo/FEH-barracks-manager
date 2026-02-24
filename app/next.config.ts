@@ -3,28 +3,33 @@ import { execSync } from "child_process";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-let commitSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "";
-if (!commitSha) {
-  try {
-    commitSha = execSync("git rev-parse --short HEAD", { cwd: __dirname })
-      .toString()
-      .trim();
-  } catch {
-    commitSha = "unknown";
+let versionLabel = "";
+try {
+  versionLabel = execSync("git describe --tags --always", { cwd: __dirname })
+    .toString()
+    .trim();
+} catch {
+  // fallback: package.json version + short SHA
+  const { version } = JSON.parse(
+    readFileSync(join(__dirname, "package.json"), "utf8")
+  ) as { version: string };
+  let sha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "";
+  if (!sha) {
+    try {
+      sha = execSync("git rev-parse --short HEAD", { cwd: __dirname })
+        .toString()
+        .trim();
+    } catch { /* ignore */ }
   }
+  versionLabel = sha ? `v${version} · ${sha}` : `v${version}`;
 }
-
-const { version } = JSON.parse(
-  readFileSync(join(__dirname, "package.json"), "utf8")
-) as { version: string };
 
 const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
   env: {
-    NEXT_PUBLIC_COMMIT_SHA: commitSha,
-    NEXT_PUBLIC_APP_VERSION: version,
+    NEXT_PUBLIC_VERSION_LABEL: versionLabel,
   },
 };
 
