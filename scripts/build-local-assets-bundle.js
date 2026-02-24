@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, "..");
 const DB_ROOT = path.join(ROOT, "db");
 const STAGE_ROOT = path.join(ROOT, "release_local", "assets");
 const STAGE_DB = path.join(STAGE_ROOT, "db");
-const OUTPUT_ZIP = path.join(ROOT, "feh-assets-bundle.zip");
+const OUTPUT_ZIP = path.join(ROOT, "feh-assets-full-bundle.zip");
 
 const REQUIRED_ENTRIES = [
   "index.json",
@@ -81,7 +81,7 @@ async function main() {
 
   zipWithPowerShell(path.join(STAGE_ROOT, "db"), OUTPUT_ZIP);
   console.log(`\nCreated: ${OUTPUT_ZIP}`);
-  console.log("Upload this file to the GitHub release as feh-assets-bundle.zip");
+  console.log("Run `npm run release:assets` to upload to the latest GitHub release.");
 }
 
 main().catch((err) => {
