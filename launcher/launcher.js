@@ -494,6 +494,7 @@ async function installOrUpdateFromRelease(release) {
     lastReleaseTag: release.tag_name,
     releaseName: release.name || release.tag_name,
     previousReleaseTag: existing?.lastReleaseTag || null,
+    installRoot: INSTALL_ROOT,
   });
 
   await fsp.rm(tempDir, { recursive: true, force: true });
@@ -512,6 +513,9 @@ async function launchApp() {
     console.log("App is not installed yet. Run Install/Update first.");
     return "not-installed";
   }
+
+  // Always refresh the .bat so it reflects the current install location.
+  await ensureStartScript().catch(() => {});
 
   if (await isAppDevServerAlreadyRunning()) {
     console.log("\nFEH Barracks app is already running. Reusing existing dev server.");
@@ -578,6 +582,27 @@ async function autoUpdateAndLaunch() {
   console.log("Checking install state and latest release...");
 
   const [meta, release] = await Promise.all([readMeta(), fetchLatestRelease()]);
+
+  // ── Folder-move detection ─────────────────────────────────────────────────
+  if (meta?.installRoot && meta.installRoot !== INSTALL_ROOT) {
+    console.log(`[Relocation] Install folder moved:`);
+    console.log(`  was: ${meta.installRoot}`);
+    console.log(`  now: ${INSTALL_ROOT}`);
+    console.log("Updating launch script and package references...");
+    await ensureStartScript();
+    if (fs.existsSync(path.join(APP_PATH, "package.json"))) {
+      try {
+        await stopRunningAppNodeProcesses();
+        await runNpm(["ci"], APP_PATH);
+        console.log("Package references updated.");
+      } catch (e) {
+        console.log(`npm ci after relocation failed: ${e.message} (continuing)`);
+      }
+    }
+    await writeMeta({ ...meta, installRoot: INSTALL_ROOT });
+    console.log("Relocation healed.\n");
+  }
+
   const installed = fs.existsSync(path.join(APP_PATH, "package.json"));
   const needsInstall = !installed;
   const needsUpdate = !needsInstall && meta?.lastReleaseTag !== release.tag_name;

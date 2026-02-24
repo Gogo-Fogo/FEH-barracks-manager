@@ -528,6 +528,7 @@ function createCore({ logger, isPackaged = false, execPath = "" } = {}) {
       lastReleaseTag: release.tag_name,
       releaseName: release.name || release.tag_name,
       previousReleaseTag: existing?.lastReleaseTag || null,
+      installRoot: INSTALL_ROOT,
     });
 
     await fsp.rm(tempDir, { recursive: true, force: true });
@@ -540,6 +541,10 @@ function createCore({ logger, isPackaged = false, execPath = "" } = {}) {
       log("App is not installed yet. Run Install/Update first.");
       return "not-installed";
     }
+
+    // Always refresh the .bat so it reflects the current install location,
+    // even if the folder was moved between sessions.
+    await ensureStartScript().catch(() => {});
 
     if (await isAppDevServerAlreadyRunning()) {
       log("\nFEH Barracks app is already running. Reusing existing dev server.");
@@ -613,6 +618,30 @@ function createCore({ logger, isPackaged = false, execPath = "" } = {}) {
       readMeta(),
       fetchLatestRelease(),
     ]);
+
+    // ── Folder-move detection ─────────────────────────────────────────────────
+    // If the user moved the FEH-Barracks-Manager folder after install, the
+    // stored installRoot in meta will differ from the current INSTALL_ROOT.
+    // Re-write the .bat and run `npm ci` so hardcoded paths are healed.
+    if (meta?.installRoot && meta.installRoot !== INSTALL_ROOT) {
+      log(`[Relocation] Install folder moved:`);
+      log(`  was: ${meta.installRoot}`);
+      log(`  now: ${INSTALL_ROOT}`);
+      log("Updating launch script and package references...");
+      await ensureStartScript();
+      if (fs.existsSync(path.join(APP_PATH, "package.json"))) {
+        try {
+          await stopRunningAppNodeProcesses();
+          await runNpm(["ci"], APP_PATH);
+          log("Package references updated.");
+        } catch (e) {
+          log(`npm ci after relocation failed: ${e.message} (continuing)`);
+        }
+      }
+      await writeMeta({ ...meta, installRoot: INSTALL_ROOT });
+      log("Relocation healed.\n");
+    }
+
     const installed = fs.existsSync(path.join(APP_PATH, "package.json"));
     const needsInstall = !installed;
     const needsUpdate =
