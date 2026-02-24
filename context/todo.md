@@ -23,7 +23,7 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
   - Hero browser/search
   - Personal barracks CRUD
   - Notes/favorites
-- [ ] Decide if v1 needs invite-only access or open signup.
+- [x] Decide if v1 needs invite-only access or open signup. **Decision: open signup.** Anyone can create an account. No invite codes or allowlists needed.
 
 ## Phase 1 - Project Setup
 - [x] Create app scaffold under `app/` (or `web/` if preferred).
