@@ -255,3 +255,79 @@ export async function getParticipantDetails(
 
   return { heroes, favorites, teams };
 }
+
+// ─── Global chat ──────────────────────────────────────────────────────────────
+
+export type TavernMessage = {
+  id: string;
+  userId: string;
+  displayName: string;
+  avatarHeroSlug: string | null;
+  content: string;
+  createdAt: string; // ISO
+};
+
+export async function fetchTavernMessages(): Promise<TavernMessage[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("tavern_messages")
+    .select("id, user_id, display_name, avatar_hero_slug, content, created_at")
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  return (data ?? []).map((r) => ({
+    id:              r.id,
+    userId:          r.user_id,
+    displayName:     r.display_name,
+    avatarHeroSlug:  r.avatar_hero_slug ?? null,
+    content:         r.content,
+    createdAt:       r.created_at,
+  }));
+}
+
+export async function sendTavernMessage(content: string): Promise<ActionResult> {
+  const text = content.trim().slice(0, 500);
+  if (!text) return { ok: false, message: "Message cannot be empty." };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not logged in." };
+
+  // Fetch sender's current display name and avatar
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, avatar_hero_slug")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "Summoner";
+  const avatarHeroSlug = profile?.avatar_hero_slug ?? null;
+
+  const { error } = await supabase.from("tavern_messages").insert({
+    user_id:         user.id,
+    display_name:    displayName,
+    avatar_hero_slug: avatarHeroSlug,
+    content:         text,
+  });
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "sent" };
+}
+
+export async function deleteTavernMessage(messageId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not logged in." };
+
+  const { error } = await supabase
+    .from("tavern_messages")
+    .delete()
+    .eq("id", messageId)
+    .eq("user_id", user.id); // RLS guard
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "deleted" };
+}

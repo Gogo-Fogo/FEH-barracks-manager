@@ -368,3 +368,39 @@ create policy "friendships_delete_own"
   on public.user_friendships for delete
   to authenticated
   using (auth.uid() = requester_id or auth.uid() = addressee_id);
+
+-- ─── Tavern global chat ──────────────────────────────────────────────────────
+-- Run this block in Supabase SQL Editor to enable the chat feature.
+
+create table if not exists public.tavern_messages (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,
+  avatar_hero_slug text,
+  content text not null,
+  created_at timestamptz not null default now(),
+  constraint tavern_messages_content_length check (char_length(content) between 1 and 500)
+);
+
+create index if not exists tavern_messages_created_idx
+  on public.tavern_messages (created_at desc);
+
+alter table public.tavern_messages enable row level security;
+
+drop policy if exists "tavern_messages_select" on public.tavern_messages;
+create policy "tavern_messages_select"
+  on public.tavern_messages for select
+  to authenticated
+  using (true);
+
+drop policy if exists "tavern_messages_insert" on public.tavern_messages;
+create policy "tavern_messages_insert"
+  on public.tavern_messages for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "tavern_messages_delete_own" on public.tavern_messages;
+create policy "tavern_messages_delete_own"
+  on public.tavern_messages for delete
+  to authenticated
+  using (auth.uid() = user_id);

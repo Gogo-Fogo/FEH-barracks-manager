@@ -13,6 +13,10 @@ import {
   searchUsersAction,
   getParticipantDetails,
   type ParticipantDetails,
+  fetchTavernMessages,
+  sendTavernMessage,
+  deleteTavernMessage,
+  type TavernMessage,
 } from "@/app/tavern/actions";
 
 // ─── Exported types ───────────────────────────────────────────────────────────
@@ -81,13 +85,14 @@ const FLOAT_DELAYS = ["0s", "1.3s", "2.5s"];
 const CROSSFADE_SECS = 2.5;
 const MUSIC_VOL = 0.45;
 
-type TabKey = "leaderboard" | "profile" | "friends" | "add";
+type TabKey = "leaderboard" | "profile" | "friends" | "add" | "chat";
 
 const TAB_META: Array<{ key: TabKey; icon: string; label: string }> = [
   { key: "leaderboard", icon: "🏆", label: "Leaderboard" },
   { key: "profile",     icon: "👤", label: "Profile"     },
   { key: "friends",     icon: "👥", label: "Friends"     },
   { key: "add",         icon: "➕", label: "Add Friend"  },
+  { key: "chat",        icon: "💬", label: "Chat"        },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -98,6 +103,7 @@ export function TavernClient(props: TavernClientProps) {
 
   // Stage participants frozen on mount so router.refresh() doesn't reshuffle
   const [participants] = useState(() => props.participants);
+  const myUserId = participants[0]?.userId ?? "";
 
   // Panel
   const [panelOpen, setPanelOpen] = useState(false);
@@ -135,6 +141,13 @@ export function TavernClient(props: TavernClientProps) {
   const [profileDetails, setProfileDetails] = useState<ParticipantDetails | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSubTab, setProfileSubTab] = useState<"heroes" | "favorites" | "teams">("heroes");
+
+  // Chat
+  const [chatMessages, setChatMessages] = useState<TavernMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Lock body scroll
   useEffect(() => {
@@ -311,6 +324,71 @@ export function TavernClient(props: TavernClientProps) {
 
   const pendingCount = props.pendingRequests.length;
 
+  // ── Chat helpers ───────────────────────────────────────────────────────────
+
+  function formatRelativeTime(isoString: string): string {
+    const diff = Date.now() - new Date(isoString).getTime();
+    const secs = Math.floor(diff / 1000);
+    if (secs < 60) return "just now";
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  async function loadChat(scrollToEnd = false) {
+    const msgs = await fetchTavernMessages();
+    setChatMessages(msgs);
+    requestAnimationFrame(() => {
+      const el = chatScrollRef.current;
+      if (!el) return;
+      if (scrollToEnd) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        if (nearBottom) el.scrollTop = el.scrollHeight;
+      }
+    });
+  }
+
+  async function handleSendChat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatInput.trim() || chatSending) return;
+    setChatSending(true);
+    try {
+      const result = await sendTavernMessage(chatInput.trim());
+      if (result.ok) {
+        setChatInput("");
+        await loadChat(true);
+      } else {
+        showToast(result.message, false);
+      }
+    } finally {
+      setChatSending(false);
+    }
+  }
+
+  async function handleDeleteMessage(messageId: string) {
+    const result = await deleteTavernMessage(messageId);
+    if (result.ok) {
+      setChatMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } else {
+      showToast(result.message, false);
+    }
+  }
+
+  // Poll chat when panel is open on chat tab
+  useEffect(() => {
+    if (panelOpen && activeTab === "chat") {
+      loadChat(true);
+      chatPollRef.current = setInterval(() => loadChat(false), 30_000);
+      return () => { if (chatPollRef.current) clearInterval(chatPollRef.current); };
+    }
+    if (chatPollRef.current) clearInterval(chatPollRef.current);
+  }, [activeTab, panelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const lbCategories = [
     { label: "Tier Power",     entries: props.leaderboard.tierPower, icon: "⚡", color: "text-yellow-300", decimal: true },
     { label: "Most Heroes",    entries: props.leaderboard.total,     icon: "⚔",  color: "text-zinc-100",   decimal: false },
@@ -323,6 +401,7 @@ export function TavernClient(props: TavernClientProps) {
     activeTab === "leaderboard" ? "🏆 Leaderboard" :
     activeTab === "profile"     ? "👤 Profile" :
     activeTab === "friends"     ? "👥 Friends" :
+    activeTab === "chat"        ? "💬 Tavern Chat" :
     activeTab === ("player" as TabKey) ? `📋 ${profileTarget?.displayName ?? "Profile"}` :
     "➕ Add Friend";
 
@@ -609,7 +688,7 @@ export function TavernClient(props: TavernClientProps) {
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-3">
 
             {/* ─── Leaderboard ─────────────────────────────────────────── */}
             {activeTab === "leaderboard" && (
@@ -939,7 +1018,78 @@ export function TavernClient(props: TavernClientProps) {
               </div>
             )}
 
+            {/* ─── Chat ──────────────────────────────────────────────────── */}
+            {activeTab === "chat" && (
+              <div className="space-y-3">
+                {chatMessages.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-zinc-500">
+                    No messages yet. Be the first to speak!
+                  </p>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <div key={msg.id} className="flex gap-2.5">
+                      {msg.avatarHeroSlug ? (
+                        <img
+                          src={`/api/headshots/${msg.avatarHeroSlug}`}
+                          alt={msg.displayName}
+                          className="mt-0.5 h-8 w-8 shrink-0 rounded-full border border-zinc-700 object-cover"
+                        />
+                      ) : (
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-xs text-zinc-500">
+                          ?
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-0.5 flex items-baseline gap-1.5">
+                          <span className="max-w-[40%] truncate text-xs font-semibold text-amber-200">
+                            {msg.displayName}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-zinc-600">
+                            {formatRelativeTime(msg.createdAt)}
+                          </span>
+                          {msg.userId === myUserId && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="ml-auto shrink-0 text-[9px] text-zinc-600 hover:text-red-400"
+                              title="Delete message"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                        <p className="break-words text-xs text-zinc-300">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
           </div>
+
+          {/* ── Chat input bar — pinned below the scrollable area ── */}
+          {panelOpen && activeTab === "chat" && (
+            <div className="shrink-0 border-t border-zinc-700/50 px-4 py-2.5">
+              <form onSubmit={handleSendChat} className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  maxLength={500}
+                  placeholder="Say something to the tavern…"
+                  className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={chatSending || !chatInput.trim()}
+                  className="rounded-md border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/60 disabled:opacity-50"
+                >
+                  {chatSending ? "…" : "Send"}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* ── Toast ── */}
