@@ -11,6 +11,8 @@ import {
   declineFriendRequest,
   removeFriend,
   searchUsersAction,
+  getParticipantDetails,
+  type ParticipantDetails,
 } from "@/app/tavern/actions";
 
 // ─── Exported types ───────────────────────────────────────────────────────────
@@ -128,6 +130,12 @@ export function TavernClient(props: TavernClientProps) {
   const [searchResults, setSearchResults] = useState<Array<{ id: string; displayName: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Player profile (opened from info card)
+  const [profileTarget, setProfileTarget] = useState<TavernParticipant | null>(null);
+  const [profileDetails, setProfileDetails] = useState<ParticipantDetails | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSubTab, setProfileSubTab] = useState<"heroes" | "favorites" | "teams">("heroes");
+
   // Lock body scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -230,6 +238,22 @@ export function TavernClient(props: TavernClientProps) {
     setActiveCard(null);
   }
 
+  async function openPlayerProfile(participant: TavernParticipant) {
+    setProfileTarget(participant);
+    setProfileDetails(null);
+    setProfileLoading(true);
+    setProfileSubTab("heroes");
+    setActiveTab("player" as TabKey);
+    setPanelOpen(true);
+    setActiveCard(null);
+    try {
+      const details = await getParticipantDetails(participant.userId);
+      setProfileDetails(details);
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
   // ── Mutations ──────────────────────────────────────────────────────────────
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -298,7 +322,9 @@ export function TavernClient(props: TavernClientProps) {
   const panelTitle =
     activeTab === "leaderboard" ? "🏆 Leaderboard" :
     activeTab === "profile"     ? "👤 Profile" :
-    activeTab === "friends"     ? "👥 Friends" : "➕ Add Friend";
+    activeTab === "friends"     ? "👥 Friends" :
+    activeTab === ("player" as TabKey) ? `📋 ${profileTarget?.displayName ?? "Profile"}` :
+    "➕ Add Friend";
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -471,11 +497,18 @@ export function TavernClient(props: TavernClientProps) {
                         <span className="text-zinc-400">❤ Favorites</span>
                         <span className="font-bold text-rose-300">{p.favoritesCount}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between border-b border-zinc-700/50 pb-1.5">
                         <span className="text-zinc-400">🛡 Teams</span>
                         <span className="font-bold text-zinc-100">{p.teamsCount}</span>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openPlayerProfile(p); }}
+                      className="mt-3 w-full rounded-lg border border-amber-700/50 bg-amber-900/30 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-900/60"
+                    >
+                      View Heroes, Favorites & Teams →
+                    </button>
                   </div>
                 )}
               </div>
@@ -737,6 +770,137 @@ export function TavernClient(props: TavernClientProps) {
                     </ul>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ─── Player Profile ──────────────────────────────────────── */}
+            {activeTab === ("player" as TabKey) && profileTarget && (
+              <div className="space-y-3">
+                {/* Player header */}
+                <div className="flex items-center gap-3 rounded-xl border border-zinc-700/50 bg-zinc-800/60 p-3">
+                  {profileTarget.avatarHeroSlug ? (
+                    <img
+                      src={`/api/headshots/${profileTarget.avatarHeroSlug}`}
+                      alt={profileTarget.displayName}
+                      className="h-12 w-12 shrink-0 rounded-full border-2 border-amber-600/50 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-700 text-xl">?</div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-amber-100">
+                      {profileTarget.displayName}
+                      {profileTarget.isMe && <span className="ml-2 text-xs text-amber-400">You</span>}
+                    </div>
+                    <div className="mt-0.5 flex gap-3 text-[10px] text-zinc-400">
+                      <span>⚔ {profileTarget.totalHeroes}</span>
+                      <span>★ {profileTarget.fiveStarHeroes}</span>
+                      <span>❤ {profileTarget.favoritesCount}</span>
+                      <span>🛡 {profileTarget.teamsCount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-tabs */}
+                <div className="flex gap-1 rounded-lg border border-zinc-700/50 bg-zinc-800/40 p-1">
+                  {(["heroes", "favorites", "teams"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setProfileSubTab(t)}
+                      className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors capitalize ${
+                        profileSubTab === t
+                          ? "bg-zinc-700 text-zinc-100"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      {t === "heroes" ? "⚔ Heroes" : t === "favorites" ? "❤ Favorites" : "🛡 Teams"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Loading */}
+                {profileLoading && (
+                  <p className="py-6 text-center text-xs text-zinc-500">Loading…</p>
+                )}
+
+                {/* Heroes sub-tab */}
+                {!profileLoading && profileSubTab === "heroes" && profileDetails && (
+                  profileDetails.heroes.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-zinc-500">No heroes in barracks.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {profileDetails.heroes.map((h) => (
+                        <div key={h.hero_slug} className="flex flex-col items-center gap-1 rounded-lg border border-zinc-700/40 bg-zinc-800/50 p-2">
+                          <img
+                            src={`/api/headshots/${h.hero_slug}`}
+                            alt={h.hero_name}
+                            className="h-10 w-10 rounded-full border border-zinc-600 object-cover"
+                          />
+                          <div className="w-full truncate text-center text-[10px] leading-tight text-zinc-300">{h.hero_name}</div>
+                          {h.tier != null && (
+                            <div className="text-[9px] text-amber-400">T{h.tier}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {/* Favorites sub-tab */}
+                {!profileLoading && profileSubTab === "favorites" && profileDetails && (
+                  profileDetails.favorites.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-zinc-500">No favorites yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {profileDetails.favorites.map((h) => (
+                        <div key={h.hero_slug} className="flex flex-col items-center gap-1 rounded-lg border border-rose-900/40 bg-rose-950/20 p-2">
+                          <img
+                            src={`/api/headshots/${h.hero_slug}`}
+                            alt={h.hero_name}
+                            className="h-10 w-10 rounded-full border border-rose-700/40 object-cover"
+                          />
+                          <div className="w-full truncate text-center text-[10px] leading-tight text-zinc-300">{h.hero_name}</div>
+                          {h.tier != null && (
+                            <div className="text-[9px] text-amber-400">T{h.tier}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {/* Teams sub-tab */}
+                {!profileLoading && profileSubTab === "teams" && profileDetails && (
+                  profileDetails.teams.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-zinc-500">No teams yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {profileDetails.teams.map((team) => (
+                        <div key={team.id} className="rounded-lg border border-zinc-700/50 bg-zinc-800/50 p-3">
+                          <div className="mb-2 text-xs font-semibold text-zinc-200">{team.name}</div>
+                          {team.description && (
+                            <div className="mb-2 text-[10px] text-zinc-500">{team.description}</div>
+                          )}
+                          <div className="flex gap-1.5 flex-wrap">
+                            {team.slots.map((slug) => (
+                              <img
+                                key={slug}
+                                src={`/api/headshots/${slug}`}
+                                alt={slug}
+                                className="h-9 w-9 rounded-full border border-zinc-600 object-cover"
+                                title={slug}
+                              />
+                            ))}
+                            {team.slots.length === 0 && (
+                              <span className="text-[10px] text-zinc-500">Empty team</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
               </div>
             )}
 

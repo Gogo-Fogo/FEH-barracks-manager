@@ -145,3 +145,113 @@ export async function searchUsersAction(
     .filter((r) => !excludeIds.has(r.id))
     .map((r) => ({ id: r.id, displayName: r.display_name || "Summoner" }));
 }
+
+// ─── Participant profile (clicked character on stage) ─────────────────────────
+
+export type ParticipantHero = {
+  hero_slug: string;
+  hero_name: string;
+  tier: number | null;
+  weapon: string | null;
+};
+
+export type ParticipantTeam = {
+  id: string;
+  name: string;
+  description: string | null;
+  slots: string[]; // hero slugs
+};
+
+export type ParticipantDetails = {
+  heroes: ParticipantHero[];
+  favorites: ParticipantHero[];
+  teams: ParticipantTeam[];
+};
+
+export async function getParticipantDetails(
+  targetUserId: string
+): Promise<ParticipantDetails> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { heroes: [], favorites: [], teams: [] };
+
+  const [barracksRes, favRes, teamsRes] = await Promise.all([
+    supabase
+      .from("user_barracks")
+      .select("hero_slug, hero_name")
+      .eq("user_id", targetUserId)
+      .order("hero_name", { ascending: true }),
+    supabase
+      .from("user_favorites")
+      .select("hero_slug")
+      .eq("user_id", targetUserId),
+    supabase
+      .from("user_teams")
+      .select("id, name, description, slots")
+      .eq("user_id", targetUserId)
+      .order("name", { ascending: true }),
+  ]);
+
+  const barracksRows = barracksRes.data ?? [];
+  const favRows      = favRes.data   ?? [];
+  const teamRows     = teamsRes.data ?? [];
+
+  // Collect all slugs we need metadata for
+  const allSlugs = [...new Set([
+    ...barracksRows.map((r) => r.hero_slug),
+    ...favRows.map((r) => r.hero_slug),
+  ])];
+
+  const heroMetaMap = new Map<string, { tier: number | null; weapon: string | null; name: string }>();
+  if (allSlugs.length > 0) {
+    const { data: heroMeta } = await supabase
+      .from("heroes")
+      .select("hero_slug, name, weapon, tier")
+      .in("hero_slug", allSlugs);
+    for (const h of heroMeta ?? []) {
+      heroMetaMap.set(h.hero_slug, { tier: h.tier ?? null, weapon: h.weapon ?? null, name: h.name });
+    }
+  }
+
+  // Also need names for team slot heroes (not necessarily in barracks)
+  const teamSlugSet = new Set<string>();
+  for (const t of teamRows) {
+    for (const s of (Array.isArray(t.slots) ? t.slots : [])) {
+      if (s && !heroMetaMap.has(s)) teamSlugSet.add(s);
+    }
+  }
+  if (teamSlugSet.size > 0) {
+    const { data: extra } = await supabase
+      .from("heroes")
+      .select("hero_slug, name, weapon, tier")
+      .in("hero_slug", [...teamSlugSet]);
+    for (const h of extra ?? []) {
+      heroMetaMap.set(h.hero_slug, { tier: h.tier ?? null, weapon: h.weapon ?? null, name: h.name });
+    }
+  }
+
+  const barracksNameMap = new Map(barracksRows.map((r) => [r.hero_slug, r.hero_name]));
+
+  const heroes: ParticipantHero[] = barracksRows.map((r) => ({
+    hero_slug: r.hero_slug,
+    hero_name: r.hero_name,
+    tier:      heroMetaMap.get(r.hero_slug)?.tier   ?? null,
+    weapon:    heroMetaMap.get(r.hero_slug)?.weapon ?? null,
+  }));
+
+  const favorites: ParticipantHero[] = favRows.map((r) => ({
+    hero_slug: r.hero_slug,
+    hero_name: barracksNameMap.get(r.hero_slug) || heroMetaMap.get(r.hero_slug)?.name || r.hero_slug,
+    tier:      heroMetaMap.get(r.hero_slug)?.tier   ?? null,
+    weapon:    heroMetaMap.get(r.hero_slug)?.weapon ?? null,
+  }));
+
+  const teams: ParticipantTeam[] = teamRows.map((r) => ({
+    id:          r.id,
+    name:        r.name,
+    description: r.description ?? null,
+    slots:       Array.isArray(r.slots) ? r.slots.filter(Boolean) : [],
+  }));
+
+  return { heroes, favorites, teams };
+}
