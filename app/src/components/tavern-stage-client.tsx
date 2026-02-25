@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 
 export type TavernParticipant = {
   userId: string;
@@ -75,17 +74,19 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
       style={{
         backgroundImage: "url('/tavern/stage.png')",
         backgroundSize: "cover",
-        backgroundPosition: "center 60%",
-        minHeight: "480px",
+        backgroundPosition: "center center",
+        // Lock the container to the image's natural portrait ratio (1696 × 2528)
+        // so the full image is always visible with no cropping.
+        aspectRatio: "1696 / 2528",
       }}
       onClick={handleStageClick}
     >
-      {/* Vignette overlay — darkens top/sides so text is readable */}
+      {/* Vignette overlay — light darkening at top (names) and bottom edge */}
       <div
         className="pointer-events-none absolute inset-0 rounded-xl"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.0) 65%, rgba(0,0,0,0.45) 100%)",
+            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.0) 25%, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.35) 100%)",
         }}
       />
 
@@ -99,11 +100,8 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
         {muted ? "🔇" : "♪"}
       </button>
 
-      {/* Hero columns */}
-      <div
-        className="relative z-10 flex h-full items-end justify-around"
-        style={{ minHeight: "480px", paddingBottom: "0px" }}
-      >
+      {/* Hero columns — absolute-fill so they always span the full portrait stage */}
+      <div className="absolute inset-0 z-10 flex items-end justify-around pb-2">
         {participants.map((p, idx) => {
           const portraitSrc = p.avatarHeroSlug
             ? `/api/fullbody/${p.avatarHeroSlug}?pose=portrait`
@@ -114,7 +112,7 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
             <div key={p.userId} className="relative flex flex-col items-center" style={{ flex: 1 }}>
               {/* Floating name label */}
               <div
-                className="relative z-10 mb-1 select-none px-3 py-1 text-center"
+                className="relative z-10 mb-2 select-none px-3 py-1 text-center"
                 style={{
                   animation: `tavernFloat 3s ease-in-out infinite`,
                   animationDelay: FLOAT_DELAYS[idx] ?? "0s",
@@ -128,11 +126,11 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
                 </span>
               </div>
 
-              {/* Portrait */}
+              {/* Portrait — 40% of the stage height so heroes feel large in portrait */}
               <div
                 data-hero-portrait
                 className="relative cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95"
-                style={{ height: "310px", width: "100%", maxWidth: "220px" }}
+                style={{ height: "40%", width: "100%", maxWidth: "260px" }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveCard(isOpen ? null : p.userId);
@@ -154,11 +152,11 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
                 )}
               </div>
 
-              {/* Info card */}
+              {/* Info card — floats just above the portrait */}
               {isOpen && (
                 <div
                   data-info-card
-                  className="absolute bottom-[320px] left-1/2 z-30 w-56 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/95 p-4 shadow-[0_0_24px_rgba(0,0,0,0.8)] backdrop-blur-md"
+                  className="absolute bottom-[42%] left-1/2 z-30 w-56 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/95 p-4 shadow-[0_0_24px_rgba(0,0,0,0.8)] backdrop-blur-md"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Headshot */}
@@ -204,7 +202,7 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
             </div>
           );
         })}
-      </div>
+      </div>{/* end hero columns */}
 
       {/* Inline keyframe for float — injected as a style tag */}
       <style>{`
