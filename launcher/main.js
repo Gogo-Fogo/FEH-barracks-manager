@@ -357,7 +357,12 @@ function downloadFile(url, destPath, totalSize, onProgress, _redirectsLeft = 8) 
             out.write(chunk);
             if (onProgress && realTotal > 0) onProgress(received, realTotal);
           });
-          res.on("end",   () => { out.end(); resolve(); });
+          res.on("end", () => {
+            // Wait for the WriteStream to fully flush and release its file
+            // handle before resolving — otherwise Expand-Archive fails with
+            // "file is being used by another process".
+            out.end(() => resolve());
+          });
           res.on("error", (e) => { out.destroy(); reject(e); });
           out.on("error", reject);
         })
