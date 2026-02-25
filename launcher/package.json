@@ -33,7 +33,7 @@
     ],
     "forceCodeSigning": false,
     "win": {
-      "icon": "assets/edelgard_husk.webp",
+      "icon": "assets/edelgard_husk.png",
       "target": [
         {
           "target": "portable",
