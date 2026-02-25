@@ -13,7 +13,7 @@ import {
   searchUsersAction,
 } from "@/app/tavern/actions";
 
-// ─── Exported types (imported by page.tsx) ────────────────────────────────────
+// ─── Exported types ───────────────────────────────────────────────────────────
 
 export type TavernParticipant = {
   userId: string;
@@ -71,9 +71,20 @@ type TavernClientProps = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FLOAT_DELAYS = ["0s", "1.1s", "2.2s"];
+// Image is 1696 × 2528  →  ratio ≈ 0.6709 (width / height)
+const IMG_RATIO = 1696 / 2528;
+const FLOAT_DELAYS = ["0s", "1.3s", "2.5s"];
 const CROSSFADE_SECS = 2.5;
 const MUSIC_VOL = 0.45;
+
+type TabKey = "leaderboard" | "profile" | "friends" | "add";
+
+const TAB_META: Array<{ key: TabKey; icon: string; label: string }> = [
+  { key: "leaderboard", icon: "🏆", label: "Leaderboard" },
+  { key: "profile",     icon: "👤", label: "Profile"     },
+  { key: "friends",     icon: "👥", label: "Friends"     },
+  { key: "add",         icon: "➕", label: "Add Friend"  },
+];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -81,13 +92,17 @@ export function TavernClient(props: TavernClientProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  // Stage participants are frozen on mount — router.refresh() won't reshuffle heroes
+  // Stage participants frozen on mount so router.refresh() doesn't reshuffle
   const [participants] = useState(() => props.participants);
 
-  // UI state
-  type TabKey = "leaderboard" | "profile" | "friends" | "add";
+  // Panel
+  const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("leaderboard");
+
+  // Info card on hero portrait
   const [activeCard, setActiveCard] = useState<string | null>(null);
+
+  // Toast
   const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -100,18 +115,18 @@ export function TavernClient(props: TavernClientProps) {
   const fadingRef = useRef(false);
   const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Profile form state (kept controlled so they don't reset on refresh)
+  // Profile form (controlled, synced on refresh)
   const [displayNameInput, setDisplayNameInput] = useState(props.myDisplayName);
   const [selectedSlug, setSelectedSlug] = useState(props.myAvatarSlug ?? "");
   useEffect(() => { setDisplayNameInput(props.myDisplayName); }, [props.myDisplayName]);
   useEffect(() => { setSelectedSlug(props.myAvatarSlug ?? ""); }, [props.myAvatarSlug]);
 
-  // Search state
+  // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ id: string; displayName: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Lock body scroll while tavern is open
+  // Lock body scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -125,7 +140,7 @@ export function TavernClient(props: TavernClientProps) {
     toastTimer.current = setTimeout(() => setToast(null), 3500);
   }
 
-  // ── Audio (crossfade loop) ─────────────────────────────────────────────────
+  // ── Audio crossfade ────────────────────────────────────────────────────────
   useEffect(() => {
     const src = "/tavern/hearthside-whispers.mp3";
     const a = new Audio(src);
@@ -135,30 +150,30 @@ export function TavernClient(props: TavernClientProps) {
     audioA.current = a;
     audioB.current = b;
 
-    function getActive() { return activeSlot.current === 0 ? a : b; }
-    function getNext()   { return activeSlot.current === 0 ? b : a; }
+    const getActive = () => (activeSlot.current === 0 ? a : b);
+    const getNext   = () => (activeSlot.current === 0 ? b : a);
 
     function doFade() {
       if (fadingRef.current) return;
       fadingRef.current = true;
-      const current = getActive();
-      const next = getNext();
-      next.currentTime = 0;
-      if (!mutedRef.current) next.play().catch(() => {});
-      const startVol = current.volume;
+      const cur = getActive();
+      const nxt = getNext();
+      nxt.currentTime = 0;
+      if (!mutedRef.current) nxt.play().catch(() => {});
+      const startVol = cur.volume;
       const steps = Math.round((CROSSFADE_SECS * 1000) / 50);
       let step = 0;
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
       fadeIntervalRef.current = setInterval(() => {
         step++;
         const t = step / steps;
-        current.volume = Math.max(0, startVol * (1 - t));
-        next.volume = mutedRef.current ? 0 : Math.min(MUSIC_VOL, MUSIC_VOL * t);
+        cur.volume = Math.max(0, startVol * (1 - t));
+        nxt.volume = mutedRef.current ? 0 : Math.min(MUSIC_VOL, MUSIC_VOL * t);
         if (step >= steps) {
           clearInterval(fadeIntervalRef.current!);
-          current.pause();
-          current.currentTime = 0;
-          current.volume = 0;
+          cur.pause();
+          cur.currentTime = 0;
+          cur.volume = 0;
           activeSlot.current = activeSlot.current === 0 ? 1 : 0;
           fadingRef.current = false;
         }
@@ -170,17 +185,13 @@ export function TavernClient(props: TavernClientProps) {
         (this === a && activeSlot.current === 0) ||
         (this === b && activeSlot.current === 1);
       if (!isActive || !this.duration) return;
-      if (this.duration - this.currentTime <= CROSSFADE_SECS) {
-        doFade();
-      }
+      if (this.duration - this.currentTime <= CROSSFADE_SECS) doFade();
     }
 
     a.addEventListener("timeupdate", onTimeUpdate);
     b.addEventListener("timeupdate", onTimeUpdate);
 
-    const tryPlay = () => {
-      if (!mutedRef.current) a.play().catch(() => {});
-    };
+    const tryPlay = () => { if (!mutedRef.current) a.play().catch(() => {}); };
     tryPlay();
     document.addEventListener("click", tryPlay, { once: true });
 
@@ -204,6 +215,17 @@ export function TavernClient(props: TavernClientProps) {
       const active = activeSlot.current === 0 ? audioA.current : audioB.current;
       active?.play().catch(() => {});
     }
+  }
+
+  // ── Panel helpers ──────────────────────────────────────────────────────────
+  function openPanel(tab: TabKey) {
+    if (panelOpen && activeTab === tab) {
+      setPanelOpen(false);
+    } else {
+      setActiveTab(tab);
+      setPanelOpen(true);
+    }
+    setActiveCard(null);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -261,81 +283,105 @@ export function TavernClient(props: TavernClientProps) {
     }
   }
 
-  // ── Stage click (dismiss card) ─────────────────────────────────────────────
-  function handleStageClick(e: React.MouseEvent) {
-    const t = e.target as HTMLElement;
-    if (!t.closest("[data-info-card]") && !t.closest("[data-hero-portrait]")) {
-      setActiveCard(null);
-    }
-  }
-
   const pendingCount = props.pendingRequests.length;
 
-  // ── Leaderboard categories ─────────────────────────────────────────────────
   const lbCategories = [
-    { label: "Most Heroes",   entries: props.leaderboard.total,     icon: "⚔",  color: "text-zinc-100"  },
-    { label: "Most 5★",       entries: props.leaderboard.fiveStar,  icon: "★",  color: "text-amber-300" },
-    { label: "Most Red",      entries: props.leaderboard.red,       icon: "🔴", color: "text-red-300"   },
-    { label: "Most Favorites",entries: props.leaderboard.favorites, icon: "❤",  color: "text-rose-300"  },
+    { label: "Most Heroes",    entries: props.leaderboard.total,     icon: "⚔",  color: "text-zinc-100"  },
+    { label: "Most 5★",        entries: props.leaderboard.fiveStar,  icon: "★",  color: "text-amber-300" },
+    { label: "Most Red",       entries: props.leaderboard.red,       icon: "🔴", color: "text-red-300"   },
+    { label: "Most Favorites", entries: props.leaderboard.favorites, icon: "❤",  color: "text-rose-300"  },
   ];
+
+  const panelTitle =
+    activeTab === "leaderboard" ? "🏆 Leaderboard" :
+    activeTab === "profile"     ? "👤 Profile" :
+    activeTab === "friends"     ? "👥 Friends" : "➕ Add Friend";
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden">
+    // Outer shell — fills viewport, letterboxes the portrait container
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black">
 
-      {/* ── Background image fills full viewport ── */}
-      <img
-        src="/tavern/stage.png"
-        alt=""
-        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
-        draggable={false}
-      />
-
-      {/* Atmospheric vignette */}
+      {/*
+        Portrait container:
+          - width  = min(100vw, 100dvh × ratio) so the full height shows first
+          - aspect-ratio fills height from the width
+          - On portrait screens: fills width; some dark space above/below
+          - On landscape desktops: fills height; dark bars on sides
+      */}
       <div
-        className="pointer-events-none absolute inset-0"
+        className="relative overflow-hidden"
         style={{
-          background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.08) 25%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.65) 100%)",
+          width: `min(100vw, calc(100dvh * ${IMG_RATIO}))`,
+          aspectRatio: `${IMG_RATIO}`,
         }}
-      />
+      >
 
-      {/* ── Top bar ── */}
-      <div className="absolute left-0 right-0 top-0 z-30 flex h-12 items-center gap-3 border-b border-white/10 bg-black/50 px-4 backdrop-blur-sm">
-        <Link
-          href="/barracks"
-          className="shrink-0 text-sm text-zinc-300 hover:text-white"
-        >
-          ← Barracks
-        </Link>
-        <h1 className="flex-1 text-center text-sm font-semibold text-amber-200">
-          🍺 The Tavern
-        </h1>
-        {pendingCount > 0 && (
+        {/* ── Full-portrait background image ── */}
+        <img
+          src="/tavern/stage.png"
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-top"
+          draggable={false}
+        />
+
+        {/* Atmospheric vignette */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.05) 20%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.7) 100%)",
+          }}
+        />
+
+        {/* ── Top bar ── */}
+        <div className="absolute left-0 right-0 top-0 z-30 flex h-11 items-center gap-2 px-3">
+          {/* Frosted pill for back button */}
+          <Link
+            href="/barracks"
+            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/45 px-3 py-1 text-xs text-zinc-200 backdrop-blur-sm hover:bg-black/65"
+          >
+            ← Barracks
+          </Link>
+
+          {/* Spacer + centered title */}
+          <div className="flex-1 text-center">
+            <span
+              className="font-semibold text-amber-100 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]"
+              style={{ fontSize: "clamp(14px, 3vw, 18px)", fontFamily: "Georgia, serif", letterSpacing: "0.06em" }}
+            >
+              The Tavern
+            </span>
+          </div>
+
+          {/* Mute button */}
           <button
             type="button"
-            onClick={() => setActiveTab("friends")}
-            className="shrink-0 rounded-full border border-amber-600/50 bg-amber-950/70 px-2.5 py-0.5 text-xs text-amber-300 hover:bg-amber-900/70"
+            onClick={toggleMute}
+            className="flex items-center justify-center rounded-full border border-white/20 bg-black/45 p-1.5 text-xs text-white/80 backdrop-blur-sm hover:bg-black/65"
+            title={muted ? "Unmute" : "Mute"}
           >
-            🔔 {pendingCount}
+            {muted ? "🔇" : "♪"}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-          className="shrink-0 rounded-full border border-white/20 bg-black/40 px-2 py-1 text-xs text-white/80 hover:bg-black/60"
-          title={muted ? "Unmute music" : "Mute music"}
-        >
-          {muted ? "🔇" : "♪"}
-        </button>
-      </div>
+        </div>
 
-      {/* ── Hero stage (left portion on desktop, full-width behind panel on mobile) ── */}
-      <div
-        className="absolute bottom-[58vh] left-0 right-0 top-12 z-10 lg:bottom-0 lg:right-80"
-        onClick={handleStageClick}
-      >
-        <div className="relative flex h-full w-full items-end justify-around px-2 pb-4">
+        {/* ── Stage area — heroes fill the portrait ── */}
+        <div
+          className="absolute left-0 right-0 top-11 z-10 flex items-end justify-around px-1"
+          style={{
+            // Leave room above action buttons so heroes don't overlap them
+            bottom: panelOpen ? "65%" : "0",
+            paddingBottom: panelOpen ? "0" : "clamp(56px, 14%, 96px)",
+            transition: "bottom 0.3s ease, padding-bottom 0.3s ease",
+          }}
+          onClick={(e) => {
+            const t = e.target as HTMLElement;
+            if (!t.closest("[data-info-card]") && !t.closest("[data-hero-portrait]")) {
+              setActiveCard(null);
+              if (panelOpen) setPanelOpen(false);
+            }
+          }}
+        >
           {participants.map((p, idx) => {
             const portraitSrc = p.avatarHeroSlug
               ? `/api/fullbody/${p.avatarHeroSlug}?pose=portrait`
@@ -346,9 +392,9 @@ export function TavernClient(props: TavernClientProps) {
               <div
                 key={p.userId}
                 className="relative flex flex-col items-center"
-                style={{ flex: 1, maxWidth: "220px" }}
+                style={{ flex: 1, maxWidth: "45%" }}
               >
-                {/* Floating name label */}
+                {/* Floating name */}
                 <div
                   className="relative z-10 mb-1 select-none"
                   style={{
@@ -364,36 +410,37 @@ export function TavernClient(props: TavernClientProps) {
                   </span>
                 </div>
 
-                {/* Portrait */}
+                {/* Portrait — BIG */}
                 <div
                   data-hero-portrait
-                  className="relative cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95"
-                  style={{ height: "min(44vh, 420px)", width: "100%" }}
+                  className="relative w-full cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95"
+                  style={{ height: "clamp(160px, 55cqh, 520px)" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveCard(isOpen ? null : p.userId);
+                    if (panelOpen) setPanelOpen(false);
                   }}
                 >
                   {portraitSrc ? (
                     <img
                       src={portraitSrc}
                       alt={p.displayName}
-                      className="h-full w-full object-contain object-bottom drop-shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+                      className="h-full w-full object-contain object-bottom drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
                       draggable={false}
                     />
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 opacity-50">
+                    <div className="flex h-full w-full flex-col items-center justify-end gap-2 pb-4 opacity-50">
                       <div className="text-5xl">?</div>
-                      <div className="text-xs text-white/60">No avatar set</div>
+                      <div className="text-xs text-white/60">No avatar</div>
                     </div>
                   )}
                 </div>
 
-                {/* Info card — floats above portrait */}
+                {/* Info card */}
                 {isOpen && (
                   <div
                     data-info-card
-                    className="absolute bottom-[calc(min(44vh,420px)+8px)] left-1/2 z-40 w-52 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/95 p-4 shadow-[0_0_24px_rgba(0,0,0,0.85)] backdrop-blur-md"
+                    className="absolute bottom-[calc(100%+8px)] left-1/2 z-40 w-52 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/97 p-4 shadow-[0_0_24px_rgba(0,0,0,0.9)] backdrop-blur-md"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="mb-3 flex items-center gap-3">
@@ -437,75 +484,106 @@ export function TavernClient(props: TavernClientProps) {
             );
           })}
         </div>
-      </div>
 
-      {/* ── Right / bottom panel ──
-            Mobile  : slides up from bottom, 58 vh tall, full-width, rounded top corners
-            Desktop : right sidebar, 320 px wide, full height below top-bar
-      ── */}
-      <div
-        className="absolute bottom-0 left-0 right-0 z-20 flex h-[58vh] flex-col rounded-t-2xl border-t border-amber-900/30 bg-zinc-900/92 backdrop-blur-md
-                   lg:bottom-0 lg:left-auto lg:top-12 lg:h-auto lg:w-80 lg:rounded-none lg:border-l lg:border-t-0"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Mobile drag handle */}
-        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-zinc-600 lg:hidden" />
+        {/* ── Floating action buttons (Wizardry-style) ──
+              Slide upward when panel opens so they sit just above it           */}
+        <div
+          className="absolute right-3 z-20 flex flex-col items-end gap-2 transition-all duration-300"
+          style={{ bottom: panelOpen ? "calc(65% + 10px)" : "clamp(56px, 13%, 96px)" }}
+        >
+          {TAB_META.map(({ key, icon, label }) => {
+            const badge = key === "friends" && pendingCount > 0;
+            const active = panelOpen && activeTab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => openPanel(key)}
+                className={`relative flex items-center gap-2 rounded-lg border px-3 py-2 text-xs backdrop-blur-sm transition-colors ${
+                  active
+                    ? "border-amber-500/60 bg-amber-900/70 text-amber-100"
+                    : "border-white/20 bg-black/50 text-zinc-200 hover:bg-black/70 hover:text-white"
+                }`}
+              >
+                <span className="text-base leading-none">{icon}</span>
+                <span>{label}</span>
+                {badge && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
 
-        {/* Tab bar */}
-        <div className="flex shrink-0 border-b border-zinc-700/50">
-          {(
-            [
-              { key: "leaderboard" as TabKey, icon: "🏆", label: "Board" },
-              { key: "profile"     as TabKey, icon: "👤", label: "Profile" },
-              {
-                key: "friends" as TabKey,
-                icon: "👥",
-                label: pendingCount > 0 ? `Friends·${pendingCount}` : "Friends",
-              },
-              { key: "add" as TabKey, icon: "➕", label: "Add" },
-            ]
-          ).map(({ key, icon, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveTab(key)}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
-                activeTab === key
-                  ? "border-b-2 border-amber-400 text-amber-200"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <span className="text-base leading-none">{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
+          {/* Leave button (Wizardry feel) */}
+          <Link
+            href="/barracks"
+            className="mt-1 flex items-center gap-2 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-xs text-zinc-400 backdrop-blur-sm hover:bg-black/60 hover:text-zinc-200"
+          >
+            <span className="text-base leading-none">🚪</span>
+            <span>Leave Tavern</span>
+          </Link>
         </div>
 
-        {/* Scrollable tab content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* ── Bottom sheet panel — slides up from the bottom ── */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 z-30 flex flex-col rounded-t-2xl border-t border-amber-900/40 bg-zinc-900/97 backdrop-blur-md transition-transform duration-300 ${
+            panelOpen ? "translate-y-0" : "translate-y-full"
+          }`}
+          style={{ height: "65%" }}
+        >
+          {/* Panel header */}
+          <div className="flex shrink-0 items-center justify-between border-b border-zinc-700/50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-semibold text-zinc-100">{panelTitle}</h3>
+              {/* Tab switcher pills */}
+              <div className="flex gap-1">
+                {TAB_META.map(({ key, icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveTab(key)}
+                    className={`rounded-full px-2 py-0.5 text-base leading-none transition-colors ${
+                      activeTab === key
+                        ? "bg-amber-700/60 text-amber-100"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                    title={TAB_META.find((t) => t.key === key)?.label}
+                  >
+                    {icon}
+                    {key === "friends" && pendingCount > 0 && (
+                      <sup className="ml-0.5 text-[9px] text-amber-400">{pendingCount}</sup>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPanelOpen(false)}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+            >
+              ✕
+            </button>
+          </div>
 
-          {/* ─── Leaderboard ─────────────────────────────────────────────── */}
-          {activeTab === "leaderboard" && (
-            <div className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-200/80">
-                🏆 Leaderboard
-              </h2>
-              {props.leaderboard.total.length < 2 ? (
-                <p className="text-xs text-zinc-500">
-                  Add friends to start competing!
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {lbCategories.map(({ label, entries, icon, color }) => {
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+
+            {/* ─── Leaderboard ─────────────────────────────────────────── */}
+            {activeTab === "leaderboard" && (
+              <div className="space-y-2.5">
+                {props.leaderboard.total.length < 2 ? (
+                  <p className="py-4 text-center text-xs text-zinc-500">
+                    Add friends to start competing!
+                  </p>
+                ) : (
+                  lbCategories.map(({ label, entries, icon, color }) => {
                     const winner = entries[0];
                     return (
-                      <div
-                        key={label}
-                        className="rounded-lg border border-zinc-700/50 bg-zinc-800/60 p-3"
-                      >
-                        <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">
-                          {label}
-                        </div>
+                      <div key={label} className="rounded-lg border border-zinc-700/50 bg-zinc-800/60 p-3">
+                        <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">{label}</div>
                         <div className="flex items-center gap-2.5">
                           {winner.avatarSlug ? (
                             <img
@@ -514,26 +592,17 @@ export function TavernClient(props: TavernClientProps) {
                               className="h-10 w-10 shrink-0 rounded-full border-2 border-amber-600/40 object-cover"
                             />
                           ) : (
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-700 text-lg">
-                              ?
-                            </div>
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-700 text-base">?</div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-xs font-medium text-zinc-200">
-                              {winner.displayName}
-                            </div>
-                            <div className={`text-base font-bold ${color}`}>
-                              {icon} {winner.score}
-                            </div>
+                            <div className="truncate text-xs font-medium text-zinc-200">{winner.displayName}</div>
+                            <div className={`text-base font-bold ${color}`}>{icon} {winner.score}</div>
                           </div>
                         </div>
                         {entries.slice(1).length > 0 && (
-                          <div className="mt-2 space-y-0.5 border-t border-zinc-700/30 pt-2">
+                          <div className="mt-1.5 space-y-0.5 border-t border-zinc-700/30 pt-1.5">
                             {entries.slice(1).map((e, i) => (
-                              <div
-                                key={i}
-                                className="flex justify-between text-[10px] text-zinc-500"
-                              >
+                              <div key={i} className="flex justify-between text-[10px] text-zinc-500">
                                 <span className="truncate">{e.displayName}</span>
                                 <span className="shrink-0 pl-2">{e.score}</span>
                               </div>
@@ -542,255 +611,186 @@ export function TavernClient(props: TavernClientProps) {
                         )}
                       </div>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── Profile ─────────────────────────────────────────────────── */}
-          {activeTab === "profile" && (
-            <div className="space-y-5">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-300/80">
-                👤 My Profile
-              </h2>
-
-              {/* Display name */}
-              <div>
-                <p className="mb-2 text-xs text-zinc-400">Display name (shown to friends)</p>
-                <form onSubmit={handleSaveName} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={displayNameInput}
-                    onChange={(e) => setDisplayNameInput(e.target.value)}
-                    maxLength={32}
-                    placeholder="Your tavern name"
-                    className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/60"
-                  >
-                    Save
-                  </button>
-                </form>
+                  })
+                )}
               </div>
+            )}
 
-              {/* Avatar hero picker */}
-              <div>
-                <p className="mb-2 text-xs text-zinc-400">Avatar hero (shown on the stage)</p>
-                <div className="flex items-center gap-3">
-                  {selectedSlug || props.myAvatarSlug ? (
-                    <img
-                      src={`/api/headshots/${selectedSlug || props.myAvatarSlug}`}
-                      alt="Avatar preview"
-                      className="h-12 w-12 shrink-0 rounded-full border-2 border-amber-600/50 object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-800 text-xl text-zinc-500">
-                      ?
-                    </div>
-                  )}
-                  {props.myBarracks.length > 0 ? (
-                    <form onSubmit={handleSetAvatar} className="flex min-w-0 flex-1 gap-2">
-                      <select
-                        value={selectedSlug}
-                        onChange={(e) => setSelectedSlug(e.target.value)}
-                        className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-100 focus:border-amber-500 focus:outline-none"
-                      >
-                        <option value="" disabled>
-                          Pick a hero…
-                        </option>
-                        {props.myBarracks.map((h) => (
-                          <option key={h.hero_slug} value={h.hero_slug}>
-                            {h.hero_name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="submit"
-                        className="rounded-md border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-900/60"
-                      >
-                        Set
-                      </button>
-                    </form>
-                  ) : (
-                    <p className="text-xs text-zinc-500">
-                      Add heroes to your barracks first.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ─── Friends ─────────────────────────────────────────────────── */}
-          {activeTab === "friends" && (
-            <div className="space-y-4">
-
-              {/* Pending incoming requests */}
-              {props.pendingRequests.length > 0 && (
+            {/* ─── Profile ──────────────────────────────────────────────── */}
+            {activeTab === "profile" && (
+              <div className="space-y-5">
                 <div>
-                  <h3 className="mb-2 text-xs font-semibold text-amber-300">
-                    🔔 Pending Requests
-                  </h3>
-                  <ul className="space-y-2">
-                    {props.pendingRequests.map((req) => (
-                      <li
-                        key={req.id}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2"
-                      >
-                        <span className="min-w-0 truncate text-xs text-zinc-200">
-                          {req.requesterName}
-                        </span>
-                        <div className="flex shrink-0 gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleAccept(req.id)}
-                            className="rounded border border-emerald-700 bg-emerald-900/30 px-2 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-900/60"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDecline(req.id)}
-                            className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-700"
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mb-2 text-xs text-zinc-400">Display name (shown to friends)</p>
+                  <form onSubmit={handleSaveName} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={displayNameInput}
+                      onChange={(e) => setDisplayNameInput(e.target.value)}
+                      maxLength={32}
+                      placeholder="Your tavern name"
+                      className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-md border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/60"
+                    >
+                      Save
+                    </button>
+                  </form>
                 </div>
-              )}
 
-              {/* Friends list */}
-              <div>
-                <h3 className="mb-2 text-xs font-semibold text-zinc-300">
-                  🧑‍🤝‍🧑 Friends
-                </h3>
-                {props.friends.length === 0 ? (
-                  <p className="text-xs text-zinc-500">
-                    No friends yet. Use the ➕ tab to add some!
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {props.friends.map((f) => (
-                      <li
-                        key={f.friendshipId}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-2"
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          {f.avatarHeroSlug ? (
-                            <img
-                              src={`/api/headshots/${f.avatarHeroSlug}`}
-                              alt={f.displayName}
-                              className="h-8 w-8 shrink-0 rounded-full border border-zinc-600 object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-600 bg-zinc-700 text-sm text-zinc-500">
-                              ?
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="truncate text-xs font-medium text-zinc-200">
-                              {f.displayName}
-                            </div>
-                            <div className="text-[10px] text-zinc-500">
-                              {f.stats.totalHeroes} heroes · {f.stats.fiveStarHeroes} ★
+                <div>
+                  <p className="mb-2 text-xs text-zinc-400">Avatar hero (shown on the stage)</p>
+                  <div className="flex items-center gap-3">
+                    {selectedSlug || props.myAvatarSlug ? (
+                      <img
+                        src={`/api/headshots/${selectedSlug || props.myAvatarSlug}`}
+                        alt="Avatar preview"
+                        className="h-12 w-12 shrink-0 rounded-full border-2 border-amber-600/50 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-800 text-xl text-zinc-500">?</div>
+                    )}
+                    {props.myBarracks.length > 0 ? (
+                      <form onSubmit={handleSetAvatar} className="flex min-w-0 flex-1 gap-2">
+                        <select
+                          value={selectedSlug}
+                          onChange={(e) => setSelectedSlug(e.target.value)}
+                          className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-100 focus:border-amber-500 focus:outline-none"
+                        >
+                          <option value="" disabled>Pick a hero…</option>
+                          {props.myBarracks.map((h) => (
+                            <option key={h.hero_slug} value={h.hero_slug}>{h.hero_name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className="rounded-md border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-900/60"
+                        >
+                          Set
+                        </button>
+                      </form>
+                    ) : (
+                      <p className="text-xs text-zinc-500">Add heroes to your barracks first.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─── Friends ──────────────────────────────────────────────── */}
+            {activeTab === "friends" && (
+              <div className="space-y-4">
+                {props.pendingRequests.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-xs font-semibold text-amber-300">🔔 Pending Requests</h3>
+                    <ul className="space-y-2">
+                      {props.pendingRequests.map((req) => (
+                        <li key={req.id} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                          <span className="min-w-0 truncate text-xs text-zinc-200">{req.requesterName}</span>
+                          <div className="flex shrink-0 gap-1.5">
+                            <button type="button" onClick={() => handleAccept(req.id)} className="rounded border border-emerald-700 bg-emerald-900/30 px-2 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-900/60">
+                              Accept
+                            </button>
+                            <button type="button" onClick={() => handleDecline(req.id)} className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-700">
+                              Decline
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold text-zinc-300">🧑‍🤝‍🧑 Friends</h3>
+                  {props.friends.length === 0 ? (
+                    <p className="text-xs text-zinc-500">No friends yet. Use ➕ Add Friend!</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {props.friends.map((f) => (
+                        <li key={f.friendshipId} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-2">
+                          <div className="flex min-w-0 items-center gap-2">
+                            {f.avatarHeroSlug ? (
+                              <img src={`/api/headshots/${f.avatarHeroSlug}`} alt={f.displayName} className="h-8 w-8 shrink-0 rounded-full border border-zinc-600 object-cover" />
+                            ) : (
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-600 bg-zinc-700 text-sm text-zinc-500">?</div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-medium text-zinc-200">{f.displayName}</div>
+                              <div className="text-[10px] text-zinc-500">{f.stats.totalHeroes} heroes · {f.stats.fiveStarHeroes} ★</div>
                             </div>
                           </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(f.friendshipId)}
-                          className="shrink-0 rounded border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-500 hover:border-red-800 hover:text-red-400"
-                        >
-                          Remove
+                          <button type="button" onClick={() => handleRemove(f.friendshipId)} className="shrink-0 rounded border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-500 hover:border-red-800 hover:text-red-400">
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ─── Add Friend ───────────────────────────────────────────── */}
+            {activeTab === "add" && (
+              <div className="space-y-3">
+                <form onSubmit={handleSearch} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by display name…"
+                    className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                  />
+                  <button type="submit" disabled={isSearching} className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50">
+                    {isSearching ? "…" : "Go"}
+                  </button>
+                </form>
+
+                {searchResults.length > 0 ? (
+                  <ul className="space-y-2">
+                    {searchResults.map((r) => (
+                      <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                        <span className="min-w-0 truncate text-xs text-zinc-200">{r.displayName}</span>
+                        <button type="button" onClick={() => handleSendRequest(r.id)} className="shrink-0 rounded border border-amber-700 bg-amber-900/30 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-900/60">
+                          Add
                         </button>
                       </li>
                     ))}
                   </ul>
-                )}
+                ) : searchQuery && !isSearching ? (
+                  <p className="text-xs text-zinc-500">
+                    No summoners found matching &ldquo;{searchQuery}&rdquo;.
+                  </p>
+                ) : null}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ─── Add Friend ──────────────────────────────────────────────── */}
-          {activeTab === "add" && (
-            <div className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-300/80">
-                ➕ Add a Friend
-              </h2>
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by display name…"
-                  className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isSearching}
-                  className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50"
-                >
-                  {isSearching ? "…" : "Go"}
-                </button>
-              </form>
-
-              {searchResults.length > 0 ? (
-                <ul className="space-y-2">
-                  {searchResults.map((r) => (
-                    <li
-                      key={r.id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2"
-                    >
-                      <span className="min-w-0 truncate text-xs text-zinc-200">
-                        {r.displayName}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleSendRequest(r.id)}
-                        className="shrink-0 rounded border border-amber-700 bg-amber-900/30 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-900/60"
-                      >
-                        Add
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : searchQuery && !isSearching ? (
-                <p className="text-xs text-zinc-500">
-                  No summoners found matching &ldquo;{searchQuery}&rdquo;.
-                </p>
-              ) : null}
-            </div>
-          )}
-
+          </div>
         </div>
+
+        {/* ── Toast ── */}
+        {toast && (
+          <div
+            className={`pointer-events-none absolute bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-xl border px-4 py-2 text-sm shadow-xl backdrop-blur-md ${
+              toast.ok
+                ? "border-emerald-700 bg-emerald-950/90 text-emerald-200"
+                : "border-amber-700 bg-amber-950/90 text-amber-200"
+            }`}
+          >
+            {toast.message}
+          </div>
+        )}
+
+        {/* Float keyframe */}
+        <style>{`
+          @keyframes tavernFloat {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-7px); }
+          }
+        `}</style>
       </div>
-
-      {/* ── Toast notification ── */}
-      {toast && (
-        <div
-          className={`pointer-events-none fixed bottom-5 left-1/2 z-[200] -translate-x-1/2 rounded-xl border px-4 py-2 text-sm shadow-xl backdrop-blur-md ${
-            toast.ok
-              ? "border-emerald-700 bg-emerald-950/90 text-emerald-200"
-              : "border-amber-700 bg-amber-950/90 text-amber-200"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
-
-      {/* Float keyframe */}
-      <style>{`
-        @keyframes tavernFloat {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-8px); }
-        }
-      `}</style>
     </div>
   );
 }
