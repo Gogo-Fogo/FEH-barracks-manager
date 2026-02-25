@@ -35,7 +35,7 @@
       }
     ],
     "win": {
-      "icon": "assets/launcher_icon.ico",
+      "icon": "assets/gullveig.png",
       "target": [
         {
           "target": "portable",
