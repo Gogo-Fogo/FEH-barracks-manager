@@ -3,9 +3,11 @@
 const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
+const http  = require("node:http");
 const pkg   = require("./package.json");
 
-const APP_URL      = "https://feh-barracks-manager.vercel.app";
+const LOCAL_URL   = "http://localhost:3000";
+const REMOTE_URL  = "https://feh-barracks-manager.vercel.app";
 const RELEASES_API = "https://api.github.com/repos/Gogo-Fogo/FEH-barracks-manager/releases/latest";
 
 let mainWin   = null;
@@ -21,8 +23,19 @@ function send(win, channel, ...args) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
 }
 
+// Check if the local dev server is up (fast, 800 ms timeout).
+function probeLocalServer() {
+  return new Promise((resolve) => {
+    const req = http.get(LOCAL_URL, { timeout: 800 }, (res) => {
+      res.destroy();
+      resolve(res.statusCode < 500);
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+  });
+}
+
 // Fetch latest GitHub release tag (shown in the splash version label).
-// Falls back to package.json version on any error or timeout.
 function fetchLatestTag() {
   return new Promise((resolve) => {
     const req = https.get(RELEASES_API, {
@@ -40,7 +53,7 @@ function fetchLatestTag() {
   });
 }
 
-// ── Splash window (frameless, shows while the app URL loads) ──────────────────
+// ── Splash window ─────────────────────────────────────────────────────────────
 function createSplash() {
   splashWin = new BrowserWindow({
     width: 480,
@@ -64,8 +77,10 @@ function createSplash() {
   });
 }
 
-// ── Main window (hidden until the app finishes loading) ───────────────────────
-function createMainWindow() {
+// ── Main window ───────────────────────────────────────────────────────────────
+function createMainWindow(appUrl) {
+  const isLocal = appUrl.startsWith("http://localhost");
+
   mainWin = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -79,22 +94,21 @@ function createMainWindow() {
   });
   mainWin.setMenuBarVisibility(false);
 
-  // Open links that target _blank (OAuth, external pages) in the system browser
   mainWin.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
   });
 
-  // Animate the progress bar while the URL is loading
+  const label = isLocal ? "Loading local server…" : "Connecting to FEH Barracks…";
   let pct = 10;
   const tick = setInterval(() => {
-    pct = Math.min(pct + 1.2, 88);
-    send(splashWin, "progress", { pct, label: "Connecting to FEH Barracks…" });
+    pct = Math.min(pct + (isLocal ? 4 : 1.2), 88);
+    send(splashWin, "progress", { pct, label });
   }, 100);
 
   mainWin.webContents.once("did-finish-load", () => {
     clearInterval(tick);
-    send(splashWin, "done", "ok"); // splash shows "Launching app…" for 500 ms
+    send(splashWin, "done", "ok");
     setTimeout(() => {
       if (splashWin && !splashWin.isDestroyed()) splashWin.close();
       if (mainWin  && !mainWin.isDestroyed())  { mainWin.show(); mainWin.focus(); }
@@ -107,7 +121,7 @@ function createMainWindow() {
     send(splashWin, "progress", { pct: 0, label: "Connection failed — check your internet." });
   });
 
-  mainWin.loadURL(APP_URL);
+  mainWin.loadURL(appUrl);
 }
 
 // ── IPC ───────────────────────────────────────────────────────────────────────
@@ -118,14 +132,23 @@ ipcMain.on("get-asset-path", (event, name) => {
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-app.whenReady().then(() => {
-  // Show splash immediately; fetch release version in background
+app.whenReady().then(async () => {
   createSplash();
-  createMainWindow();
 
-  fetchLatestTag().then((version) => {
-    send(splashWin, "init", { version });
-  });
+  // Probe local dev server and fetch version in parallel
+  const [isLocal, version] = await Promise.all([
+    probeLocalServer(),
+    fetchLatestTag(),
+  ]);
+
+  const appUrl = isLocal ? LOCAL_URL : REMOTE_URL;
+  send(splashWin, "init", { version });
+
+  if (isLocal) {
+    send(splashWin, "log", "Local server detected — using localhost:3000");
+  }
+
+  createMainWindow(appUrl);
 });
 
 app.on("window-all-closed", () => {
