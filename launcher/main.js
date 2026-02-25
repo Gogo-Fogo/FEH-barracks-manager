@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, dialog, ipcMain, shell, session } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, protocol, shell, session } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const http  = require("node:http");
@@ -10,13 +10,29 @@ const { spawnSync } = require("node:child_process");
 
 const pkg = require("./package.json");
 
+// ── Register custom scheme BEFORE app.ready ─────────────────────────────────
+// feh-local:// serves bundle assets without the HTTPS→HTTP mixed-content
+// restriction that blocked the old redirectURL to http://127.0.0.1.
+// registerSchemesAsPrivileged MUST be called before app is ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "feh-local",
+    privileges: {
+      standard:        true,  // standard URL parsing (host, pathname, etc.)
+      secure:          true,  // treated as a secure origin — no HTTPS→feh-local downgrade issue
+      bypassCSP:       true,  // can be fetched from HTTPS pages
+      supportFetchAPI: true,  // works with fetch()
+      corsEnabled:     false,
+    },
+  },
+]);
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 const LOCAL_URL    = "http://localhost:3000";
 const REMOTE_URL   = "https://feh-barracks-manager.vercel.app";
 const VERCEL_HOST  = "feh-barracks-manager.vercel.app";
 const RELEASES_API = "https://api.github.com/repos/Gogo-Fogo/FEH-barracks-manager/releases/latest";
 const BUNDLE_NAME  = "feh-data-bundle.zip";
-const ASSET_PORT   = 45678;
 
 let mainWin   = null;
 let splashWin = null;
@@ -107,62 +123,56 @@ async function buildIndices() {
   } catch { /* shared dir absent */ }
 }
 
-// ── Local HTTP asset server ────────────────────────────────────────────────────
-// Endpoints:
-//   GET /serve?f={relative-path-from-dbRoot}          → serve a static file
-//   GET /unit-data/{heroSlug}                          → serve unit JSON + quotes + poses
-function startAssetServer() {
-  return new Promise((resolve) => {
-    const safeRoot = path.resolve(getDbRoot());
+// ── Local feh-local:// protocol handler ───────────────────────────────────────
+// Replaces the old HTTP server on port 45678.
+// feh-local://assets/serve?f={rel}        → serve a static file from the bundle
+// feh-local://assets/unit-data/{heroSlug} → serve unit JSON + quotes + poses
+function registerLocalProtocol() {
+  const safeRoot = path.resolve(getDbRoot());
 
-    const server = http.createServer(async (req, res) => {
-      try {
-        const url = new URL(req.url, `http://127.0.0.1:${ASSET_PORT}`);
+  protocol.handle("feh-local", async (request) => {
+    try {
+      const url = new URL(request.url);
+      const { pathname, searchParams } = url;
 
-        // ── Static file endpoint ─────────────────────────────────────────────
-        if (url.pathname === "/serve") {
-          const rel = url.searchParams.get("f");
-          if (!rel) { res.writeHead(400); res.end(); return; }
+      // ── Static file endpoint ─────────────────────────────────────────────
+      if (pathname === "/serve") {
+        const rel = searchParams.get("f");
+        if (!rel) return new Response("Bad Request", { status: 400 });
 
-          const full = path.resolve(safeRoot, rel);
-          if (!full.startsWith(safeRoot + path.sep) && full !== safeRoot) {
-            res.writeHead(403); res.end(); return;
-          }
+        const full = path.resolve(safeRoot, rel);
+        // Path traversal guard
+        if (!full.startsWith(safeRoot + path.sep) && full !== safeRoot) {
+          return new Response("Forbidden", { status: 403 });
+        }
 
-          const data = await fsp.readFile(full);
-          res.writeHead(200, {
-            "Content-Type": inferMime(full),
+        const data = await fsp.readFile(full);
+        return new Response(data, {
+          status: 200,
+          headers: {
+            "Content-Type":  inferMime(full),
             "Cache-Control": "public, max-age=604800",
-            "Access-Control-Allow-Origin": "*",
-          });
-          res.end(data);
-          return;
-        }
-
-        // ── Unit-data JSON endpoint ──────────────────────────────────────────
-        if (url.pathname.startsWith("/unit-data/")) {
-          const heroSlug = decodeURIComponent(url.pathname.slice("/unit-data/".length));
-          const payload  = await buildLocalUnitData(heroSlug);
-          res.writeHead(200, {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-store",
-            "Access-Control-Allow-Origin": "*",
-          });
-          res.end(JSON.stringify(payload));
-          return;
-        }
-
-        res.writeHead(404); res.end();
-      } catch {
-        res.writeHead(500); res.end();
+          },
+        });
       }
-    });
 
-    server.listen(ASSET_PORT, "127.0.0.1", () => resolve(server));
-    server.on("error", (e) => {
-      console.error("Asset server error:", e.message);
-      resolve(null);
-    });
+      // ── Unit-data JSON endpoint ──────────────────────────────────────────
+      if (pathname.startsWith("/unit-data/")) {
+        const heroSlug = decodeURIComponent(pathname.slice("/unit-data/".length));
+        const payload  = await buildLocalUnitData(heroSlug);
+        return new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: {
+            "Content-Type":  "application/json",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+
+      return new Response("Not Found", { status: 404 });
+    } catch (err) {
+      return new Response(`Internal Error: ${err.message}`, { status: 500 });
+    }
   });
 }
 
@@ -207,9 +217,9 @@ async function readLocalJson(filePath) {
 }
 
 // ── webRequest interception ────────────────────────────────────────────────────
-// Intercepts /api/headshots/* and /api/shared-icons/* on the Vercel domain.
-// If the asset is in the local index, redirects to the local HTTP server.
-// If not found locally, passes through to Vercel (which falls back to Fandom CDN).
+// Intercepts /api/headshots/*, /api/shared-icons/*, /api/unit-data/* on the
+// Vercel domain and redirects to the local feh-local:// protocol handler.
+// If an asset isn't in the local index, passes through to Vercel.
 function setupInterception() {
   session.defaultSession.webRequest.onBeforeRequest(
     {
@@ -224,7 +234,7 @@ function setupInterception() {
         const url = new URL(details.url);
         const { pathname, searchParams } = url;
 
-        // ── Headshots ──────────────────────────────────────────────────────────
+        // ── Headshots ──────────────────────────────────────────────────────
         if (pathname.startsWith("/api/headshots/")) {
           if (!headshotIndex) { callback({}); return; }
           const rawSlug = decodeURIComponent(
@@ -235,7 +245,7 @@ function setupInterception() {
             headshotIndex.get(normSlug(rawSlug));
           if (rel) {
             callback({
-              redirectURL: `http://127.0.0.1:${ASSET_PORT}/serve?f=${encodeURIComponent(rel)}`,
+              redirectURL: `feh-local://assets/serve?f=${encodeURIComponent(rel)}`,
             });
           } else {
             callback({}); // pass through to Vercel
@@ -243,7 +253,7 @@ function setupInterception() {
           return;
         }
 
-        // ── Shared icons ───────────────────────────────────────────────────────
+        // ── Shared icons ───────────────────────────────────────────────────
         if (pathname.startsWith("/api/shared-icons/")) {
           if (!sharedIconIndex) { callback({}); return; }
           const category = pathname.slice("/api/shared-icons/".length).split("/")[0];
@@ -252,7 +262,7 @@ function setupInterception() {
           const rel  = key ? sharedIconIndex.get(key) : undefined;
           if (rel) {
             callback({
-              redirectURL: `http://127.0.0.1:${ASSET_PORT}/serve?f=${encodeURIComponent(rel)}`,
+              redirectURL: `feh-local://assets/serve?f=${encodeURIComponent(rel)}`,
             });
           } else {
             callback({}); // pass through to Vercel
@@ -260,17 +270,16 @@ function setupInterception() {
           return;
         }
 
-        // ── Unit data JSON (quotes, artist, build, IVs, guide) ─────────────────
-        // Always serve from local bundle if db/units/ is present — this is the
-        // key fix for missing artist/quotes/skills on Vercel.
+        // ── Unit data JSON (quotes, artist, build, IVs, guide) ─────────────
+        // Always serve from local bundle — this bypasses Vercel which has no
+        // access to the locally-extracted db/ folder.
         if (pathname.startsWith("/api/unit-data/")) {
           const heroSlug = decodeURIComponent(
             pathname.slice("/api/unit-data/".length).split("?")[0]
           );
-          const dbRoot = getDbRoot();
-          if (fs.existsSync(dbRoot)) {
+          if (fs.existsSync(getDbRoot())) {
             callback({
-              redirectURL: `http://127.0.0.1:${ASSET_PORT}/unit-data/${encodeURIComponent(heroSlug)}`,
+              redirectURL: `feh-local://assets/unit-data/${encodeURIComponent(heroSlug)}`,
             });
           } else {
             callback({}); // no local data — pass through
@@ -388,8 +397,8 @@ function extractZip(zipPath, destDir) {
     "-ErrorAction Stop",
   ].join(" ");
   const result = spawnSync(pwsh, ["-NoProfile", "-NonInteractive", "-Command", cmd], {
-    stdio:   "pipe",   // capture output — never inherit in a packaged app
-    timeout: 180000,
+    stdio:    "pipe",   // capture output — never inherit in a packaged app
+    timeout:  180000,
     encoding: "utf8",
   });
   const stderr = (result.stderr || "").trim();
@@ -427,9 +436,6 @@ function createMainWindow(appUrl) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      // Allow HTTP responses from local asset server while the page is served
-      // over HTTPS. This is intentional for the desktop app context.
-      webSecurity: false,
     },
   });
   mainWin.setMenuBarVisibility(false);
@@ -573,7 +579,7 @@ app.whenReady().then(async () => {
     send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
   }
 
-  // ── Start local asset server if data is present ────────────────────────────
+  // ── Register local protocol and start interception if data is present ──────
   const dbRoot = getDbRoot();
   if (fs.existsSync(dbRoot)) {
     await buildIndices();
@@ -581,11 +587,9 @@ app.whenReady().then(async () => {
       `Asset index ready: ${headshotIndex.size} heroes, ${sharedIconIndex.size} icons`
     );
 
-    const assetServer = await startAssetServer();
-    if (assetServer) {
-      setupInterception();
-      send(splashWin, "log", `Local asset server on port ${ASSET_PORT}`);
-    }
+    registerLocalProtocol();
+    setupInterception();
+    send(splashWin, "log", "Local protocol handler registered (feh-local://)");
   } else {
     send(splashWin, "log", "No local data bundle found — all assets will load from CDN");
   }
