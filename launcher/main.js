@@ -372,17 +372,27 @@ function extractZip(zipPath, destDir) {
   const pwsh = fs.existsSync("C:/Program Files/PowerShell/7/pwsh.exe")
     ? "C:/Program Files/PowerShell/7/pwsh.exe"
     : "powershell.exe";
+  // Use -LiteralPath to avoid glob expansion issues, and pipe output so the
+  // child process doesn't inherit a null handle (which caused silent failures
+  // in packaged Electron apps where there is no console stdio).
   const cmd = [
     "Expand-Archive",
-    `-Path '${zipPath.replace(/'/g, "''")}'`,
+    `-LiteralPath '${zipPath.replace(/'/g, "''")}'`,
     `-DestinationPath '${destDir.replace(/'/g, "''")}'`,
     "-Force",
+    "-ErrorAction Stop",
   ].join(" ");
   const result = spawnSync(pwsh, ["-NoProfile", "-NonInteractive", "-Command", cmd], {
-    stdio:   "inherit",
-    timeout: 120000,
+    stdio:   "pipe",   // capture output — never inherit in a packaged app
+    timeout: 180000,
+    encoding: "utf8",
   });
-  if (result.status !== 0) throw new Error("Expand-Archive failed");
+  const stderr = (result.stderr || "").trim();
+  const stdout = (result.stdout || "").trim();
+  if (result.status !== 0 || result.error) {
+    const detail = stderr || stdout || (result.error?.message ?? "unknown error");
+    throw new Error(`Expand-Archive failed (exit ${result.status}): ${detail}`);
+  }
 }
 
 // ── Window factories ───────────────────────────────────────────────────────────
