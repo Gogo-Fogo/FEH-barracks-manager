@@ -16,7 +16,17 @@ const os   = require("node:os");
 const ROOT     = path.resolve(__dirname, "..");
 const LAUNCHER = path.join(ROOT, "launcher");
 const EXE_PATH = path.join(ROOT, "dist", "FEH-Barracks-Launcher.exe");
-const GH_CMD   = process.platform === "win32" ? "gh.exe" : "gh";
+// Resolve gh CLI — try well-known Windows install paths before falling back to PATH.
+const GH_CMD = (() => {
+  if (process.platform !== "win32") return "gh";
+  const candidates = [
+    "C:\\Program Files\\GitHub CLI\\gh.exe",
+    path.join(process.env.LOCALAPPDATA || "", "Programs", "GitHub CLI", "gh.exe"),
+    path.join(process.env.USERPROFILE  || "", "scoop", "shims", "gh.exe"),
+  ];
+  for (const c of candidates) if (fs.existsSync(c)) return c;
+  return "gh.exe";
+})();
 const NPM_CMD  = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function run(cmd, args, opts = {}) {

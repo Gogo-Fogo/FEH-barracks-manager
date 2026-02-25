@@ -1,29 +1,213 @@
 "use strict";
 
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, session } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const http  = require("node:http");
-const pkg   = require("./package.json");
+const fs    = require("node:fs");
+const fsp   = require("node:fs/promises");
+const { spawnSync } = require("node:child_process");
 
-const LOCAL_URL   = "http://localhost:3000";
-const REMOTE_URL  = "https://feh-barracks-manager.vercel.app";
+const pkg = require("./package.json");
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const LOCAL_URL    = "http://localhost:3000";
+const REMOTE_URL   = "https://feh-barracks-manager.vercel.app";
+const VERCEL_HOST  = "feh-barracks-manager.vercel.app";
 const RELEASES_API = "https://api.github.com/repos/Gogo-Fogo/FEH-barracks-manager/releases/latest";
+const BUNDLE_NAME  = "feh-data-bundle.zip";
+const ASSET_PORT   = 45678;
 
 let mainWin   = null;
 let splashWin = null;
 
-function getIconPath() {
-  return app.isPackaged
+// In-memory asset index built from the local data bundle.
+// headshotIndex:  Map< slug-variant → relative-path-from-dbRoot >
+// sharedIconIndex: Map< "category/filename" → relative-path-from-dbRoot >
+let headshotIndex   = null;
+let sharedIconIndex = null;
+
+// ── Path helpers ───────────────────────────────────────────────────────────────
+const getDataRoot    = () => path.join(app.getPath("userData"), "feh-data");
+const getDbRoot      = () => path.join(getDataRoot(), "db");
+const getVersionFile = () => path.join(getDataRoot(), "version.txt");
+const getIconPath    = () =>
+  app.isPackaged
     ? path.join(process.resourcesPath, "assets", "gullveig.png")
     : path.join(__dirname, "assets", "gullveig.png");
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+const send = (win, ch, ...a) => {
+  if (win && !win.isDestroyed()) win.webContents.send(ch, ...a);
+};
+
+function inferMime(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".png")  return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".gif")  return "image/gif";
+  return "application/octet-stream";
 }
 
-function send(win, channel, ...args) {
-  if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
+// Same normalisation algorithm used in the Next.js API routes.
+function normSlug(s) {
+  return String(s || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .toLowerCase()
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
 }
 
-// Check if the local dev server is up (fast, 800 ms timeout).
+// ── Asset index builders ───────────────────────────────────────────────────────
+async function buildIndices() {
+  const dbRoot = getDbRoot();
+  headshotIndex   = new Map();
+  sharedIconIndex = new Map();
+
+  // headshots: db/unit_assets/fandom/headshots/{heroDir}/{image}
+  const headsRoot = path.join(dbRoot, "unit_assets", "fandom", "headshots");
+  try {
+    const entries = await fsp.readdir(headsRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const heroDir = path.join(headsRoot, entry.name);
+      try {
+        const files = await fsp.readdir(heroDir);
+        const image = files.find((f) => /\.(webp|png|jpe?g|gif)$/i.test(f));
+        if (!image) continue;
+        const rel = path.relative(dbRoot, path.join(heroDir, image)).replace(/\\/g, "/");
+        // Index by exact lower-case dir name AND normalised slug
+        const lower = entry.name.toLowerCase();
+        const normd = normSlug(entry.name);
+        if (!headshotIndex.has(lower)) headshotIndex.set(lower, rel);
+        if (!headshotIndex.has(normd)) headshotIndex.set(normd, rel);
+      } catch { /* skip */ }
+    }
+  } catch { /* headshots dir absent */ }
+
+  // shared icons: db/unit_assets/fandom/shared/{category}/{file}
+  const sharedRoot = path.join(dbRoot, "unit_assets", "fandom", "shared");
+  try {
+    const categories = await fsp.readdir(sharedRoot, { withFileTypes: true });
+    for (const cat of categories) {
+      if (!cat.isDirectory()) continue;
+      const catDir = path.join(sharedRoot, cat.name);
+      try {
+        const files = await fsp.readdir(catDir);
+        for (const file of files) {
+          const key = `${cat.name}/${file}`;
+          const rel = path.relative(dbRoot, path.join(catDir, file)).replace(/\\/g, "/");
+          sharedIconIndex.set(key, rel);
+        }
+      } catch { /* skip */ }
+    }
+  } catch { /* shared dir absent */ }
+}
+
+// ── Local HTTP asset server ────────────────────────────────────────────────────
+// Single endpoint: GET /serve?f={relative-path-from-dbRoot}
+// The interceptor redirects Vercel API calls here with the pre-resolved path.
+function startAssetServer() {
+  return new Promise((resolve) => {
+    const dbRoot = getDbRoot();
+    const safeRoot = path.resolve(dbRoot);
+
+    const server = http.createServer(async (req, res) => {
+      try {
+        const url = new URL(req.url, `http://127.0.0.1:${ASSET_PORT}`);
+        if (url.pathname !== "/serve") { res.writeHead(404); res.end(); return; }
+
+        const rel = url.searchParams.get("f");
+        if (!rel) { res.writeHead(400); res.end(); return; }
+
+        // Security: path traversal guard
+        const full = path.resolve(safeRoot, rel);
+        if (!full.startsWith(safeRoot + path.sep) && full !== safeRoot) {
+          res.writeHead(403); res.end(); return;
+        }
+
+        const data = await fsp.readFile(full);
+        res.writeHead(200, {
+          "Content-Type": inferMime(full),
+          "Cache-Control": "public, max-age=604800",
+          "Access-Control-Allow-Origin": "*",
+        });
+        res.end(data);
+      } catch {
+        res.writeHead(404); res.end();
+      }
+    });
+
+    server.listen(ASSET_PORT, "127.0.0.1", () => resolve(server));
+    server.on("error", (e) => {
+      console.error("Asset server error:", e.message);
+      resolve(null);
+    });
+  });
+}
+
+// ── webRequest interception ────────────────────────────────────────────────────
+// Intercepts /api/headshots/* and /api/shared-icons/* on the Vercel domain.
+// If the asset is in the local index, redirects to the local HTTP server.
+// If not found locally, passes through to Vercel (which falls back to Fandom CDN).
+function setupInterception() {
+  session.defaultSession.webRequest.onBeforeRequest(
+    {
+      urls: [
+        `https://${VERCEL_HOST}/api/headshots/*`,
+        `https://${VERCEL_HOST}/api/shared-icons/*`,
+      ],
+    },
+    (details, callback) => {
+      try {
+        const url = new URL(details.url);
+        const { pathname, searchParams } = url;
+
+        // ── Headshots ──────────────────────────────────────────────────────────
+        if (pathname.startsWith("/api/headshots/")) {
+          if (!headshotIndex) { callback({}); return; }
+          const rawSlug = decodeURIComponent(
+            pathname.slice("/api/headshots/".length).split("?")[0]
+          );
+          const rel =
+            headshotIndex.get(rawSlug.toLowerCase()) ??
+            headshotIndex.get(normSlug(rawSlug));
+          if (rel) {
+            callback({
+              redirectURL: `http://127.0.0.1:${ASSET_PORT}/serve?f=${encodeURIComponent(rel)}`,
+            });
+          } else {
+            callback({}); // pass through to Vercel
+          }
+          return;
+        }
+
+        // ── Shared icons ───────────────────────────────────────────────────────
+        if (pathname.startsWith("/api/shared-icons/")) {
+          if (!sharedIconIndex) { callback({}); return; }
+          const category = pathname.slice("/api/shared-icons/".length).split("/")[0];
+          const name = searchParams.get("name");
+          const key  = name ? `${category}/${name}` : null;
+          const rel  = key ? sharedIconIndex.get(key) : undefined;
+          if (rel) {
+            callback({
+              redirectURL: `http://127.0.0.1:${ASSET_PORT}/serve?f=${encodeURIComponent(rel)}`,
+            });
+          } else {
+            callback({}); // pass through to Vercel
+          }
+          return;
+        }
+      } catch { /* fall through */ }
+      callback({});
+    }
+  );
+}
+
+// ── Probe local dev server (fast, 800 ms timeout) ─────────────────────────────
 function probeLocalServer() {
   return new Promise((resolve) => {
     const req = http.get(LOCAL_URL, { timeout: 800 }, (res) => {
@@ -35,32 +219,101 @@ function probeLocalServer() {
   });
 }
 
-// Fetch latest GitHub release tag (shown in the splash version label).
-function fetchLatestTag() {
+// ── GitHub release helpers ─────────────────────────────────────────────────────
+function fetchLatestRelease() {
   return new Promise((resolve) => {
-    const req = https.get(RELEASES_API, {
-      headers: { "User-Agent": `FEH-Barracks-Launcher/${pkg.version}` },
-    }, (res) => {
-      let data = "";
-      res.on("data", (c) => (data += c));
-      res.on("end", () => {
-        try { resolve(JSON.parse(data).tag_name || pkg.version); }
-        catch { resolve(pkg.version); }
-      });
+    const req = https.get(
+      RELEASES_API,
+      { headers: { "User-Agent": `FEH-Barracks-Launcher/${pkg.version}` } },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          try {
+            const json  = JSON.parse(data);
+            const asset = (json.assets || []).find((a) => a.name === BUNDLE_NAME);
+            resolve({
+              tag:         json.tag_name || pkg.version,
+              downloadUrl: asset?.browser_download_url ?? null,
+              assetSize:   asset?.size ?? 0,
+            });
+          } catch {
+            resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 });
+          }
+        });
+      }
+    );
+    req.on("error", () => resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 }));
+    req.setTimeout(8000, () => {
+      req.destroy();
+      resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 });
     });
-    req.on("error", () => resolve(pkg.version));
-    req.setTimeout(5000, () => { req.destroy(); resolve(pkg.version); });
   });
 }
 
-// ── Splash window ─────────────────────────────────────────────────────────────
+function readInstalledVersion() {
+  try { return fs.readFileSync(getVersionFile(), "utf8").trim(); } catch { return null; }
+}
+
+// ── Streaming download with redirect handling and progress ─────────────────────
+function downloadFile(url, destPath, totalSize, onProgress, _redirectsLeft = 8) {
+  return new Promise((resolve, reject) => {
+    const doRequest = (targetUrl, left) => {
+      if (left <= 0) { reject(new Error("Too many redirects")); return; }
+      const proto = targetUrl.startsWith("https://") ? https : http;
+      proto
+        .get(targetUrl, { headers: { "User-Agent": `FEH-Barracks-Launcher/${pkg.version}` } }, (res) => {
+          if ([301, 302, 307, 308].includes(res.statusCode)) {
+            res.destroy();
+            doRequest(res.headers.location, left - 1);
+            return;
+          }
+          if (res.statusCode !== 200) {
+            res.destroy();
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          const realTotal = parseInt(res.headers["content-length"] || "0", 10) || totalSize;
+          let received = 0;
+          const out = fs.createWriteStream(destPath);
+          res.on("data", (chunk) => {
+            received += chunk.length;
+            out.write(chunk);
+            if (onProgress && realTotal > 0) onProgress(received, realTotal);
+          });
+          res.on("end",   () => { out.end(); resolve(); });
+          res.on("error", (e) => { out.destroy(); reject(e); });
+          out.on("error", reject);
+        })
+        .on("error", reject);
+    };
+    doRequest(url, _redirectsLeft);
+  });
+}
+
+// ── Extract via PowerShell ─────────────────────────────────────────────────────
+function extractZip(zipPath, destDir) {
+  const pwsh = fs.existsSync("C:/Program Files/PowerShell/7/pwsh.exe")
+    ? "C:/Program Files/PowerShell/7/pwsh.exe"
+    : "powershell.exe";
+  const cmd = [
+    "Expand-Archive",
+    `-Path '${zipPath.replace(/'/g, "''")}'`,
+    `-DestinationPath '${destDir.replace(/'/g, "''")}'`,
+    "-Force",
+  ].join(" ");
+  const result = spawnSync(pwsh, ["-NoProfile", "-NonInteractive", "-Command", cmd], {
+    stdio:   "inherit",
+    timeout: 120000,
+  });
+  if (result.status !== 0) throw new Error("Expand-Archive failed");
+}
+
+// ── Window factories ───────────────────────────────────────────────────────────
 function createSplash() {
   splashWin = new BrowserWindow({
-    width: 480,
-    height: 300,
-    frame: false,
-    resizable: false,
-    center: true,
+    width: 480, height: 300,
+    frame: false, resizable: false, center: true,
     icon: getIconPath(),
     backgroundColor: "#0a0a1a",
     webPreferences: {
@@ -71,25 +324,21 @@ function createSplash() {
   });
   splashWin.loadFile(path.join(__dirname, "renderer", "index.html"));
   splashWin.setMenuBarVisibility(false);
-
-  splashWin.webContents.once("did-finish-load", () => {
-    send(splashWin, "progress", { pct: 10, label: "Connecting to FEH Barracks…" });
-  });
 }
 
-// ── Main window ───────────────────────────────────────────────────────────────
 function createMainWindow(appUrl) {
   const isLocal = appUrl.startsWith("http://localhost");
-
   mainWin = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: 1280, height: 800,
     show: false,
     icon: getIconPath(),
     backgroundColor: "#0a0a1a",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // Allow HTTP responses from local asset server while the page is served
+      // over HTTPS. This is intentional for the desktop app context.
+      webSecurity: false,
     },
   });
   mainWin.setMenuBarVisibility(false);
@@ -99,58 +348,123 @@ function createMainWindow(appUrl) {
     return { action: "deny" };
   });
 
-  const label = isLocal ? "Loading local server…" : "Connecting to FEH Barracks…";
-  let pct = 10;
+  let pct = isLocal ? 60 : 92;
+  const label = isLocal ? "Loading local server…" : "Opening FEH Barracks…";
   const tick = setInterval(() => {
-    pct = Math.min(pct + (isLocal ? 4 : 1.2), 88);
+    pct = Math.min(pct + (isLocal ? 3 : 0.6), 98);
     send(splashWin, "progress", { pct, label });
-  }, 100);
+  }, 150);
 
   mainWin.webContents.once("did-finish-load", () => {
     clearInterval(tick);
     send(splashWin, "done", "ok");
     setTimeout(() => {
       if (splashWin && !splashWin.isDestroyed()) splashWin.close();
-      if (mainWin  && !mainWin.isDestroyed())  { mainWin.show(); mainWin.focus(); }
+      if (mainWin  && !mainWin.isDestroyed())   { mainWin.show(); mainWin.focus(); }
     }, 500);
   });
 
   mainWin.webContents.on("did-fail-load", (_e, code, desc) => {
     clearInterval(tick);
-    send(splashWin, "log",      `Could not connect: ${desc} (${code})`);
+    send(splashWin, "log",      `Load failed: ${desc} (${code})`);
     send(splashWin, "progress", { pct: 0, label: "Connection failed — check your internet." });
   });
 
   mainWin.loadURL(appUrl);
 }
 
-// ── IPC ───────────────────────────────────────────────────────────────────────
+// ── IPC ────────────────────────────────────────────────────────────────────────
 ipcMain.on("get-asset-path", (event, name) => {
   event.returnValue = app.isPackaged
     ? path.join(process.resourcesPath, "assets", name)
     : path.join(__dirname, "assets", name);
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Boot ───────────────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   createSplash();
+  send(splashWin, "progress", { pct: 5, label: "Connecting…" });
 
-  // Probe local dev server and fetch version in parallel
-  const [isLocal, version] = await Promise.all([
-    probeLocalServer(),
-    fetchLatestTag(),
-  ]);
+  // Probe local dev server and fetch release metadata in parallel.
+  const [isLocal, release] = await Promise.all([probeLocalServer(), fetchLatestRelease()]);
+  send(splashWin, "init", { version: release.tag });
 
-  const appUrl = isLocal ? LOCAL_URL : REMOTE_URL;
-  send(splashWin, "init", { version });
-
+  // ── Local dev mode ─────────────────────────────────────────────────────────
   if (isLocal) {
-    send(splashWin, "log", "Local server detected — using localhost:3000");
+    send(splashWin, "log",      "Local dev server detected — loading localhost:3000");
+    send(splashWin, "progress", { pct: 55, label: "Local server detected…" });
+    createMainWindow(LOCAL_URL);
+    return;
   }
 
-  createMainWindow(appUrl);
+  // ── Check / download data bundle ───────────────────────────────────────────
+  const dataRoot        = getDataRoot();
+  const installedVer    = readInstalledVersion();
+  const needsDownload   = !installedVer || installedVer !== release.tag;
+
+  if (needsDownload && release.downloadUrl) {
+    await fsp.mkdir(dataRoot, { recursive: true });
+    const zipDest = path.join(dataRoot, BUNDLE_NAME);
+
+    send(splashWin, "log", installedVer
+      ? `Update available: ${installedVer} → ${release.tag}`
+      : `Downloading data bundle (${release.tag})…`
+    );
+    send(splashWin, "progress", { pct: 5, label: "Downloading data bundle…" });
+
+    try {
+      await downloadFile(
+        release.downloadUrl,
+        zipDest,
+        release.assetSize,
+        (rx, tot) => {
+          const pct = Math.round(5 + (rx / tot) * 52); // 5% → 57%
+          const mb  = (rx  / 1024 / 1024).toFixed(1);
+          const tmb = (tot / 1024 / 1024).toFixed(1);
+          send(splashWin, "progress", { pct, label: `Downloading… ${mb} / ${tmb} MB` });
+        }
+      );
+
+      send(splashWin, "progress", { pct: 60, label: "Extracting data…" });
+      send(splashWin, "log", "Extracting bundle…");
+      extractZip(zipDest, dataRoot);
+
+      await fsp.rm(zipDest, { force: true }).catch(() => {});
+      await fsp.writeFile(getVersionFile(), release.tag, "utf8");
+
+      send(splashWin, "log",      `Data bundle installed (${release.tag})`);
+      send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
+    } catch (err) {
+      const msg = `Download/extract error: ${err.message} — images will load from CDN`;
+      send(splashWin, "log", msg);
+      console.error(msg);
+    }
+  } else if (!needsDownload) {
+    send(splashWin, "log",      `Data up to date (${installedVer})`);
+    send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
+  } else {
+    // GitHub release has no data bundle asset yet.
+    send(splashWin, "log",      "No data bundle in this release — images will load from CDN");
+    send(splashWin, "progress", { pct: 88, label: "Connecting to FEH Barracks…" });
+  }
+
+  // ── Start local asset server if data is present ────────────────────────────
+  const dbRoot = getDbRoot();
+  if (fs.existsSync(dbRoot)) {
+    await buildIndices();
+    send(splashWin, "log",
+      `Asset index ready: ${headshotIndex.size} heroes, ${sharedIconIndex.size} icons`
+    );
+
+    const assetServer = await startAssetServer();
+    if (assetServer) {
+      setupInterception();
+      send(splashWin, "log", `Local asset server on port ${ASSET_PORT}`);
+    }
+  }
+
+  send(splashWin, "progress", { pct: 90, label: "Opening FEH Barracks…" });
+  createMainWindow(REMOTE_URL);
 });
 
-app.on("window-all-closed", () => {
-  app.quit();
-});
+app.on("window-all-closed", () => app.quit());

@@ -10,7 +10,9 @@
     "scrape:fandom-rarities": "node scraper/fandom_rarity_updater.js",
     "reconcile:index": "node scripts/reconcile-index-from-units.js",
     "build:local-assets-bundle": "node scripts/build-local-assets-bundle.js",
+    "build:data-bundle": "node scripts/build-data-bundle.js",
     "release:assets": "node scripts/release-full-assets.js",
+    "release:data-bundle": "node scripts/release-data-bundle.js",
     "release:launcher": "node scripts/release-launcher.js",
     "validate:hero-aliases": "node scripts/validate-hero-aliases.js"
   },
