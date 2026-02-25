@@ -370,13 +370,8 @@ export function TavernClient(props: TavernClientProps) {
 
         {/* ── Stage area — heroes fill the portrait ── */}
         <div
-          className="absolute left-0 right-0 top-11 z-10 flex items-end justify-around px-1"
-          style={{
-            // Leave room above action buttons so heroes don't overlap them
-            bottom: panelOpen ? "65%" : "0",
-            paddingBottom: panelOpen ? "0" : "clamp(56px, 14%, 96px)",
-            transition: "bottom 0.3s ease, padding-bottom 0.3s ease",
-          }}
+          className="absolute bottom-0 left-0 right-0 top-11 z-10 flex items-end justify-around px-1"
+          style={{ paddingBottom: "clamp(56px, 14%, 96px)" }}
           onClick={(e) => {
             const t = e.target as HTMLElement;
             if (!t.closest("[data-info-card]") && !t.closest("[data-hero-portrait]")) {
@@ -488,11 +483,10 @@ export function TavernClient(props: TavernClientProps) {
           })}
         </div>
 
-        {/* ── Floating action buttons (Wizardry-style) ──
-              Slide upward when panel opens so they sit just above it           */}
+        {/* ── Floating action buttons (Wizardry-style) ── */}
         <div
-          className="absolute right-3 z-20 flex flex-col items-end gap-2 transition-all duration-300"
-          style={{ bottom: panelOpen ? "calc(65% + 10px)" : "clamp(56px, 13%, 96px)" }}
+          className="absolute right-3 z-20 flex flex-col items-end gap-2"
+          style={{ bottom: "clamp(56px, 13%, 96px)" }}
         >
           {TAB_META.map(({ key, icon, label }) => {
             const badge = key === "friends" && pendingCount > 0;
@@ -529,12 +523,22 @@ export function TavernClient(props: TavernClientProps) {
           </Link>
         </div>
 
-        {/* ── Bottom sheet panel — slides up from the bottom ── */}
+        {/* ── Backdrop — dims the tavern art when popup is open ── */}
+        {panelOpen && (
+          <div
+            className="absolute inset-0 z-[25] bg-black/50 backdrop-blur-[2px]"
+            onClick={() => setPanelOpen(false)}
+          />
+        )}
+
+        {/* ── Popup modal — centred in the portrait frame ── */}
         <div
-          className={`absolute bottom-0 left-0 right-0 z-30 flex flex-col rounded-t-2xl border-t border-amber-900/40 bg-zinc-900/97 backdrop-blur-md transition-transform duration-300 ${
-            panelOpen ? "translate-y-0" : "translate-y-full"
+          className={`absolute left-1/2 z-30 flex w-[92%] max-h-[72%] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-amber-900/40 bg-zinc-900/98 shadow-[0_8px_48px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all duration-200 ${
+            panelOpen
+              ? "opacity-100 scale-100 pointer-events-auto"
+              : "opacity-0 scale-95 pointer-events-none"
           }`}
-          style={{ height: "65%" }}
+          style={{ top: "12%" }}
         >
           {/* Panel header */}
           <div className="flex shrink-0 items-center justify-between border-b border-zinc-700/50 px-4 py-3">
