@@ -11,6 +11,7 @@
     "reconcile:index": "node scripts/reconcile-index-from-units.js",
     "build:local-assets-bundle": "node scripts/build-local-assets-bundle.js",
     "release:assets": "node scripts/release-full-assets.js",
+    "release:launcher": "node scripts/release-launcher.js",
     "validate:hero-aliases": "node scripts/validate-hero-aliases.js"
   },
   "keywords": [],

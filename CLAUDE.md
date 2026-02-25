@@ -94,7 +94,9 @@ Full protocol in `context/workflow.md`. Summary:
 5. Import to Supabase: `npm --prefix app run import:heroes`
 6. Rarity safety check: verify `rarity_key` count in index before import
 7. Smoke test, then `git status` + commit only intentional files
-8. After pushing a release tag: `npm run release:assets` — builds `feh-assets-full-bundle.zip` and uploads to latest GitHub release (replaces old copy automatically). Requires `gh` CLI.
+8. After pushing a release tag:
+   - `npm run release:assets` — builds `feh-assets-full-bundle.zip` and uploads to latest GitHub release (replaces old copy automatically). Requires `gh` CLI.
+   - `npm run release:launcher` — builds `FEH-Barracks-Launcher.exe` (portable) and uploads to latest GitHub release. **Must be run from an admin/elevated terminal** (needs symlink privilege). Requires `gh` CLI.
 
 **Missing unit recovery:** `npm run reconcile:index [-- --archive-url=<url>]` then `build_parser.js --only=<slug>.json`
 
