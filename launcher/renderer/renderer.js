@@ -1,7 +1,7 @@
 "use strict";
 
 // ── Background image ──────────────────────────────────────────
-const imgPath = window.launcher.getAssetPath("gullveig.png");
+const imgPath = window.launcher.getAssetPath("edelgard_husk.png");
 document.getElementById("bg").style.backgroundImage =
   `url('${imgPath.replace(/\\/g, "/")}')`;
 

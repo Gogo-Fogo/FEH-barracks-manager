@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, ipcMain, shell, session } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell, session } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const http  = require("node:http");
@@ -474,20 +474,39 @@ app.whenReady().then(async () => {
   }
 
   // ── Check / download data bundle ───────────────────────────────────────────
-  const dataRoot        = getDataRoot();
-  const installedVer    = readInstalledVersion();
-  const needsDownload   = !installedVer || installedVer !== release.tag;
+  const dataRoot     = getDataRoot();
+  const unitsDir     = path.join(getDbRoot(), "units");
+  const installedVer = readInstalledVersion();
 
-  if (needsDownload && release.downloadUrl) {
+  // Force re-download if version matches but units/ is actually missing —
+  // prevents a stale version.txt from permanently blocking the download.
+  const unitsExist   = fs.existsSync(unitsDir) &&
+    (() => { try { return fs.readdirSync(unitsDir).length > 0; } catch { return false; } })();
+  const needsDownload = !installedVer || installedVer !== release.tag || !unitsExist;
+
+  send(splashWin, "log",
+    `Version check — installed: ${installedVer ?? "none"}, latest: ${release.tag}, units on disk: ${unitsExist}`
+  );
+
+  if (!release.downloadUrl) {
+    // GitHub API returned but had no matching asset (unusual).
+    const msg = `Could not find ${BUNDLE_NAME} in release ${release.tag}.\nImages will load from CDN.`;
+    send(splashWin, "log", msg);
+    dialog.showErrorBox("FEH Barracks — Data Bundle Missing", msg);
+  } else if (needsDownload) {
     await fsp.mkdir(dataRoot, { recursive: true });
     const zipDest = path.join(dataRoot, BUNDLE_NAME);
 
-    send(splashWin, "log", installedVer
-      ? `Update available: ${installedVer} → ${release.tag}`
-      : `Downloading data bundle (${release.tag})…`
-    );
+    const reason = !installedVer
+      ? `First install — downloading data bundle (${release.tag})…`
+      : !unitsExist
+      ? `Local data missing despite version match — re-downloading (${release.tag})…`
+      : `Update available: ${installedVer} → ${release.tag}`;
+
+    send(splashWin, "log", reason);
     send(splashWin, "progress", { pct: 5, label: "Downloading data bundle…" });
 
+    let downloadOk = false;
     try {
       await downloadFile(
         release.downloadUrl,
@@ -500,28 +519,43 @@ app.whenReady().then(async () => {
           send(splashWin, "progress", { pct, label: `Downloading… ${mb} / ${tmb} MB` });
         }
       );
+      downloadOk = true;
+    } catch (err) {
+      const msg = `Download failed: ${err.message}`;
+      send(splashWin, "log", msg);
+      dialog.showErrorBox("FEH Barracks — Download Failed", `${msg}\n\nImages will load from CDN.`);
+    }
 
+    if (downloadOk) {
       send(splashWin, "progress", { pct: 60, label: "Extracting data…" });
       send(splashWin, "log", "Extracting bundle…");
-      extractZip(zipDest, dataRoot);
+      try {
+        extractZip(zipDest, dataRoot);
+        await fsp.rm(zipDest, { force: true }).catch(() => {});
 
-      await fsp.rm(zipDest, { force: true }).catch(() => {});
-      await fsp.writeFile(getVersionFile(), release.tag, "utf8");
+        // Verify extraction succeeded before writing version stamp.
+        const afterUnits = fs.existsSync(unitsDir) &&
+          (() => { try { return fs.readdirSync(unitsDir).length > 0; } catch { return false; } })();
 
-      send(splashWin, "log",      `Data bundle installed (${release.tag})`);
-      send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
-    } catch (err) {
-      const msg = `Download/extract error: ${err.message} — images will load from CDN`;
-      send(splashWin, "log", msg);
-      console.error(msg);
+        if (afterUnits) {
+          await fsp.writeFile(getVersionFile(), release.tag, "utf8");
+          send(splashWin, "log", `Data bundle installed (${release.tag})`);
+        } else {
+          const msg = "Extraction completed but db/units/ appears empty — check disk space.";
+          send(splashWin, "log", msg);
+          dialog.showErrorBox("FEH Barracks — Extraction Issue", msg);
+        }
+      } catch (err) {
+        const msg = `Extraction failed: ${err.message}`;
+        send(splashWin, "log", msg);
+        dialog.showErrorBox("FEH Barracks — Extraction Failed", `${msg}\n\nImages will load from CDN.`);
+      }
     }
-  } else if (!needsDownload) {
-    send(splashWin, "log",      `Data up to date (${installedVer})`);
+
     send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
   } else {
-    // GitHub release has no data bundle asset yet.
-    send(splashWin, "log",      "No data bundle in this release — images will load from CDN");
-    send(splashWin, "progress", { pct: 88, label: "Connecting to FEH Barracks…" });
+    send(splashWin, "log", `Data up to date (${installedVer})`);
+    send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
   }
 
   // ── Start local asset server if data is present ────────────────────────────
@@ -537,6 +571,8 @@ app.whenReady().then(async () => {
       setupInterception();
       send(splashWin, "log", `Local asset server on port ${ASSET_PORT}`);
     }
+  } else {
+    send(splashWin, "log", "No local data bundle found — all assets will load from CDN");
   }
 
   send(splashWin, "progress", { pct: 90, label: "Opening FEH Barracks…" });
