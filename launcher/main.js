@@ -33,8 +33,8 @@ const getDbRoot      = () => path.join(getDataRoot(), "db");
 const getVersionFile = () => path.join(getDataRoot(), "version.txt");
 const getIconPath    = () =>
   app.isPackaged
-    ? path.join(process.resourcesPath, "assets", "gullveig.png")
-    : path.join(__dirname, "assets", "gullveig.png");
+    ? path.join(process.resourcesPath, "assets", "edelgard_husk.png")
+    : path.join(__dirname, "assets", "edelgard_husk.png");
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
 const send = (win, ch, ...a) => {
