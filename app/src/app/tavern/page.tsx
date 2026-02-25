@@ -31,11 +31,12 @@ async function loadUserStats(
 
   let redHeroes = 0;
   let fiveStarHeroes = 0;
+  let tierPower = 0;
 
   if (heroSlugs.length > 0) {
     const { data: heroMeta } = await supabase
       .from("heroes")
-      .select("hero_slug, weapon, rarity")
+      .select("hero_slug, weapon, rarity, tier")
       .in("hero_slug", heroSlugs);
 
     const metaMap = new Map((heroMeta ?? []).map((h) => [h.hero_slug, h]));
@@ -59,13 +60,21 @@ async function loadUserStats(
 
       const rarity = (meta.rarity ?? "").toLowerCase();
       if (rarity.includes("5")) fiveStarHeroes++;
+
+      // Tier power: sum all hero tier values (numeric in DB, e.g. 9.5, 8.0)
+      const t = parseFloat(meta.tier ?? "0");
+      if (!isNaN(t)) tierPower += t;
     }
   }
+
+  // Round to one decimal to avoid floating-point noise
+  tierPower = Math.round(tierPower * 10) / 10;
 
   return {
     totalHeroes:   heroSlugs.length,
     fiveStarHeroes,
     redHeroes,
+    tierPower,
     favoritesCount: favRows.length,
     teamsCount:     teamRows.length,
   };
@@ -235,6 +244,7 @@ export default async function TavernPage() {
       friends={friends}
       pendingRequests={pendingRequests}
       leaderboard={{
+        tierPower: buildLeaderboard("tierPower"),
         total:     buildLeaderboard("totalHeroes"),
         fiveStar:  buildLeaderboard("fiveStarHeroes"),
         red:       buildLeaderboard("redHeroes"),

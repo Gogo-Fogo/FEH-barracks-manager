@@ -30,6 +30,7 @@ export type UserStats = {
   totalHeroes: number;
   fiveStarHeroes: number;
   redHeroes: number;
+  tierPower: number;
   favoritesCount: number;
   teamsCount: number;
 };
@@ -62,6 +63,7 @@ type TavernClientProps = {
   friends: FriendRow[];
   pendingRequests: PendingRequest[];
   leaderboard: {
+    tierPower: LeaderEntry[];
     total: LeaderEntry[];
     fiveStar: LeaderEntry[];
     red: LeaderEntry[];
@@ -286,10 +288,11 @@ export function TavernClient(props: TavernClientProps) {
   const pendingCount = props.pendingRequests.length;
 
   const lbCategories = [
-    { label: "Most Heroes",    entries: props.leaderboard.total,     icon: "⚔",  color: "text-zinc-100"  },
-    { label: "Most 5★",        entries: props.leaderboard.fiveStar,  icon: "★",  color: "text-amber-300" },
-    { label: "Most Red",       entries: props.leaderboard.red,       icon: "🔴", color: "text-red-300"   },
-    { label: "Most Favorites", entries: props.leaderboard.favorites, icon: "❤",  color: "text-rose-300"  },
+    { label: "Tier Power",     entries: props.leaderboard.tierPower, icon: "⚡", color: "text-yellow-300", decimal: true },
+    { label: "Most Heroes",    entries: props.leaderboard.total,     icon: "⚔",  color: "text-zinc-100",   decimal: false },
+    { label: "Most 5★",        entries: props.leaderboard.fiveStar,  icon: "★",  color: "text-amber-300",  decimal: false },
+    { label: "Most Red",       entries: props.leaderboard.red,       icon: "🔴", color: "text-red-300",    decimal: false },
+    { label: "Most Favorites", entries: props.leaderboard.favorites, icon: "❤",  color: "text-rose-300",   decimal: false },
   ];
 
   const panelTitle =
@@ -499,13 +502,13 @@ export function TavernClient(props: TavernClientProps) {
                 key={key}
                 type="button"
                 onClick={() => openPanel(key)}
-                className={`relative flex items-center gap-2 rounded-lg border px-3 py-2 text-xs backdrop-blur-sm transition-colors ${
+                className={`relative flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium backdrop-blur-sm transition-colors ${
                   active
                     ? "border-amber-500/60 bg-amber-900/70 text-amber-100"
-                    : "border-white/20 bg-black/50 text-zinc-200 hover:bg-black/70 hover:text-white"
+                    : "border-white/20 bg-black/55 text-zinc-200 hover:bg-black/75 hover:text-white"
                 }`}
               >
-                <span className="text-base leading-none">{icon}</span>
+                <span className="text-lg leading-none">{icon}</span>
                 <span>{label}</span>
                 {badge && (
                   <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
@@ -519,9 +522,9 @@ export function TavernClient(props: TavernClientProps) {
           {/* Leave button (Wizardry feel) */}
           <Link
             href="/barracks"
-            className="mt-1 flex items-center gap-2 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-xs text-zinc-400 backdrop-blur-sm hover:bg-black/60 hover:text-zinc-200"
+            className="mt-1 flex items-center gap-2.5 rounded-xl border border-white/15 bg-black/45 px-4 py-2.5 text-sm font-medium text-zinc-400 backdrop-blur-sm hover:bg-black/65 hover:text-zinc-200"
           >
-            <span className="text-base leading-none">🚪</span>
+            <span className="text-lg leading-none">🚪</span>
             <span>Leave Tavern</span>
           </Link>
         </div>
@@ -579,8 +582,9 @@ export function TavernClient(props: TavernClientProps) {
                     Add friends to start competing!
                   </p>
                 ) : (
-                  lbCategories.map(({ label, entries, icon, color }) => {
+                  lbCategories.map(({ label, entries, icon, color, decimal }) => {
                     const winner = entries[0];
+                    const fmt = (n: number) => decimal ? n.toFixed(1) : String(n);
                     return (
                       <div key={label} className="rounded-lg border border-zinc-700/50 bg-zinc-800/60 p-3">
                         <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">{label}</div>
@@ -596,7 +600,7 @@ export function TavernClient(props: TavernClientProps) {
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-xs font-medium text-zinc-200">{winner.displayName}</div>
-                            <div className={`text-base font-bold ${color}`}>{icon} {winner.score}</div>
+                            <div className={`text-base font-bold ${color}`}>{icon} {fmt(winner.score)}</div>
                           </div>
                         </div>
                         {entries.slice(1).length > 0 && (
@@ -604,7 +608,7 @@ export function TavernClient(props: TavernClientProps) {
                             {entries.slice(1).map((e, i) => (
                               <div key={i} className="flex justify-between text-[10px] text-zinc-500">
                                 <span className="truncate">{e.displayName}</span>
-                                <span className="shrink-0 pl-2">{e.score}</span>
+                                <span className="shrink-0 pl-2">{fmt(e.score)}</span>
                               </div>
                             ))}
                           </div>
