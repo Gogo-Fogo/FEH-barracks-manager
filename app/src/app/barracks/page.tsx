@@ -280,6 +280,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               >
                 Open My Wifus
               </Link>
+              <Link
+                href="/tavern"
+                className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950"
+              >
+                🍺 Open Tavern
+              </Link>
             </div>
           </div>
 

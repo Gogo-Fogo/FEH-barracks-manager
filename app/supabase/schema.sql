@@ -110,9 +110,28 @@ create index if not exists user_aether_resort_preferences_user_idx
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
+  avatar_hero_slug text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists avatar_hero_slug text;
+
+-- Social: friend requests and relationships
+create table if not exists public.user_friendships (
+  id            uuid primary key default gen_random_uuid(),
+  requester_id  uuid not null references auth.users(id) on delete cascade,
+  addressee_id  uuid not null references auth.users(id) on delete cascade,
+  status        text not null default 'pending'
+                  check (status in ('pending', 'accepted')),
+  created_at    timestamptz not null default now(),
+  unique (requester_id, addressee_id),
+  check (requester_id <> addressee_id)
+);
+
+create index if not exists user_friendships_requester_idx on public.user_friendships (requester_id);
+create index if not exists user_friendships_addressee_idx on public.user_friendships (addressee_id);
 
 alter table public.heroes enable row level security;
 alter table public.user_barracks enable row level security;
@@ -122,6 +141,7 @@ alter table public.user_teams enable row level security;
 alter table public.user_hero_preferences enable row level security;
 alter table public.user_aether_resort_preferences enable row level security;
 alter table public.profiles enable row level security;
+alter table public.user_friendships enable row level security;
 
 -- heroes: readable by authenticated users, write via service role/import script only
 drop policy if exists "heroes_select_authenticated" on public.heroes;
@@ -130,12 +150,20 @@ create policy "heroes_select_authenticated"
   to authenticated
   using (true);
 
--- user_barracks: users can only manage their own rows
+-- user_barracks: own rows + accepted friends (for tavern leaderboard)
 drop policy if exists "user_barracks_select_own" on public.user_barracks;
 create policy "user_barracks_select_own"
   on public.user_barracks for select
   to authenticated
-  using (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.user_friendships
+      where status = 'accepted'
+        and ((requester_id = auth.uid() and addressee_id = user_barracks.user_id)
+          or (addressee_id = auth.uid() and requester_id = user_barracks.user_id))
+    )
+  );
 
 drop policy if exists "user_barracks_insert_own" on public.user_barracks;
 create policy "user_barracks_insert_own"
@@ -156,12 +184,20 @@ create policy "user_barracks_delete_own"
   to authenticated
   using (auth.uid() = user_id);
 
--- user_favorites: users can only manage their own rows
+-- user_favorites: own rows + accepted friends (for tavern leaderboard)
 drop policy if exists "user_favorites_select_own" on public.user_favorites;
 create policy "user_favorites_select_own"
   on public.user_favorites for select
   to authenticated
-  using (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.user_friendships
+      where status = 'accepted'
+        and ((requester_id = auth.uid() and addressee_id = user_favorites.user_id)
+          or (addressee_id = auth.uid() and requester_id = user_favorites.user_id))
+    )
+  );
 
 drop policy if exists "user_favorites_insert_own" on public.user_favorites;
 create policy "user_favorites_insert_own"
@@ -201,12 +237,20 @@ create policy "user_notes_delete_own"
   to authenticated
   using (auth.uid() = user_id);
 
--- user_teams: users can only manage their own rows
+-- user_teams: own rows + accepted friends (for tavern)
 drop policy if exists "user_teams_select_own" on public.user_teams;
 create policy "user_teams_select_own"
   on public.user_teams for select
   to authenticated
-  using (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.user_friendships
+      where status = 'accepted'
+        and ((requester_id = auth.uid() and addressee_id = user_teams.user_id)
+          or (addressee_id = auth.uid() and requester_id = user_teams.user_id))
+    )
+  );
 
 drop policy if exists "user_teams_insert_own" on public.user_teams;
 create policy "user_teams_insert_own"
@@ -279,12 +323,13 @@ create policy "user_aether_resort_preferences_delete_own"
   to authenticated
   using (auth.uid() = user_id);
 
--- profiles: users can only manage their own profile
+-- profiles: all authenticated users can read (required for friend search + tavern display)
 drop policy if exists "profiles_select_own" on public.profiles;
-create policy "profiles_select_own"
+drop policy if exists "profiles_select_authenticated" on public.profiles;
+create policy "profiles_select_authenticated"
   on public.profiles for select
   to authenticated
-  using (auth.uid() = id);
+  using (true);
 
 drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own"
@@ -298,3 +343,28 @@ create policy "profiles_update_own"
   to authenticated
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+-- user_friendships: RLS
+drop policy if exists "friendships_select_own" on public.user_friendships;
+create policy "friendships_select_own"
+  on public.user_friendships for select
+  to authenticated
+  using (auth.uid() = requester_id or auth.uid() = addressee_id);
+
+drop policy if exists "friendships_insert_own" on public.user_friendships;
+create policy "friendships_insert_own"
+  on public.user_friendships for insert
+  to authenticated
+  with check (auth.uid() = requester_id);
+
+drop policy if exists "friendships_update_addr" on public.user_friendships;
+create policy "friendships_update_addr"
+  on public.user_friendships for update
+  to authenticated
+  using (auth.uid() = addressee_id);
+
+drop policy if exists "friendships_delete_own" on public.user_friendships;
+create policy "friendships_delete_own"
+  on public.user_friendships for delete
+  to authenticated
+  using (auth.uid() = requester_id or auth.uid() = addressee_id);
