@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("launcher", {
   getAssetPath: (name) => ipcRenderer.sendSync("get-asset-path", name),
+  onInit:       (cb) => ipcRenderer.on("init",       (_, data) => cb(data)),
   onLog:        (cb) => ipcRenderer.on("log",        (_, msg)  => cb(msg)),
   onProgress:   (cb) => ipcRenderer.on("progress",   (_, data) => cb(data)),
   onDone:       (cb) => ipcRenderer.on("done",        (_, s)   => cb(s)),

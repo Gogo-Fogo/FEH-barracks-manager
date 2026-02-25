@@ -21,7 +21,9 @@
       "output": "../dist"
     },
     "files": [
-      "main.js"
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
     ],
     "extraResources": [
       {
