@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^26.0.0"
   },
   "build": {
     "appId": "com.gogo-fogo.feh-barracks-launcher",
@@ -34,6 +34,7 @@
         "to": "assets/"
       }
     ],
+    "forceCodeSigning": false,
     "win": {
       "icon": "assets/gullveig.png",
       "target": [

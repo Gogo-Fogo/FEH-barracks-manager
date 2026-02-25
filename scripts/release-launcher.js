@@ -4,21 +4,20 @@
  * Builds FEH-Barracks-Launcher.exe (portable, x64) and uploads it
  * to the latest GitHub release, replacing any previous copy (--clobber).
  *
- * MUST be run from an elevated (admin) terminal — electron-builder needs
- * symlink privileges to extract its winCodeSign toolchain on Windows.
- *
  * Requires gh CLI: https://cli.github.com/
  *   winget install GitHub.cli   (first-time setup)
  *   gh auth login               (first-time auth)
  */
 const path = require("node:path");
+const fs   = require("node:fs");
 const { spawnSync } = require("node:child_process");
+const os   = require("node:os");
 
-const ROOT      = path.resolve(__dirname, "..");
-const LAUNCHER  = path.join(ROOT, "launcher");
-const EXE_PATH  = path.join(ROOT, "dist", "FEH-Barracks-Launcher.exe");
-const GH_CMD    = process.platform === "win32" ? "gh.exe" : "gh";
-const NPM_CMD   = process.platform === "win32" ? "npm.cmd" : "npm";
+const ROOT     = path.resolve(__dirname, "..");
+const LAUNCHER = path.join(ROOT, "launcher");
+const EXE_PATH = path.join(ROOT, "dist", "FEH-Barracks-Launcher.exe");
+const GH_CMD   = process.platform === "win32" ? "gh.exe" : "gh";
+const NPM_CMD  = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function run(cmd, args, opts = {}) {
   const result = spawnSync(cmd, args, { stdio: "inherit", ...opts });
@@ -28,8 +27,58 @@ function run(cmd, args, opts = {}) {
   }
 }
 
+// ── Pre-populate the electron-builder winCodeSign cache ──────────────────────
+// electron-builder bundles macOS code-signing tools (libssl/libcrypto symlinks)
+// in its winCodeSign archive. On Windows without Developer Mode, 7-zip cannot
+// create those symlinks and aborts with exit code 2. We pre-create the cache
+// directory from the most-recently-partially-extracted temp dir (which has all
+// Windows tools intact) so app-builder skips the download entirely.
+function ensureWinCodeSignCache() {
+  const cacheRoot = process.env.LOCALAPPDATA
+    ? path.join(process.env.LOCALAPPDATA, "electron-builder", "Cache", "winCodeSign")
+    : path.join(os.homedir(), "AppData", "Local", "electron-builder", "Cache", "winCodeSign");
+
+  const finalDir = path.join(cacheRoot, "winCodeSign-2.6.0");
+  if (fs.existsSync(finalDir)) {
+    console.log("winCodeSign cache: already populated, skipping.");
+    return;
+  }
+
+  // Find any partially-extracted temp dir that has the Windows tools
+  let src = null;
+  if (fs.existsSync(cacheRoot)) {
+    for (const entry of fs.readdirSync(cacheRoot)) {
+      if (!/^\d+$/.test(entry)) continue;
+      const candidate = path.join(cacheRoot, entry);
+      if (fs.existsSync(path.join(candidate, "windows-10"))) { src = candidate; break; }
+    }
+  }
+
+  if (!src) {
+    console.log("winCodeSign cache: no partial extraction found — will attempt live download.");
+    console.log("  If build fails on symlink errors, enable Windows Developer Mode:");
+    console.log("  Settings → System → For developers → Developer Mode → ON");
+    return;
+  }
+
+  console.log(`winCodeSign cache: seeding from ${src}`);
+  fs.cpSync(src, finalDir, { recursive: true });
+  // Create dummy placeholder files for the two macOS symlinks that 7za couldn't create
+  for (const rel of ["darwin/10.12/lib/libcrypto.dylib", "darwin/10.12/lib/libssl.dylib"]) {
+    const fp = path.join(finalDir, rel);
+    fs.mkdirSync(path.dirname(fp), { recursive: true });
+    if (!fs.existsSync(fp)) fs.writeFileSync(fp, "");
+  }
+  console.log(`winCodeSign cache: seeded → ${finalDir}`);
+}
+
+ensureWinCodeSignCache();
+
 console.log("=== Step 1: Build launcher exe ===");
-run(NPM_CMD, ["run", "build"], { cwd: LAUNCHER });
+run(NPM_CMD, ["run", "build"], {
+  cwd: LAUNCHER,
+  env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: "false" },
+});
 console.log(`\nBuilt: ${EXE_PATH}`);
 
 console.log("\n=== Step 2: Upload to latest GitHub release ===");

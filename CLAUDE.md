@@ -96,7 +96,7 @@ Full protocol in `context/workflow.md`. Summary:
 7. Smoke test, then `git status` + commit only intentional files
 8. After pushing a release tag:
    - `npm run release:assets` — builds `feh-assets-full-bundle.zip` and uploads to latest GitHub release (replaces old copy automatically). Requires `gh` CLI.
-   - `npm run release:launcher` — builds `FEH-Barracks-Launcher.exe` (portable) and uploads to latest GitHub release. **Must be run from an admin/elevated terminal** (needs symlink privilege). Requires `gh` CLI.
+   - `npm run release:launcher` — builds `FEH-Barracks-Launcher.exe` (portable) and uploads to latest GitHub release. Requires `gh` CLI.
    - **Banner image**: release notes must start with `<img src="https://raw.githubusercontent.com/Gogo-Fogo/FEH-barracks-manager/main/assets/release/banner.webp" width="380" alt="feh-barracks-manager-banner" />` — reuse this same URL every release (points to `assets/release/banner.webp` in the repo).
 
 **Missing unit recovery:** `npm run reconcile:index [-- --archive-url=<url>]` then `build_parser.js --only=<slug>.json`
