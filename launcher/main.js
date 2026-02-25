@@ -108,36 +108,53 @@ async function buildIndices() {
 }
 
 // ── Local HTTP asset server ────────────────────────────────────────────────────
-// Single endpoint: GET /serve?f={relative-path-from-dbRoot}
-// The interceptor redirects Vercel API calls here with the pre-resolved path.
+// Endpoints:
+//   GET /serve?f={relative-path-from-dbRoot}          → serve a static file
+//   GET /unit-data/{heroSlug}                          → serve unit JSON + quotes + poses
 function startAssetServer() {
   return new Promise((resolve) => {
-    const dbRoot = getDbRoot();
-    const safeRoot = path.resolve(dbRoot);
+    const safeRoot = path.resolve(getDbRoot());
 
     const server = http.createServer(async (req, res) => {
       try {
         const url = new URL(req.url, `http://127.0.0.1:${ASSET_PORT}`);
-        if (url.pathname !== "/serve") { res.writeHead(404); res.end(); return; }
 
-        const rel = url.searchParams.get("f");
-        if (!rel) { res.writeHead(400); res.end(); return; }
+        // ── Static file endpoint ─────────────────────────────────────────────
+        if (url.pathname === "/serve") {
+          const rel = url.searchParams.get("f");
+          if (!rel) { res.writeHead(400); res.end(); return; }
 
-        // Security: path traversal guard
-        const full = path.resolve(safeRoot, rel);
-        if (!full.startsWith(safeRoot + path.sep) && full !== safeRoot) {
-          res.writeHead(403); res.end(); return;
+          const full = path.resolve(safeRoot, rel);
+          if (!full.startsWith(safeRoot + path.sep) && full !== safeRoot) {
+            res.writeHead(403); res.end(); return;
+          }
+
+          const data = await fsp.readFile(full);
+          res.writeHead(200, {
+            "Content-Type": inferMime(full),
+            "Cache-Control": "public, max-age=604800",
+            "Access-Control-Allow-Origin": "*",
+          });
+          res.end(data);
+          return;
         }
 
-        const data = await fsp.readFile(full);
-        res.writeHead(200, {
-          "Content-Type": inferMime(full),
-          "Cache-Control": "public, max-age=604800",
-          "Access-Control-Allow-Origin": "*",
-        });
-        res.end(data);
-      } catch {
+        // ── Unit-data JSON endpoint ──────────────────────────────────────────
+        if (url.pathname.startsWith("/unit-data/")) {
+          const heroSlug = decodeURIComponent(url.pathname.slice("/unit-data/".length));
+          const payload  = await buildLocalUnitData(heroSlug);
+          res.writeHead(200, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+            "Access-Control-Allow-Origin": "*",
+          });
+          res.end(JSON.stringify(payload));
+          return;
+        }
+
         res.writeHead(404); res.end();
+      } catch {
+        res.writeHead(500); res.end();
       }
     });
 
@@ -147,6 +164,46 @@ function startAssetServer() {
       resolve(null);
     });
   });
+}
+
+// Build the same JSON shape as /api/unit-data/[heroSlug] on Vercel.
+async function buildLocalUnitData(heroSlug) {
+  const dbRoot = getDbRoot();
+
+  const unitFile = await readLocalJson(path.join(dbRoot, "units", `${heroSlug}.json`));
+  const quotesFile = await readLocalJson(path.join(dbRoot, "quotes", "fandom", `${heroSlug}.json`));
+  const quoteText = quotesFile?.quote_text ?? null;
+
+  // Fullbody poses
+  const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
+  let poses = [];
+  try {
+    const fbDir = path.join(dbRoot, "unit_assets", "fandom", "fullbody", heroSlug);
+    const files  = await fsp.readdir(fbDir);
+    const poseSet = new Set();
+    for (const f of files) {
+      const m = f.match(/_(portrait|attack|special|damage)\.(webp|png|jpe?g)$/i);
+      if (m?.[1]) poseSet.add(m[1].toLowerCase());
+    }
+    poses = DEFAULT_POSE_ORDER.filter((p) => poseSet.has(p));
+  } catch { /* no local fullbody */ }
+  if (!poses.length) poses = ["portrait"];
+
+  // Background options
+  let backgroundOptions = [];
+  try {
+    const bgDir = path.join(dbRoot, "unit_assets", "fandom", "shared", "unit_backgrounds");
+    backgroundOptions = (await fsp.readdir(bgDir))
+      .filter((f) => /\.(png|webp|jpe?g)$/i.test(f))
+      .sort();
+  } catch { /* not in bundle */ }
+
+  return { unitFile: unitFile ?? null, quoteText, poses, backgroundOptions };
+}
+
+async function readLocalJson(filePath) {
+  try { return JSON.parse(await fsp.readFile(filePath, "utf8")); }
+  catch { return null; }
 }
 
 // ── webRequest interception ────────────────────────────────────────────────────
@@ -159,6 +216,7 @@ function setupInterception() {
       urls: [
         `https://${VERCEL_HOST}/api/headshots/*`,
         `https://${VERCEL_HOST}/api/shared-icons/*`,
+        `https://${VERCEL_HOST}/api/unit-data/*`,
       ],
     },
     (details, callback) => {
@@ -198,6 +256,24 @@ function setupInterception() {
             });
           } else {
             callback({}); // pass through to Vercel
+          }
+          return;
+        }
+
+        // ── Unit data JSON (quotes, artist, build, IVs, guide) ─────────────────
+        // Always serve from local bundle if db/units/ is present — this is the
+        // key fix for missing artist/quotes/skills on Vercel.
+        if (pathname.startsWith("/api/unit-data/")) {
+          const heroSlug = decodeURIComponent(
+            pathname.slice("/api/unit-data/".length).split("?")[0]
+          );
+          const dbRoot = getDbRoot();
+          if (fs.existsSync(dbRoot)) {
+            callback({
+              redirectURL: `http://127.0.0.1:${ASSET_PORT}/unit-data/${encodeURIComponent(heroSlug)}`,
+            });
+          } else {
+            callback({}); // no local data — pass through
           }
           return;
         }
