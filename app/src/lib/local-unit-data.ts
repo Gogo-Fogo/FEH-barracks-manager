@@ -24,6 +24,42 @@ const fandomQuoteTextCache = new Map<string, Promise<string | null>>();
 const fandomImageUrlByTitleCache = new Map<string, Promise<string | null>>();
 let fandomQuotePageLookupPromise: Promise<Map<string, string>> | null = null;
 
+// ── Index name lookup ─────────────────────────────────────────────────────────
+// db/index.json is committed to git and available on Vercel even when
+// db/units/ is not. We build a slug→name map so heroes with special characters
+// (ð, ö, þ, etc.) that safeSlug() converts to `_` can still resolve to their
+// real display name for Fandom image lookup.
+let indexNameBySlugPromise: Promise<Map<string, string>> | null = null;
+
+function nameToSlug(name: string): string {
+  return String(name || "").replace(/[^a-z0-9]/gi, "_").toLowerCase();
+}
+
+async function loadIndexNameBySlug(): Promise<Map<string, string>> {
+  if (indexNameBySlugPromise) return indexNameBySlugPromise;
+  indexNameBySlugPromise = (async () => {
+    try {
+      const raw = await fs.readFile(path.join(dbRoot(), "index.json"), "utf8");
+      const entries = JSON.parse(raw) as Array<{ name?: string }>;
+      const map = new Map<string, string>();
+      for (const entry of entries) {
+        if (!entry.name) continue;
+        const slug = nameToSlug(entry.name);
+        if (slug && !map.has(slug)) map.set(slug, entry.name);
+      }
+      return map;
+    } catch {
+      return new Map<string, string>();
+    }
+  })();
+  return indexNameBySlugPromise;
+}
+
+async function loadHeroNameBySlug(heroSlug: string): Promise<string | null> {
+  const map = await loadIndexNameBySlug();
+  return map.get(heroSlug) ?? null;
+}
+
 type FandomImageKind = "headshot" | "fullbody";
 const FULLBODY_POSE_ORDER = ["portrait", "attack", "special", "damage"] as const;
 
@@ -293,8 +329,22 @@ function candidateScore(candidateTokens: string[], entryTokens: string[]) {
 }
 
 async function resolveFandomBaseBySlug(heroSlug: string) {
-  const unit = await loadUnitRecordBySlug(heroSlug);
-  const candidates = buildFandomBaseCandidates(unit, heroSlug);
+  const [unit, indexName] = await Promise.all([
+    loadUnitRecordBySlug(heroSlug),
+    loadHeroNameBySlug(heroSlug),
+  ]);
+
+  // When the unit JSON is unavailable (e.g. on Vercel where db/units/ is not
+  // deployed), fall back to the real display name from db/index.json.
+  // This fixes Fandom image lookup for heroes with non-ASCII characters
+  // (ð→d, ö→o, etc.) whose slugs lose that information.
+  const effectiveUnit: UnitRecord | null = unit
+    ? { ...unit, name: unit.name || indexName || undefined }
+    : indexName
+    ? { name: indexName }
+    : null;
+
+  const candidates = buildFandomBaseCandidates(effectiveUnit, heroSlug);
   if (!candidates.length) return null;
 
   const index = await loadFandomBaseIndex();
