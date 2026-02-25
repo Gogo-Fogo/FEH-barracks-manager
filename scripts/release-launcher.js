@@ -20,7 +20,9 @@ const GH_CMD   = process.platform === "win32" ? "gh.exe" : "gh";
 const NPM_CMD  = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, { stdio: "inherit", ...opts });
+  // .cmd/.bat files on Windows require shell:true to be spawned
+  const shell = process.platform === "win32";
+  const result = spawnSync(cmd, args, { stdio: "inherit", shell, ...opts });
   if (result.status !== 0) {
     console.error(`\nFailed: ${cmd} ${args.join(" ")}`);
     process.exit(result.status ?? 1);
