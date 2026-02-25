@@ -34,5 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ cate
     }
   }
 
-  return new NextResponse("Not found", { status: 404 });
+  // Fall back to bundled static icons in /public/icons/ (always available on Vercel)
+  const staticUrl = `/icons/${encodeURIComponent(category)}/${encodeURIComponent(name)}`;
+  return NextResponse.redirect(new URL(staticUrl, request.url), 302);
 }
