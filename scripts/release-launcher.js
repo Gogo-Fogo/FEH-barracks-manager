@@ -87,7 +87,7 @@ console.log("\n=== Step 2: Upload to latest GitHub release ===");
 // Get the latest release tag
 const tagResult = spawnSync(GH_CMD, [
   "release", "list", "--limit", "1", "--json", "tagName", "--jq", ".[0].tagName",
-], { encoding: "utf8" });
+], { encoding: "utf8", shell: process.platform === "win32" });
 const tag = tagResult.stdout.trim();
 if (!tag) { console.error("Could not determine latest release tag."); process.exit(1); }
 console.log(`Uploading to release: ${tag}`);
