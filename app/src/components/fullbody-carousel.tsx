@@ -144,7 +144,7 @@ export function FullbodyCarousel({
       <button
         type="button"
         onClick={() => setIsExpanded(true)}
-        className="hero-art-composite relative mx-auto block w-full max-w-[420px] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 text-left leading-none transition hover:border-zinc-500"
+        className="hero-art-composite relative mx-auto block w-full max-w-[588px] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 text-left leading-none transition hover:border-zinc-500"
         aria-label={`Expand ${heroName} ${currentPose} art`}
       >
         {currentBackground ? (

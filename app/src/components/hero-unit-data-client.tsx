@@ -59,35 +59,67 @@ function SkillValueWithTooltip({
   description: string | null;
   href?: string | null;
 }) {
+  const [open, setOpen] = useState(false);
+
   if (!skillName || skillName.trim() === "-") return <span>{skillName || "-"}</span>;
 
   const tooltipText = description || "Description not yet extracted from current scraped skill text.";
   const badgeClass =
-    "inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400" +
-    (href ? " cursor-pointer hover:border-indigo-500 hover:bg-indigo-950/60" : " cursor-help");
-
-  const inner = (
-    <>
-      <span className="truncate">{skillName}</span>
-      <span className={`text-sm ${href ? "text-indigo-400" : "text-indigo-300"}`}>
-        {href ? "↗" : "ⓘ"}
-      </span>
-    </>
-  );
+    "inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer hover:border-indigo-500 hover:bg-indigo-950/60";
 
   return (
-    <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
-      {href ? (
-        <a href={href} target="_blank" rel="noopener noreferrer" className={badgeClass}>
-          {inner}
-        </a>
-      ) : (
-        <span className={badgeClass}>{inner}</span>
-      )}
-      <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
-        {tooltipText}
+    <>
+      <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
+        <button type="button" onClick={() => setOpen(true)} className={badgeClass}>
+          <span className="truncate">{skillName}</span>
+          <span className="text-sm text-indigo-400">{href ? "↗" : "ⓘ"}</span>
+        </button>
+        <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
+          {tooltipText}
+        </span>
       </span>
-    </span>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-indigo-700/60 bg-zinc-950 p-5 shadow-[0_0_32px_rgba(99,102,241,0.3)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <h3 className="text-base font-semibold text-zinc-100">{skillName}</h3>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="shrink-0 rounded px-2 py-0.5 text-sm text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm leading-relaxed text-zinc-300">{tooltipText}</p>
+
+            {href && (
+              <div className="mt-4 border-t border-zinc-800 pt-3">
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-indigo-400 hover:underline"
+                >
+                  View reference on Game8 ↗
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -223,7 +255,7 @@ export function HeroUnitDataClient({
 
   if (loading) {
     return (
-      <div className="mt-6 grid gap-6 md:grid-cols-[minmax(360px,420px)_1fr]">
+      <div className="mt-6 grid gap-6 md:grid-cols-[minmax(360px,588px)_1fr]">
         {/* Carousel skeleton */}
         <div className="space-y-3">
           <div className="aspect-[440/700] w-full animate-pulse rounded-2xl bg-zinc-800" />
@@ -240,7 +272,7 @@ export function HeroUnitDataClient({
   }
 
   return (
-    <section className="mt-6 grid gap-6 md:grid-cols-[minmax(360px,420px)_1fr]">
+    <section className="mt-6 grid gap-6 md:grid-cols-[minmax(360px,588px)_1fr]">
       {/* Left — fullbody carousel + artist */}
       <div className="space-y-3">
         <FullbodyCarousel
@@ -288,7 +320,7 @@ export function HeroUnitDataClient({
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm">
             <h2 className="mb-2 text-base font-semibold">Recommended Build</h2>
             <p className="mb-2 text-xs text-zinc-400">
-              Hover any skill for description · click ↗ to open reference page.
+              Hover any skill for description · click to open detail popup.
             </p>
             <div className="grid gap-2 md:grid-cols-2">
               {derived.buildEntries.map((entry) => (

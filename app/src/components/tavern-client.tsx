@@ -83,7 +83,7 @@ type TavernClientProps = {
 const IMG_RATIO = 1696 / 2528;
 const FLOAT_DELAYS = ["0s", "1.3s", "2.5s"];
 const CROSSFADE_SECS = 2.5;
-const MUSIC_VOL = 0.45;
+const MUSIC_VOL = 0.18;
 
 type TabKey = "leaderboard" | "profile" | "friends" | "add" | "chat";
 
