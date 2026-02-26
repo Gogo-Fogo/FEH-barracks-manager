@@ -334,12 +334,6 @@ function candidateScore(candidateTokens: string[], entryTokens: string[]) {
 }
 
 async function resolveFandomBaseBySlug(heroSlug: string) {
-  // Fast path: static map built from raw_text_data Fandom-style names.
-  // Covers seasonal heroes (e.g. "summer_tiki__adult_" → "Tiki Summering Scion")
-  // whose Game8 slug doesn't fuzzy-match the Fandom name without the unit JSON.
-  const staticBase = FANDOM_NAME_MAP[heroSlug] ?? FANDOM_NAME_MAP[normalizeSlug(heroSlug)];
-  if (staticBase) return staticBase;
-
   const [unit, indexName] = await Promise.all([
     loadUnitRecordBySlug(heroSlug),
     loadHeroNameBySlug(heroSlug),
@@ -356,35 +350,45 @@ async function resolveFandomBaseBySlug(heroSlug: string) {
     : null;
 
   const candidates = buildFandomBaseCandidates(effectiveUnit, heroSlug);
-  if (!candidates.length) return null;
 
-  const index = await loadFandomBaseIndex();
-  if (!index.length) return null;
+  if (candidates.length) {
+    const index = await loadFandomBaseIndex();
 
-  const byNormalized = new Map(index.map((entry) => [entry.normalizedKey, entry.baseName]));
+    if (index.length) {
+      const byNormalized = new Map(index.map((entry) => [entry.normalizedKey, entry.baseName]));
 
-  for (const candidate of candidates) {
-    const normalized = normalizeLookupText(candidate);
-    const exact = byNormalized.get(normalized);
-    if (exact) return exact;
-  }
-
-  let bestMatch: { baseName: string; score: number } | null = null;
-  for (const candidate of candidates) {
-    const candidateTokens = tokenizeLookupKey(candidate);
-    if (!candidateTokens.length) continue;
-
-    for (const entry of index) {
-      const score = candidateScore(candidateTokens, entry.tokens);
-      if (!Number.isFinite(score)) continue;
-
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { baseName: entry.baseName, score };
+      for (const candidate of candidates) {
+        const normalized = normalizeLookupText(candidate);
+        const exact = byNormalized.get(normalized);
+        if (exact) return exact;
       }
+
+      let bestMatch: { baseName: string; score: number } | null = null;
+      for (const candidate of candidates) {
+        const candidateTokens = tokenizeLookupKey(candidate);
+        if (!candidateTokens.length) continue;
+
+        for (const entry of index) {
+          const score = candidateScore(candidateTokens, entry.tokens);
+          if (!Number.isFinite(score)) continue;
+
+          if (!bestMatch || score > bestMatch.score) {
+            bestMatch = { baseName: entry.baseName, score };
+          }
+        }
+      }
+
+      if (bestMatch && bestMatch.score >= 8) return bestMatch.baseName;
     }
   }
 
-  return bestMatch && bestMatch.score >= 8 ? bestMatch.baseName : null;
+  // Fallback: static map built from raw_text_data Fandom-style names.
+  // Only consulted when fuzzy matching fails — prevents garbled map entries
+  // (e.g. heroes with non-ASCII chars stored incorrectly in raw_text_data)
+  // from overriding a working fuzzy match.
+  // Fixes heroes like "summer_tiki__adult_" whose Game8 slug doesn't
+  // fuzzy-match the Fandom name without the unit JSON on Vercel.
+  return FANDOM_NAME_MAP[heroSlug] ?? FANDOM_NAME_MAP[normalizeSlug(heroSlug)] ?? null;
 }
 
 async function loadFandomImageUrlByTitle(fileTitle: string) {
