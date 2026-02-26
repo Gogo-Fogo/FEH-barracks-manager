@@ -59,67 +59,26 @@ function SkillValueWithTooltip({
   description: string | null;
   href?: string | null;
 }) {
-  const [open, setOpen] = useState(false);
-
   if (!skillName || skillName.trim() === "-") return <span>{skillName || "-"}</span>;
 
   const tooltipText = description || "Description not yet extracted from current scraped skill text.";
   const badgeClass =
     "inline-flex max-w-full items-center gap-1 rounded-md border border-indigo-700/60 bg-indigo-950/35 px-2 py-1 text-base text-zinc-100 outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer hover:border-indigo-500 hover:bg-indigo-950/60";
 
+  const handleClick = href
+    ? () => window.open(href, "_blank", "popup,width=1100,height=750,resizable=yes,scrollbars=yes")
+    : undefined;
+
   return (
-    <>
-      <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
-        <button type="button" onClick={() => setOpen(true)} className={badgeClass}>
-          <span className="truncate">{skillName}</span>
-          <span className="text-sm text-indigo-400">{href ? "↗" : "ⓘ"}</span>
-        </button>
-        <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
-          {tooltipText}
-        </span>
+    <span className="group skill-tooltip relative inline-flex max-w-full items-center gap-1 align-middle">
+      <button type="button" onClick={handleClick} className={badgeClass}>
+        <span className="truncate">{skillName}</span>
+        <span className="text-sm text-indigo-400">{href ? "↗" : "ⓘ"}</span>
+      </button>
+      <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-0 z-40 hidden w-[min(40rem,88vw)] rounded-lg border border-indigo-500/70 bg-zinc-950/97 p-4 text-base leading-7 text-zinc-100 shadow-[0_0_16px_rgba(99,102,241,0.45),0_0_34px_rgba(59,130,246,0.3)] backdrop-blur-sm group-hover:block">
+        {tooltipText}
       </span>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-xl border border-indigo-700/60 bg-zinc-950 p-5 shadow-[0_0_32px_rgba(99,102,241,0.3)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <h3 className="text-base font-semibold text-zinc-100">{skillName}</h3>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="shrink-0 rounded px-2 py-0.5 text-sm text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-sm leading-relaxed text-zinc-300">{tooltipText}</p>
-
-            {href && (
-              <div className="mt-4 border-t border-zinc-800 pt-3">
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-indigo-400 hover:underline"
-                >
-                  View reference on Game8 ↗
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+    </span>
   );
 }
 

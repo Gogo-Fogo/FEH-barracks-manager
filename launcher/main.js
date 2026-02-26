@@ -197,7 +197,7 @@ async function buildLocalUnitData(heroSlug) {
     }
     poses = DEFAULT_POSE_ORDER.filter((p) => poseSet.has(p));
   } catch { /* no local fullbody */ }
-  if (!poses.length) poses = ["portrait"];
+  if (!poses.length) poses = DEFAULT_POSE_ORDER;
 
   // Background options
   let backgroundOptions = [];
@@ -440,7 +440,22 @@ function createMainWindow(appUrl) {
   });
   mainWin.setMenuBarVisibility(false);
 
-  mainWin.webContents.setWindowOpenHandler(({ url }) => {
+  mainWin.webContents.setWindowOpenHandler(({ url, features }) => {
+    // Allow popup windows for known reference sites (Game8 / Fandom skill pages)
+    const isRef = url.includes("game8.co") || url.includes("feheroes.fandom.com");
+    const isPopup = features.includes("popup") || features.includes("width=");
+    if (isRef && isPopup) {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 1100,
+          height: 750,
+          autoHideMenuBar: true,
+          icon: getIconPath(),
+          webPreferences: { nodeIntegration: false, contextIsolation: true },
+        },
+      };
+    }
     shell.openExternal(url);
     return { action: "deny" };
   });
