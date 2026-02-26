@@ -14,7 +14,8 @@
     "release:assets": "node scripts/release-full-assets.js",
     "release:data-bundle": "node scripts/release-data-bundle.js",
     "release:launcher": "node scripts/release-launcher.js",
-    "validate:hero-aliases": "node scripts/validate-hero-aliases.js"
+    "validate:hero-aliases": "node scripts/validate-hero-aliases.js",
+    "generate:fandom-name-map": "node scripts/generate-fandom-name-map.js"
   },
   "keywords": [],
   "author": "",

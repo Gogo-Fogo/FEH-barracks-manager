@@ -3,6 +3,11 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { dbRoot } from "@/lib/db-root";
+import fandomNameMapJson from "./fandom-name-map.json";
+
+// Static slug → Fandom image base name map (generated from db/units/ raw_text_data).
+// Committed to git so it is available on Vercel where db/units/ is not deployed.
+const FANDOM_NAME_MAP: Record<string, string> = fandomNameMapJson as Record<string, string>;
 
 type UnitRecord = {
   name?: string;
@@ -329,6 +334,12 @@ function candidateScore(candidateTokens: string[], entryTokens: string[]) {
 }
 
 async function resolveFandomBaseBySlug(heroSlug: string) {
+  // Fast path: static map built from raw_text_data Fandom-style names.
+  // Covers seasonal heroes (e.g. "summer_tiki__adult_" → "Tiki Summering Scion")
+  // whose Game8 slug doesn't fuzzy-match the Fandom name without the unit JSON.
+  const staticBase = FANDOM_NAME_MAP[heroSlug] ?? FANDOM_NAME_MAP[normalizeSlug(heroSlug)];
+  if (staticBase) return staticBase;
+
   const [unit, indexName] = await Promise.all([
     loadUnitRecordBySlug(heroSlug),
     loadHeroNameBySlug(heroSlug),
