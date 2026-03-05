@@ -32,7 +32,11 @@ const LOCAL_URL    = "http://localhost:3000";
 const REMOTE_URL   = "https://feh-barracks-manager.vercel.app";
 const VERCEL_HOST  = "feh-barracks-manager.vercel.app";
 const RELEASES_API = "https://api.github.com/repos/Gogo-Fogo/FEH-barracks-manager/releases/latest";
-const BUNDLE_NAME  = "feh-data-bundle.zip";
+const BUNDLE_CANDIDATES = [
+  "feh-assets-full-bundle.zip",
+  "feh-assets-bundle.zip",
+  "feh-data-bundle.zip",
+];
 
 let mainWin   = null;
 let splashWin = null;
@@ -47,6 +51,7 @@ let sharedIconIndex = null;
 const getDataRoot    = () => path.join(app.getPath("userData"), "feh-data");
 const getDbRoot      = () => path.join(getDataRoot(), "db");
 const getVersionFile = () => path.join(getDataRoot(), "version.txt");
+const getBundleFile  = () => path.join(getDataRoot(), "bundle.txt");
 const getIconPath    = () =>
   app.isPackaged
     ? path.join(process.resourcesPath, "assets", "edelgard_husk.png")
@@ -315,29 +320,37 @@ function fetchLatestRelease() {
         res.on("data", (c) => (data += c));
         res.on("end", () => {
           try {
-            const json  = JSON.parse(data);
-            const asset = (json.assets || []).find((a) => a.name === BUNDLE_NAME);
+            const json = JSON.parse(data);
+            const assets = Array.isArray(json.assets) ? json.assets : [];
+            const asset = BUNDLE_CANDIDATES
+              .map((name) => assets.find((a) => a.name === name))
+              .find(Boolean);
             resolve({
               tag:         json.tag_name || pkg.version,
+              assetName:   asset?.name ?? null,
               downloadUrl: asset?.browser_download_url ?? null,
               assetSize:   asset?.size ?? 0,
             });
           } catch {
-            resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 });
+            resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 });
           }
         });
       }
     );
-    req.on("error", () => resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 }));
+    req.on("error", () => resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 }));
     req.setTimeout(8000, () => {
       req.destroy();
-      resolve({ tag: pkg.version, downloadUrl: null, assetSize: 0 });
+      resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 });
     });
   });
 }
 
 function readInstalledVersion() {
   try { return fs.readFileSync(getVersionFile(), "utf8").trim(); } catch { return null; }
+}
+
+function readInstalledBundleName() {
+  try { return fs.readFileSync(getBundleFile(), "utf8").trim(); } catch { return null; }
 }
 
 // ── Streaming download with redirect handling and progress ─────────────────────
@@ -512,35 +525,50 @@ app.whenReady().then(async () => {
   // ── Check / download data bundle ───────────────────────────────────────────
   const dataRoot     = getDataRoot();
   const unitsDir     = path.join(getDbRoot(), "units");
+  const fullbodyDir  = path.join(getDbRoot(), "unit_assets", "fandom", "fullbody");
   const installedVer = readInstalledVersion();
+  const installedBundle = readInstalledBundleName();
 
   // Force re-download if version matches but units/ is actually missing —
   // prevents a stale version.txt from permanently blocking the download.
   const unitsExist   = fs.existsSync(unitsDir) &&
     (() => { try { return fs.readdirSync(unitsDir).length > 0; } catch { return false; } })();
-  const needsDownload = !installedVer || installedVer !== release.tag || !unitsExist;
+  const fullbodyExists = fs.existsSync(fullbodyDir) &&
+    (() => { try { return fs.readdirSync(fullbodyDir).length > 0; } catch { return false; } })();
+  const releaseWantsFull = release.assetName === "feh-assets-full-bundle.zip";
+  const preferredMissing = releaseWantsFull
+    ? !fullbodyExists
+    : Boolean(release.assetName) && installedBundle !== release.assetName;
+  const needsDownload =
+    !installedVer ||
+    installedVer !== release.tag ||
+    !unitsExist ||
+    preferredMissing;
 
   send(splashWin, "log",
-    `Version check — installed: ${installedVer ?? "none"}, latest: ${release.tag}, units on disk: ${unitsExist}`
+    `Version check — installed: ${installedVer ?? "none"}, latest: ${release.tag}, units on disk: ${unitsExist}, bundle on disk: ${installedBundle ?? "unknown"}, release bundle: ${release.assetName ?? "none"}, fullbody on disk: ${fullbodyExists}`
   );
 
   if (!release.downloadUrl) {
     // GitHub API returned but had no matching asset (unusual).
-    const msg = `Could not find ${BUNDLE_NAME} in release ${release.tag}.\nImages will load from CDN.`;
+    const msg = `Could not find a data/assets bundle (${BUNDLE_CANDIDATES.join(", ")}) in release ${release.tag}.\nImages will load from CDN.`;
     send(splashWin, "log", msg);
     dialog.showErrorBox("FEH Barracks — Data Bundle Missing", msg);
   } else if (needsDownload) {
     await fsp.mkdir(dataRoot, { recursive: true });
-    const zipDest = path.join(dataRoot, BUNDLE_NAME);
+    const zipName = release.assetName || "feh-data-bundle.zip";
+    const zipDest = path.join(dataRoot, zipName);
 
     const reason = !installedVer
-      ? `First install — downloading data bundle (${release.tag})…`
+      ? `First install — downloading ${zipName} (${release.tag})…`
       : !unitsExist
-      ? `Local data missing despite version match — re-downloading (${release.tag})…`
+      ? `Local data missing despite version match — re-downloading ${zipName} (${release.tag})…`
+      : preferredMissing
+      ? `Preferred bundle not fully present locally — downloading ${zipName} (${release.tag})…`
       : `Update available: ${installedVer} → ${release.tag}`;
 
     send(splashWin, "log", reason);
-    send(splashWin, "progress", { pct: 5, label: "Downloading data bundle…" });
+    send(splashWin, "progress", { pct: 5, label: `Downloading ${zipName}…` });
 
     let downloadOk = false;
     try {
@@ -552,7 +580,7 @@ app.whenReady().then(async () => {
           const pct = Math.round(5 + (rx / tot) * 52); // 5% → 57%
           const mb  = (rx  / 1024 / 1024).toFixed(1);
           const tmb = (tot / 1024 / 1024).toFixed(1);
-          send(splashWin, "progress", { pct, label: `Downloading… ${mb} / ${tmb} MB` });
+          send(splashWin, "progress", { pct, label: `Downloading ${zipName}… ${mb} / ${tmb} MB` });
         }
       );
       downloadOk = true;
@@ -575,7 +603,8 @@ app.whenReady().then(async () => {
 
         if (afterUnits) {
           await fsp.writeFile(getVersionFile(), release.tag, "utf8");
-          send(splashWin, "log", `Data bundle installed (${release.tag})`);
+          await fsp.writeFile(getBundleFile(), zipName, "utf8");
+          send(splashWin, "log", `Bundle installed (${release.tag}): ${zipName}`);
         } else {
           const msg = "Extraction completed but db/units/ appears empty — check disk space.";
           send(splashWin, "log", msg);

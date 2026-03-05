@@ -39,6 +39,7 @@ export function FullbodyCarousel({
   const [isExpanded, setIsExpanded] = useState(false);
   const initialBackgroundIndex = Math.max(0, safeBackgrounds.indexOf(initialBackgroundName || ""));
   const [backgroundIndex, setBackgroundIndex] = useState(initialBackgroundIndex);
+  const [backgroundLoadFailed, setBackgroundLoadFailed] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export function FullbodyCarousel({
 
   const prevBackground = () => {
     if (!safeBackgrounds.length) return;
+    setBackgroundLoadFailed(false);
     setBackgroundIndex((i) => {
       const nextIndex = (i - 1 + safeBackgrounds.length) % safeBackgrounds.length;
       const nextBackground = safeBackgrounds[nextIndex];
@@ -99,6 +101,7 @@ export function FullbodyCarousel({
 
   const nextBackground = () => {
     if (!safeBackgrounds.length) return;
+    setBackgroundLoadFailed(false);
     setBackgroundIndex((i) => {
       const nextIndex = (i + 1) % safeBackgrounds.length;
       const nextBackground = safeBackgrounds[nextIndex];
@@ -147,12 +150,13 @@ export function FullbodyCarousel({
         className="hero-art-composite relative mx-auto block w-full max-w-[588px] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 text-left leading-none transition hover:border-zinc-500"
         aria-label={`Expand ${heroName} ${currentPose} art`}
       >
-        {currentBackground ? (
+        {currentBackground && !backgroundLoadFailed ? (
           <img
             src={`/api/shared-icons/unit_backgrounds?name=${encodeURIComponent(currentBackground)}`}
             alt=""
             className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35"
             aria-hidden="true"
+            onError={() => setBackgroundLoadFailed(true)}
           />
         ) : null}
 

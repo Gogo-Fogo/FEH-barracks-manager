@@ -63,3 +63,4 @@ db/banner_pull_discovered_urls.json
 !context/
 !README.md
 !.clinerules
+.vercel

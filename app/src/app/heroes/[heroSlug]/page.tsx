@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { moveIconName, rarityIconName, weaponIconName } from "@/lib/feh-icons";
-import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
+import { loadUnitRarityBySlugs, parseRarityFromRawText } from "@/lib/local-unit-data";
 import { HeroUnitDataClient } from "@/components/hero-unit-data-client";
 import { toggleFavorite } from "@/app/barracks/actions";
 
@@ -21,6 +21,32 @@ function unitBackgroundName(tag?: string | null) {
   if (t.includes("tea"))   return "Bg_DetailedStatus_TeaParty.webp";
   if (t.includes("ninja")) return "Bg_DetailedStatus_Ask.webp";
   return "BG_DetailedStatus.png";
+}
+
+async function loadRarityFromUnitDataApi(heroSlug: string) {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
+  if (!host) return null;
+
+  const protoHeader = requestHeaders.get("x-forwarded-proto");
+  const protocol = protoHeader || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
+  const url = `${protocol}://${host}/api/unit-data/${encodeURIComponent(heroSlug)}`;
+
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+
+    const json = (await response.json()) as {
+      unitFile?: { rarity?: string | null; raw_text_data?: string | null } | null;
+    };
+
+    const directRarity = String(json?.unitFile?.rarity || "").trim();
+    if (directRarity) return directRarity;
+
+    return parseRarityFromRawText(json?.unitFile?.raw_text_data) || null;
+  } catch {
+    return null;
+  }
 }
 
 export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
@@ -62,6 +88,20 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
       name:      canonicalHeroSlug.replace(/_+/g, " "),
       rarity, tier: null, weapon: null, move: null, tag: null, source_url: null,
     };
+  }
+
+  // Some DB rows store placeholder rarity strings (e.g. "-") instead of null.
+  // Treat those as missing and recover per-hero from local/remote guide text.
+  const needsRarityBackfill =
+    !hero.rarity ||
+    /^[-–—\s]+$/.test(hero.rarity) ||
+    /^(unknown|n\/a)$/i.test(hero.rarity.trim());
+
+  if (needsRarityBackfill) {
+    const rarityMap = await loadUnitRarityBySlugs([canonicalHeroSlug]);
+    let rarity = rarityMap.get(canonicalHeroSlug) ?? null;
+    if (!rarity) rarity = await loadRarityFromUnitDataApi(canonicalHeroSlug);
+    hero = { ...hero, rarity };
   }
 
   const { data: favoriteRow } = await supabase

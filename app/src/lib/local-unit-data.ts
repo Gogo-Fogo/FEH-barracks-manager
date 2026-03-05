@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { dbRoot } from "@/lib/db-root";
 import fandomNameMapJson from "./fandom-name-map.json";
+import game8IndexJson from "./game8-index.json";
 
 // Static slug → Fandom image base name map (generated from db/units/ raw_text_data).
 // Committed to git so it is available on Vercel where db/units/ is not deployed.
@@ -16,6 +17,13 @@ type UnitRecord = {
   raw_text_data?: string | null;
   rarity?: string | null;
 };
+
+type Game8IndexEntry = {
+  name?: string;
+  url?: string;
+};
+
+const GAME8_INDEX: Array<Game8IndexEntry> = game8IndexJson as Array<Game8IndexEntry>;
 
 const unitRecordCache = new Map<string, Promise<UnitRecord | null>>();
 const normalizedFileIndexCache = new Map<string, Promise<Map<string, string>>>();
@@ -35,6 +43,8 @@ let fandomQuotePageLookupPromise: Promise<Map<string, string>> | null = null;
 // (ð, ö, þ, etc.) that safeSlug() converts to `_` can still resolve to their
 // real display name for Fandom image lookup.
 let indexNameBySlugPromise: Promise<Map<string, string>> | null = null;
+let game8UrlBySlugPromise: Promise<Map<string, string>> | null = null;
+const remoteRarityBySlugCache = new Map<string, Promise<string | null>>();
 
 function nameToSlug(name: string): string {
   return String(name || "").replace(/[^a-z0-9]/gi, "_").toLowerCase();
@@ -494,6 +504,99 @@ function stripHtmlToText(html: string) {
     .trim();
 }
 
+function stripMarkdownToText(markdown: string) {
+  return String(markdown || "")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, " $1 ")
+    .replace(/`{1,3}[^`]*`{1,3}/g, " ")
+    .replace(/^\s*>+\s?/gm, "")
+    .replace(/[|]/g, " ")
+    .replace(/\*\*|__/g, " ")
+    .replace(/^[#-]+\s*/gm, "")
+    .replace(/\r/g, "")
+    .replace(/\n\s*\n\s*\n+/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function normalizeForRarity(text: string) {
+  return String(text || "")
+    .replace(/\r/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildMirrorUrl(sourceUrl: string) {
+  return `https://r.jina.ai/http://${String(sourceUrl || "").replace(/^https?:\/\//i, "")}`;
+}
+
+async function loadGame8UrlBySlug(): Promise<Map<string, string>> {
+  if (game8UrlBySlugPromise) return game8UrlBySlugPromise;
+  game8UrlBySlugPromise = (async () => {
+    const map = new Map<string, string>();
+    for (const entry of GAME8_INDEX) {
+      const slug = nameToSlug(String(entry?.name || ""));
+      const url = String(entry?.url || "").trim();
+      if (!slug || !/^https?:\/\//i.test(url) || map.has(slug)) continue;
+      map.set(slug, url);
+    }
+    return map;
+  })();
+  return game8UrlBySlugPromise;
+}
+
+async function loadRemoteRarityBySlug(heroSlug: string): Promise<string | null> {
+  const normalized = normalizeSlug(heroSlug);
+  if (!normalized) return null;
+
+  if (remoteRarityBySlugCache.has(normalized)) {
+    return remoteRarityBySlugCache.get(normalized)!;
+  }
+
+  const promise = (async () => {
+    const urlBySlug = await loadGame8UrlBySlug();
+    const sourceUrl = urlBySlug.get(normalized);
+    if (!sourceUrl) return null;
+
+    const fetchOpts: RequestInit = {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      cache: "force-cache",
+    };
+
+    try {
+      const response = await fetch(sourceUrl, fetchOpts);
+      if (response.ok) {
+        const html = await response.text();
+        const rarity = parseRarityFromRawText(normalizeForRarity(stripHtmlToText(html)));
+        if (rarity) return rarity;
+      }
+    } catch {
+      // fall through
+    }
+
+    try {
+      const mirror = await fetch(buildMirrorUrl(sourceUrl), fetchOpts);
+      if (mirror.ok) {
+        const text = await mirror.text();
+        const rarity = parseRarityFromRawText(normalizeForRarity(stripMarkdownToText(text)));
+        if (rarity) return rarity;
+      }
+    } catch {
+      // fall through
+    }
+
+    return null;
+  })();
+
+  remoteRarityBySlugCache.set(normalized, promise);
+  return promise;
+}
+
+
 async function loadFandomQuotePageLookup() {
   if (fandomQuotePageLookupPromise) {
     return fandomQuotePageLookupPromise;
@@ -547,10 +650,19 @@ function buildQuoteTitleCandidates(heroSlug: string, unit: UnitRecord | null) {
 }
 
 async function resolveFandomQuotePageTitle(heroSlug: string) {
-  const unit = await loadUnitRecordBySlug(heroSlug);
+  const [unit, indexName] = await Promise.all([
+    loadUnitRecordBySlug(heroSlug),
+    loadHeroNameBySlug(heroSlug),
+  ]);
   const lookup = await loadFandomQuotePageLookup();
 
-  for (const candidateKey of buildQuoteTitleCandidates(heroSlug, unit)) {
+  const effectiveUnit: UnitRecord | null = unit
+    ? { ...unit, name: unit.name || indexName || undefined }
+    : indexName
+    ? { name: indexName }
+    : null;
+
+  for (const candidateKey of buildQuoteTitleCandidates(heroSlug, effectiveUnit)) {
     const page = lookup.get(candidateKey);
     if (page) return page;
   }
@@ -640,7 +752,8 @@ function collectRarityTokens(text: string) {
   const tokens: string[] = [];
   let match: RegExpExecArray | null;
 
-  const starPattern = /([1-5](?:\.5)?)\s*(?:★|star)/gi;
+  // Covers common formats: 5★, 5☆, 5⭐, 5-star, 5 star, 5 stars
+  const starPattern = /([1-5](?:\.5)?)\s*(?:[-\s])?\s*(?:★|☆|⭐|stars?)/gi;
   while ((match = starPattern.exec(text))) {
     tokens.push(match[1]);
   }
@@ -784,9 +897,16 @@ export async function loadUnitRarityBySlugs(slugs: string[]) {
   const out = new Map<string, string | null>();
 
   const uniqueSlugs = Array.from(new Set(slugs.map((slug) => String(slug || "").trim()).filter(Boolean)));
+  const shouldUseRemoteFallback = uniqueSlugs.length <= 4;
+
   for (const slug of uniqueSlugs) {
     const unit = await loadUnitRecordBySlug(slug);
-    const rarity = unit?.rarity || parseRarityFromRawText(unit?.raw_text_data) || null;
+    let rarity = unit?.rarity || parseRarityFromRawText(unit?.raw_text_data) || null;
+
+    if (!rarity && shouldUseRemoteFallback) {
+      rarity = await loadRemoteRarityBySlug(slug);
+    }
+
     out.set(slug, rarity);
   }
 
