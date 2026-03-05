@@ -48,7 +48,60 @@ let headshotIndex   = null;
 let sharedIconIndex = null;
 
 // ── Path helpers ───────────────────────────────────────────────────────────────
-const getDataRoot    = () => path.join(app.getPath("userData"), "feh-data");
+let resolvedDataRoot = null;
+let resolvedDataRootReason = null;
+
+function canWriteDirectory(dirPath) {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true });
+    const probe = path.join(dirPath, `.write-test-${process.pid}-${Date.now()}`);
+    fs.writeFileSync(probe, "ok");
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveDataRoot() {
+  if (resolvedDataRoot) return resolvedDataRoot;
+
+  const userDataRoot = path.join(app.getPath("userData"), "feh-data");
+
+  // In packaged builds, prefer storing data next to the launcher EXE so
+  // users can keep everything in one folder. Fall back to AppData if the
+  // EXE directory is not writable (e.g. Program Files).
+  if (app.isPackaged) {
+    const portableExeDir = String(process.env.PORTABLE_EXECUTABLE_DIR || "").trim();
+    const execDir = path.dirname(process.execPath);
+    const normalizedExecDir = execDir.replace(/\//g, "\\");
+    const runningFromTemp = /\\appdata\\local\\temp\\/i.test(normalizedExecDir);
+    const preferredBaseDir = portableExeDir || (runningFromTemp ? "" : execDir);
+
+    if (preferredBaseDir) {
+      const exeDataRoot = path.join(preferredBaseDir, "feh-data");
+      if (canWriteDirectory(exeDataRoot)) {
+        resolvedDataRoot = exeDataRoot;
+        resolvedDataRootReason = portableExeDir ? "portable-env-dir" : "portable-next-to-exe";
+        return resolvedDataRoot;
+      }
+    }
+
+    resolvedDataRoot = userDataRoot;
+    resolvedDataRootReason = "fallback-userData";
+    return resolvedDataRoot;
+  }
+
+  resolvedDataRoot = userDataRoot;
+  resolvedDataRootReason = "dev-userData";
+  return resolvedDataRoot;
+}
+
+function getDataRootInfo() {
+  return { path: resolveDataRoot(), reason: resolvedDataRootReason };
+}
+
+const getDataRoot    = () => resolveDataRoot();
 const getDbRoot      = () => path.join(getDataRoot(), "db");
 const getVersionFile = () => path.join(getDataRoot(), "version.txt");
 const getBundleFile  = () => path.join(getDataRoot(), "bundle.txt");
@@ -411,7 +464,7 @@ function extractZip(zipPath, destDir) {
   ].join(" ");
   const result = spawnSync(pwsh, ["-NoProfile", "-NonInteractive", "-Command", cmd], {
     stdio:    "pipe",   // capture output — never inherit in a packaged app
-    timeout:  180000,
+    timeout:  3600000,
     encoding: "utf8",
   });
   const stderr = (result.stderr || "").trim();
@@ -435,7 +488,10 @@ function createSplash() {
       nodeIntegration: false,
     },
   });
-  splashWin.loadFile(path.join(__dirname, "renderer", "index.html"));
+  const splashHtml = app.isPackaged
+    ? path.join(process.resourcesPath, "renderer", "index.html")
+    : path.join(__dirname, "renderer", "index.html");
+  splashWin.loadFile(splashHtml);
   splashWin.setMenuBarVisibility(false);
 }
 
@@ -509,6 +565,9 @@ ipcMain.on("get-asset-path", (event, name) => {
 app.whenReady().then(async () => {
   createSplash();
   send(splashWin, "progress", { pct: 5, label: "Connecting…" });
+
+  const rootInfo = getDataRootInfo();
+  send(splashWin, "log", `Data location: ${rootInfo.path} (${rootInfo.reason})`);
 
   // Probe local dev server and fetch release metadata in parallel.
   const [isLocal, release] = await Promise.all([probeLocalServer(), fetchLatestRelease()]);
@@ -600,13 +659,18 @@ app.whenReady().then(async () => {
         // Verify extraction succeeded before writing version stamp.
         const afterUnits = fs.existsSync(unitsDir) &&
           (() => { try { return fs.readdirSync(unitsDir).length > 0; } catch { return false; } })();
+        const afterFullbody = fs.existsSync(fullbodyDir) &&
+          (() => { try { return fs.readdirSync(fullbodyDir).length > 0; } catch { return false; } })();
+        const extractionLooksComplete = afterUnits && (!releaseWantsFull || afterFullbody);
 
-        if (afterUnits) {
+        if (extractionLooksComplete) {
           await fsp.writeFile(getVersionFile(), release.tag, "utf8");
           await fsp.writeFile(getBundleFile(), zipName, "utf8");
           send(splashWin, "log", `Bundle installed (${release.tag}): ${zipName}`);
         } else {
-          const msg = "Extraction completed but db/units/ appears empty — check disk space.";
+          const msg = releaseWantsFull && !afterFullbody
+            ? "Extraction completed but fullbody assets were not found. The bundle may be incomplete or extraction timed out."
+            : "Extraction completed but db/units/ appears empty — check disk space.";
           send(splashWin, "log", msg);
           dialog.showErrorBox("FEH Barracks — Extraction Issue", msg);
         }

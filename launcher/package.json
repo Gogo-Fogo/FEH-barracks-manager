@@ -23,12 +23,16 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*"
+      "renderer/**"
     ],
     "extraResources": [
       {
         "from": "assets/",
         "to": "assets/"
+      },
+      {
+        "from": "renderer/",
+        "to": "renderer/"
       }
     ],
     "forceCodeSigning": false,
