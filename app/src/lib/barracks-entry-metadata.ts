@@ -9,16 +9,147 @@ export const HERO_BLESSING_OPTIONS = [
   "Earth",
 ] as const;
 
+export const HERO_BLESSING_META = {
+  Light: {
+    badge: "LGT",
+    description: "Offense mythic setup",
+    accent: "amber",
+  },
+  Astra: {
+    badge: "AST",
+    description: "Burst offense setup",
+    accent: "sky",
+  },
+  Anima: {
+    badge: "ANM",
+    description: "Defense mythic setup",
+    accent: "rose",
+  },
+  Dark: {
+    badge: "DRK",
+    description: "Defense trap coverage",
+    accent: "violet",
+  },
+  Fire: {
+    badge: "FIR",
+    description: "Seasonal stat bonus",
+    accent: "red",
+  },
+  Water: {
+    badge: "WTR",
+    description: "Seasonal stat bonus",
+    accent: "cyan",
+  },
+  Wind: {
+    badge: "WND",
+    description: "Seasonal stat bonus",
+    accent: "emerald",
+  },
+  Earth: {
+    badge: "ERT",
+    description: "Seasonal stat bonus",
+    accent: "stone",
+  },
+} as const satisfies Record<
+  (typeof HERO_BLESSING_OPTIONS)[number],
+  {
+    badge: string;
+    description: string;
+    accent: "amber" | "sky" | "rose" | "violet" | "red" | "cyan" | "emerald" | "stone";
+  }
+>;
+
 export const EQUIPPED_SKILL_SLOTS = [
-  { key: "weapon", label: "Weapon", allowedCategories: ["weapon"] },
-  { key: "assist", label: "Assist", allowedCategories: ["assist"] },
-  { key: "special", label: "Special", allowedCategories: ["special"] },
-  { key: "passive_a", label: "Passive A", allowedCategories: ["passive_a"] },
-  { key: "passive_b", label: "Passive B", allowedCategories: ["passive_b"] },
-  { key: "passive_c", label: "Passive C", allowedCategories: ["passive_c"] },
-  { key: "sacred_seal", label: "Sacred Seal", allowedCategories: ["sacred_seal"] },
-  { key: "attuned", label: "Attuned", allowedCategories: ["attuned"] },
-  { key: "emblem", label: "Emblem", allowedCategories: ["emblem"] },
+  {
+    key: "weapon",
+    label: "Weapon",
+    shortLabel: "WPN",
+    accent: "amber",
+    allowedCategories: ["weapon"],
+    helperText: "Primary inheritable or exclusive weapon skill.",
+    placeholder: "Search weapon skills",
+    emptyStateText: "No matching weapon skills found.",
+  },
+  {
+    key: "assist",
+    label: "Assist",
+    shortLabel: "AST",
+    accent: "sky",
+    allowedCategories: ["assist"],
+    helperText: "Movement, refresh, heal, or reposition support skill.",
+    placeholder: "Search assist skills",
+    emptyStateText: "No matching assist skills found.",
+  },
+  {
+    key: "special",
+    label: "Special",
+    shortLabel: "SPC",
+    accent: "violet",
+    allowedCategories: ["special"],
+    helperText: "Triggered combat special currently equipped on the hero.",
+    placeholder: "Search special skills",
+    emptyStateText: "No matching special skills found.",
+  },
+  {
+    key: "passive_a",
+    label: "Passive A",
+    shortLabel: "A",
+    accent: "rose",
+    allowedCategories: ["passive_a"],
+    helperText: "Slot A passive for stats, recoil, finish, clash, and more.",
+    placeholder: "Search passive A skills",
+    emptyStateText: "No matching passive A skills found.",
+  },
+  {
+    key: "passive_b",
+    label: "Passive B",
+    shortLabel: "B",
+    accent: "emerald",
+    allowedCategories: ["passive_b"],
+    helperText: "Slot B passive for tempo, follow-up, DR, and utility.",
+    placeholder: "Search passive B skills",
+    emptyStateText: "No matching passive B skills found.",
+  },
+  {
+    key: "passive_c",
+    label: "Passive C",
+    shortLabel: "C",
+    accent: "cyan",
+    allowedCategories: ["passive_c"],
+    helperText: "Slot C passive for team support, ploys, and field pressure.",
+    placeholder: "Search passive C skills",
+    emptyStateText: "No matching passive C skills found.",
+  },
+  {
+    key: "sacred_seal",
+    label: "Sacred Seal",
+    shortLabel: "SEAL",
+    accent: "stone",
+    allowedCategories: ["sacred_seal"],
+    helperText: "Sacred Seal slot used to round out the build.",
+    placeholder: "Search sacred seals",
+    emptyStateText: "No matching sacred seals found.",
+  },
+  {
+    key: "attuned",
+    label: "Attuned",
+    shortLabel: "ATN",
+    accent: "amber",
+    allowedCategories: ["attuned"],
+    helperText: "Attuned slot for Echo or attuned effects.",
+    placeholder: "Search attuned skills",
+    emptyStateText: "No matching attuned skills found.",
+  },
+  {
+    key: "emblem",
+    label: "Emblem",
+    shortLabel: "EMB",
+    accent: "violet",
+    allowedCategories: ["emblem"],
+    helperText: "Ring or emblem pairing currently assigned to the hero.",
+    placeholder: "Search emblems",
+    emptyStateText: "No matching emblems found.",
+  },
 ] as const;
 
 export type HeroBlessingOption = (typeof HERO_BLESSING_OPTIONS)[number];
@@ -30,7 +161,13 @@ export type BarracksTrackedSkill = {
   category: string;
   category_label: string | null;
   subcategory: string | null;
+  source: string | null;
   source_url: string | null;
+  effect: string | null;
+  sp: string | null;
+  attack: string | null;
+  range: string | null;
+  rating: string | null;
 };
 
 export type BarracksEquippedSkills = Record<EquippedSkillSlotKey, BarracksTrackedSkill | null>;
@@ -81,6 +218,11 @@ function normalizeSourceUrl(value: string | null | undefined) {
   return null;
 }
 
+function normalizeMetaText(value: string | null | undefined) {
+  const text = cleanText(value);
+  return text || null;
+}
+
 export function parseTrackedSkillInput(value: string | null | undefined): BarracksTrackedSkill | null {
   const text = cleanText(value);
   if (!text) return null;
@@ -111,7 +253,13 @@ function normalizeTrackedSkill(value: unknown): BarracksTrackedSkill | null {
       category: "legacy",
       category_label: "Legacy",
       subcategory: null,
+      source: null,
       source_url: null,
+      effect: null,
+      sp: null,
+      attack: null,
+      range: null,
+      rating: null,
     };
   }
 
@@ -130,7 +278,13 @@ function normalizeTrackedSkill(value: unknown): BarracksTrackedSkill | null {
     category,
     category_label: cleanText(candidate.category_label) || (category === "legacy" ? "Legacy" : null),
     subcategory: cleanText(candidate.subcategory) || null,
+    source: normalizeMetaText(candidate.source),
     source_url: normalizeSourceUrl(candidate.source_url),
+    effect: normalizeMetaText(candidate.effect),
+    sp: normalizeMetaText(candidate.sp),
+    attack: normalizeMetaText(candidate.attack),
+    range: normalizeMetaText(candidate.range),
+    rating: normalizeMetaText(candidate.rating),
   };
 }
 

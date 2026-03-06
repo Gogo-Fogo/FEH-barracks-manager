@@ -13,6 +13,7 @@ import { buildAliasTermsBySlug, normalizeHeroSearchText, normalizeHeroSlugSearch
 import {
   countEquippedSkills,
   EQUIPPED_SKILL_SLOTS,
+  HERO_BLESSING_META,
   HERO_BLESSING_OPTIONS,
   type BarracksEntryInventory,
   parseBarracksEntryNotes,
@@ -65,6 +66,41 @@ type LibraryEntry = {
 const MERGE_OPTIONS = Array.from({ length: 21 }, (_, index) => index);
 const DUPE_OPTIONS_BASE = [...Array.from({ length: 21 }, (_, index) => index), 25, 30, 40, 50, 75, 99];
 
+const ACCENT_STYLES = {
+  amber: {
+    badge: "border-amber-700/70 bg-amber-950/70 text-amber-200",
+    panel: "border-amber-900/50 bg-amber-950/20",
+  },
+  sky: {
+    badge: "border-sky-700/70 bg-sky-950/70 text-sky-200",
+    panel: "border-sky-900/50 bg-sky-950/20",
+  },
+  violet: {
+    badge: "border-violet-700/70 bg-violet-950/70 text-violet-200",
+    panel: "border-violet-900/50 bg-violet-950/20",
+  },
+  rose: {
+    badge: "border-rose-700/70 bg-rose-950/70 text-rose-200",
+    panel: "border-rose-900/50 bg-rose-950/20",
+  },
+  emerald: {
+    badge: "border-emerald-700/70 bg-emerald-950/70 text-emerald-200",
+    panel: "border-emerald-900/50 bg-emerald-950/20",
+  },
+  cyan: {
+    badge: "border-cyan-700/70 bg-cyan-950/70 text-cyan-200",
+    panel: "border-cyan-900/50 bg-cyan-950/20",
+  },
+  red: {
+    badge: "border-red-700/70 bg-red-950/70 text-red-200",
+    panel: "border-red-900/50 bg-red-950/20",
+  },
+  stone: {
+    badge: "border-zinc-700/70 bg-zinc-900/85 text-zinc-200",
+    panel: "border-zinc-800 bg-zinc-900/55",
+  },
+} as const;
+
 function toNum(value: string | undefined) {
   if (!value || !value.trim()) return null;
   const parsed = Number(value);
@@ -101,7 +137,7 @@ function buildInventorySummary(hero: LibraryEntry) {
   }
   const equippedCount = countEquippedSkills(hero.inventory);
   if (equippedCount) {
-    parts.push(`Build ${equippedCount}`);
+    parts.push(`Build ${equippedCount}/${EQUIPPED_SKILL_SLOTS.length}`);
   }
   if (hero.inventory.fodder.length) {
     parts.push(`Fodder ${hero.inventory.fodder.length}`);
@@ -507,21 +543,36 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                       <div>
                         <label className="mb-2 block text-xs text-zinc-400">Blessings</label>
                         <div className="grid gap-2 sm:grid-cols-2">
-                          {HERO_BLESSING_OPTIONS.map((blessing) => (
-                            <label
-                              key={`${hero.hero_slug}-${blessing}`}
-                              className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2 py-1.5 text-xs text-zinc-300"
-                            >
+                          {HERO_BLESSING_OPTIONS.map((blessing) => {
+                            const meta = HERO_BLESSING_META[blessing];
+                            const accentStyle = ACCENT_STYLES[meta.accent];
+
+                            return (
+                              <label
+                                key={`${hero.hero_slug}-${blessing}`}
+                                className={`flex items-start gap-3 rounded-xl border px-3 py-2 text-xs text-zinc-300 ${accentStyle.panel}`}
+                              >
                               <input
                                 type="checkbox"
                                 name="inventory_blessings"
                                 value={blessing}
                                 defaultChecked={hero.inventory.blessings.includes(blessing)}
-                                className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-cyan-400"
+                                className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-cyan-400"
                               />
-                              <span>{blessing}</span>
-                            </label>
-                          ))}
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${accentStyle.badge}`}
+                                    >
+                                      {meta.badge}
+                                    </span>
+                                    <span className="font-medium text-zinc-100">{blessing}</span>
+                                  </div>
+                                  <p className="mt-1 text-[11px] text-zinc-500">{meta.description}</p>
+                                </div>
+                              </label>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -532,29 +583,48 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                           Track the actual FEH build slots using the shared Game8-based skill catalog.
                         </p>
                       </div>
-                      <div className="grid gap-3 lg:grid-cols-2">
-                        {EQUIPPED_SKILL_SLOTS.map((slot) => (
-                          <SkillTagSelector
-                            key={`${hero.hero_slug}-${slot.key}`}
-                            inputName={`equipped_${slot.key}`}
-                            label={slot.label}
-                            helperText={`Search ${slot.label.toLowerCase()} options from the shared catalog.`}
-                            selectedValue={hero.inventory.equipped[slot.key]}
-                            multiple={false}
-                            allowedCategories={[...slot.allowedCategories]}
-                            placeholder={`Search ${slot.label.toLowerCase()}`}
-                            emptyStateText={`No matching ${slot.label.toLowerCase()} skills found.`}
-                          />
-                        ))}
+                      <div className="grid gap-3 xl:grid-cols-2">
+                        {EQUIPPED_SKILL_SLOTS.map((slot) => {
+                          const accentStyle = ACCENT_STYLES[slot.accent];
+
+                          return (
+                            <div
+                              key={`${hero.hero_slug}-${slot.key}`}
+                              className={`rounded-xl border p-3 ${accentStyle.panel}`}
+                            >
+                              <div className="mb-3 flex items-start gap-3">
+                                <span
+                                  className={`inline-flex min-w-[3.25rem] items-center justify-center rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${accentStyle.badge}`}
+                                >
+                                  {slot.shortLabel}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-zinc-100">{slot.label}</p>
+                                  <p className="mt-1 text-xs text-zinc-500">{slot.helperText}</p>
+                                </div>
+                              </div>
+                              <SkillTagSelector
+                                inputName={`equipped_${slot.key}`}
+                                selectedValue={hero.inventory.equipped[slot.key]}
+                                multiple={false}
+                                allowedCategories={[...slot.allowedCategories]}
+                                placeholder={slot.placeholder}
+                                emptyStateText={slot.emptyStateText}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
-                      <SkillTagSelector
-                        inputName="inventory_fodder"
-                        label="Fodder / manuals on hand"
-                        helperText="Track inheritance pieces you own for this hero or project."
-                        selectedValues={hero.inventory.fodder}
-                        placeholder="Search fodder, manuals, seals..."
-                        emptyStateText="No matching fodder skills found."
-                      />
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900/55 p-3">
+                        <SkillTagSelector
+                          inputName="inventory_fodder"
+                          label="Fodder / manuals on hand"
+                          helperText="Track inheritance pieces, duplicate manuals, and spare seals you own for this hero or project."
+                          selectedValues={hero.inventory.fodder}
+                          placeholder="Search fodder, manuals, seals..."
+                          emptyStateText="No matching fodder skills found."
+                        />
+                      </div>
                       {hero.inventory.legacy_skills.length ? (
                         <div className="rounded-lg border border-amber-800/60 bg-amber-950/25 p-3 text-xs text-amber-100">
                           <p className="font-semibold uppercase tracking-[0.16em] text-amber-200">Legacy tracked skills</p>
