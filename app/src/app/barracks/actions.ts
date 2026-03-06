@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
+import { parseInventoryList, serializeBarracksEntryNotes } from "@/lib/barracks-entry-metadata";
 
 function requireText(value: FormDataEntryValue | null, label: string) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -95,6 +96,14 @@ export async function updateBarracksEntry(formData: FormData) {
   const mergesRaw = optionalText(formData.get("merges")) || "0";
   const copiesOwnedRaw = optionalText(formData.get("copies_owned")) || "0";
   const notes = optionalText(formData.get("notes"));
+  const blessings = formData
+    .getAll("inventory_blessings")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const skills = parseInventoryList(optionalText(formData.get("inventory_skills")));
+  const fodder = parseInventoryList(optionalText(formData.get("inventory_fodder")));
+  const resources = parseInventoryList(optionalText(formData.get("inventory_resources")));
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const merges = Number.parseInt(mergesRaw ?? "0", 10);
@@ -109,16 +118,23 @@ export async function updateBarracksEntry(formData: FormData) {
 
   if (!user) throw new Error("You must be logged in.");
 
+  const serializedNotes = serializeBarracksEntryNotes(notes, {
+    blessings,
+    skills,
+    fodder,
+    resources,
+  });
+
   let { error } = await supabase
     .from("user_barracks")
-    .update({ merges: safeMerges, copies_owned: safeCopiesOwned, notes, updated_at: new Date().toISOString() })
+    .update({ merges: safeMerges, copies_owned: safeCopiesOwned, notes: serializedNotes, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("user_id", user.id);
 
   if (error?.message?.includes("copies_owned")) {
     const fallback = await supabase
       .from("user_barracks")
-      .update({ merges: safeMerges, notes, updated_at: new Date().toISOString() })
+      .update({ merges: safeMerges, notes: serializedNotes, updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("user_id", user.id);
     error = fallback.error;

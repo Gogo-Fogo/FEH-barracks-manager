@@ -115,6 +115,22 @@ body {
   filter: none !important;
 }
 
+.library-card-details > summary {
+  list-style: none;
+}
+
+.library-card-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.library-card-details[open] .library-card-chevron {
+  transform: rotate(90deg);
+}
+
+.library-card-chevron {
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .video-feed-card {
   transition:
     transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),

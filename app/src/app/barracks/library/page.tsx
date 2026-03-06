@@ -9,6 +9,13 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import { buildAliasTermsBySlug, normalizeHeroSearchText, normalizeHeroSlugSearchText } from "@/lib/hero-typeahead";
+import {
+  HERO_BLESSING_OPTIONS,
+  type BarracksEntryInventory,
+  hasTrackedInventory,
+  parseBarracksEntryNotes,
+  stringifyInventoryList,
+} from "@/lib/barracks-entry-metadata";
 import { removeBarracksEntry, toggleFavorite, updateBarracksEntry } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +51,7 @@ type LibraryEntry = {
   merges: number;
   copies_owned: number;
   notes: string | null;
+  inventory: BarracksEntryInventory;
   updated_at: string | null;
   rarity: string | null;
   weapon: string | null;
@@ -52,10 +60,6 @@ type LibraryEntry = {
   tag: string | null;
   favorite: boolean;
 };
-
-function normalize(value: string | null | undefined) {
-  return (value || "").trim().toLowerCase();
-}
 
 function toNum(value: string | undefined) {
   if (!value || !value.trim()) return null;
@@ -84,6 +88,23 @@ function buildLibraryRedirectPath(params: {
 
   const query = nextParams.toString();
   return query ? `/barracks/library?${query}` : "/barracks/library";
+}
+
+function buildInventorySummary(hero: LibraryEntry) {
+  const parts: string[] = [];
+  if (hero.inventory.blessings.length) {
+    parts.push(...hero.inventory.blessings);
+  }
+  if (hero.inventory.skills.length) {
+    parts.push(`Skills ${hero.inventory.skills.length}`);
+  }
+  if (hero.inventory.fodder.length) {
+    parts.push(`Fodder ${hero.inventory.fodder.length}`);
+  }
+  if (hero.inventory.resources.length) {
+    parts.push(`Other ${hero.inventory.resources.length}`);
+  }
+  return parts;
 }
 
 async function loadLocalRarityBySlug() {
@@ -191,13 +212,15 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
 
   const libraryAll: LibraryEntry[] = (barracks || []).map((entry) => {
     const meta = heroMetaBySlug.get(entry.hero_slug);
+    const parsedEntry = parseBarracksEntryNotes(entry.notes);
     return {
       id: entry.id,
       hero_slug: entry.hero_slug,
       hero_name: entry.hero_name,
       merges: entry.merges ?? 0,
       copies_owned: entry.copies_owned ?? 0,
-      notes: entry.notes,
+      notes: parsedEntry.notes || null,
+      inventory: parsedEntry.inventory,
       updated_at: entry.updated_at,
       rarity: meta?.rarity ?? null,
       weapon: meta?.weapon ?? null,
@@ -328,13 +351,16 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
             {filtered.map((hero) => (
               <article
                 key={hero.hero_slug}
-                className="library-card-shell rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition-all hover:border-zinc-700 hover:bg-zinc-900/80"
+                className="library-card-shell relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition-all hover:border-zinc-700 hover:bg-zinc-900/80"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    href={`/heroes/${hero.hero_slug}`}
-                    className="library-card-primary block min-w-0 flex-1 rounded-xl"
-                  >
+                <Link
+                  href={`/heroes/${hero.hero_slug}`}
+                  aria-label={`Open ${hero.hero_name}`}
+                  className="absolute inset-0 z-0 rounded-xl"
+                />
+
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <div className="pointer-events-none min-w-0 flex-1">
                     <div className="flex gap-3">
                       <img
                         src={`/api/headshots/${hero.hero_slug}`}
@@ -381,8 +407,8 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                         <p className="text-xs text-zinc-400">Tag: {hero.tag || "-"}</p>
                       </div>
                     </div>
-                  </Link>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
+                  </div>
+                  <div className="relative z-20 flex shrink-0 flex-col items-end gap-2 pointer-events-auto">
                     <form action={toggleFavorite}>
                       <input type="hidden" name="hero_slug" value={hero.hero_slug} readOnly />
                       <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
@@ -396,7 +422,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <div className="pointer-events-none mt-3 flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-zinc-300">
                     Merges: +{hero.merges}
                   </span>
@@ -405,11 +431,27 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   </span>
                 </div>
 
-                {hero.notes ? <p className="mt-2 line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
+                {hasTrackedInventory(hero.inventory) ? (
+                  <div className="pointer-events-none mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-300">
+                    {buildInventorySummary(hero).map((item) => (
+                      <span
+                        key={`${hero.hero_slug}-${item}`}
+                        className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-0.5"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
 
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
-                    Edit merges / dupes / notes
+                {hero.notes ? <p className="pointer-events-none mt-2 line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
+
+                <details className="library-card-details relative z-20 mt-3 rounded-xl border border-zinc-800/80 bg-zinc-900/55 p-2 pointer-events-auto open:border-cyan-800/70 open:bg-zinc-900/80">
+                  <summary className="flex list-none items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/60">
+                    <span className="library-card-chevron flex h-6 w-6 items-center justify-center rounded-full border border-cyan-800/80 bg-cyan-950/40 text-sm text-cyan-300">
+                      ▸
+                    </span>
+                    <span>Edit merges / dupes / notes</span>
                   </summary>
                   <form action={updateBarracksEntry} className="mt-3 space-y-3">
                     <input type="hidden" name="id" value={hero.id} readOnly />
@@ -448,6 +490,64 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                         className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
                       />
                     </div>
+                    <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tracked Hero Resources</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          These save with the hero entry and are included in AI exports for inheritance/build planning.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs text-zinc-400">Blessings</label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {HERO_BLESSING_OPTIONS.map((blessing) => (
+                            <label
+                              key={`${hero.hero_slug}-${blessing}`}
+                              className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2 py-1.5 text-xs text-zinc-300"
+                            >
+                              <input
+                                type="checkbox"
+                                name="inventory_blessings"
+                                value={blessing}
+                                defaultChecked={hero.inventory.blessings.includes(blessing)}
+                                className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-cyan-400"
+                              />
+                              <span>{blessing}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-zinc-400">Skills on this hero</label>
+                        <textarea
+                          name="inventory_skills"
+                          defaultValue={stringifyInventoryList(hero.inventory.skills)}
+                          placeholder="Example: Laguz Friend 4, Distant Bonus Doubler, Reposition Gait"
+                          rows={2}
+                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-zinc-400">Fodder / manuals on hand</label>
+                        <textarea
+                          name="inventory_fodder"
+                          defaultValue={stringifyInventoryList(hero.inventory.fodder)}
+                          placeholder="Example: Arcane prima, No Quarter, Potent 4"
+                          rows={2}
+                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-zinc-400">Other resources / tags</label>
+                        <textarea
+                          name="inventory_resources"
+                          defaultValue={stringifyInventoryList(hero.inventory.resources)}
+                          placeholder="Example: Forma candidate, Emblem Marth ready, Arena core project"
+                          rows={2}
+                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="submit"
@@ -459,7 +559,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   </form>
                 </details>
 
-                <form action={removeBarracksEntry} className="mt-3">
+                <form action={removeBarracksEntry} className="relative z-20 mt-3 pointer-events-auto">
                   <input type="hidden" name="id" value={hero.id} readOnly />
                   <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
                   <button
@@ -470,7 +570,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   </button>
                 </form>
 
-                <p className="mt-3 text-xs text-zinc-500">
+                <p className="pointer-events-none mt-3 text-xs text-zinc-500">
                   Last updated: {hero.updated_at ? new Date(hero.updated_at).toLocaleString() : "-"}
                 </p>
               </article>

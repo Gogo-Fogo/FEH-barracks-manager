@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, dialog, ipcMain, protocol, shell, session } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, protocol, shell, session, screen } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const http  = require("node:http");
@@ -525,8 +525,15 @@ function createSplash() {
 
 function createMainWindow(appUrl) {
   const isLocal = appUrl.startsWith("http://localhost");
+  const workArea = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.max(1120, Math.min(1520, workArea.width - 56));
+  const height = Math.max(760, Math.min(980, workArea.height - 72));
   mainWin = new BrowserWindow({
-    width: 1280, height: 800,
+    width,
+    height,
+    minWidth: 1120,
+    minHeight: 760,
+    center: true,
     show: false,
     icon: getIconPath(),
     backgroundColor: "#0a0a1a",

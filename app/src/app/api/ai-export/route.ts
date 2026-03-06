@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dbRoot } from "@/lib/db-root";
+import { hasTrackedInventory, parseBarracksEntryNotes } from "@/lib/barracks-entry-metadata";
 
 type UnitFile = {
   name?: string;
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
   const [{ data: barracks }, { data: teams }, { data: notes }] = await Promise.all([
     supabase
       .from("user_barracks")
-      .select("hero_slug,hero_name,merges,notes,updated_at")
+      .select("hero_slug,hero_name,merges,copies_owned,notes,updated_at")
       .eq("user_id", user.id)
       .order("hero_name", { ascending: true }),
     supabase
@@ -168,6 +169,9 @@ export async function GET(request: Request) {
 
   lines.push("## Summary");
   lines.push(`- Barracks heroes: ${(barracks || []).length}`);
+  lines.push(
+    `- Heroes with tracked inventory: ${(barracks || []).filter((entry) => hasTrackedInventory(parseBarracksEntryNotes(entry.notes).inventory)).length}`
+  );
   lines.push(`- Team presets: ${(teams || []).length}`);
   lines.push(`- Notes included: ${(notes || []).length}`);
   lines.push(`- Banner pull guides loaded: ${bannerGuides.length}`);
@@ -178,6 +182,7 @@ export async function GET(request: Request) {
   lines.push("- Prioritize recommendations using ONLY heroes owned in this file unless user explicitly asks for wishlist/summon targets.");
   lines.push("- Use team presets + barracks + notes together to infer playstyle and gaps.");
   lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, and available merges matter.");
+  lines.push("- Use tracked blessings, inherited skills, fodder on hand, and project tags from barracks entries when recommending builds or inheritance.");
   lines.push("- If user asks summon advice for a specific banner, first identify banner units from user input (or ask for banner roster) and compare against owned roster + roles.");
   lines.push("- If banner roster is not provided in this export, ask follow-up for banner unit list before final recommendation.");
   lines.push("- Keep advice concise: top 1-3 summon priorities, why, and what role gap each fills.");
@@ -207,13 +212,27 @@ export async function GET(request: Request) {
     lines.push("- None");
   } else {
     for (const entry of barracks || []) {
+      const parsedEntry = parseBarracksEntryNotes(entry.notes);
       lines.push(`- ${entry.hero_name} (${entry.hero_slug})`);
       const meta = heroMetaBySlug.get(entry.hero_slug);
       lines.push(`  - Tier: ${meta?.tier ?? "-"}`);
       lines.push(`  - Class: ${meta?.weapon || "-"} / ${meta?.move || "-"}`);
       lines.push(`  - Tag: ${meta?.tag || "-"}`);
       lines.push(`  - Merges: ${entry.merges ?? 0}`);
-      if (entry.notes) lines.push(`  - Player Notes: ${sanitizeText(entry.notes)}`);
+      lines.push(`  - Dupes on hand: ${entry.copies_owned ?? 0}`);
+      if (parsedEntry.inventory.blessings.length) {
+        lines.push(`  - Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
+      }
+      if (parsedEntry.inventory.skills.length) {
+        lines.push(`  - Tracked Skills: ${parsedEntry.inventory.skills.join(", ")}`);
+      }
+      if (parsedEntry.inventory.fodder.length) {
+        lines.push(`  - Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
+      }
+      if (parsedEntry.inventory.resources.length) {
+        lines.push(`  - Other Resources: ${parsedEntry.inventory.resources.join(", ")}`);
+      }
+      if (parsedEntry.notes) lines.push(`  - Player Notes: ${sanitizeText(parsedEntry.notes)}`);
       lines.push(`  - Updated: ${entry.updated_at || "-"}`);
     }
   }
@@ -238,7 +257,23 @@ export async function GET(request: Request) {
   } else {
     for (const entry of barracks || []) {
       const unit = await readUnitFile(entry.hero_slug);
+      const parsedEntry = parseBarracksEntryNotes(entry.notes);
       lines.push(`### ${entry.hero_name} (${entry.hero_slug})`);
+      if (parsedEntry.inventory.blessings.length) {
+        lines.push(`- Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
+      }
+      if (parsedEntry.inventory.skills.length) {
+        lines.push(`- Tracked Skills: ${parsedEntry.inventory.skills.join(", ")}`);
+      }
+      if (parsedEntry.inventory.fodder.length) {
+        lines.push(`- Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
+      }
+      if (parsedEntry.inventory.resources.length) {
+        lines.push(`- Other Resources: ${parsedEntry.inventory.resources.join(", ")}`);
+      }
+      if (parsedEntry.notes) {
+        lines.push(`- Player Notes: ${sanitizeText(parsedEntry.notes)}`);
+      }
 
       if (!unit) {
         lines.push("- Guide source file not found locally.");

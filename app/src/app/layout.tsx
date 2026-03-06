@@ -43,9 +43,43 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <div className="fixed bottom-2 right-3 font-mono text-[10px] text-zinc-600 select-none pointer-events-none">
-          {versionLabel}
+        <div className="flex min-h-screen flex-col">
+          <div className="flex-1">{children}</div>
+          <footer className="border-t border-zinc-800/80 bg-zinc-950/96 px-3 py-3 text-[11px] text-zinc-400 sm:px-5">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="leading-relaxed">
+                Sources:{" "}
+                <a
+                  href="https://game8.co/games/fire-emblem-heroes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-300 transition hover:text-sky-200"
+                >
+                  Game8
+                </a>{" "}
+                for hero/unit data,{" "}
+                <a
+                  href="https://feheroes.fandom.com/wiki/List_of_Heroes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-300 transition hover:text-sky-200"
+                >
+                  FE Heroes Wiki / Fandom
+                </a>{" "}
+                for art and quotes,{" "}
+                <a
+                  href="https://fire-emblem-heroes.com/en/topics/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-300 transition hover:text-sky-200"
+                >
+                  official FEH news
+                </a>
+                , and YouTube for the recent FEH video feed. Fire Emblem Heroes and related assets belong to Nintendo / Intelligent Systems.
+              </p>
+              <div className="shrink-0 font-mono text-[10px] text-zinc-500">{versionLabel}</div>
+            </div>
+          </footer>
         </div>
       </body>
     </html>
