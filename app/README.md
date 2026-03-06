@@ -35,7 +35,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Current routes
 
 - `/` public landing page
-- `/login` auth page (sign in / sign up / password reset email trigger)
+- `/login` auth page (email sign in, sign up, Google, Discord, password reset email trigger)
+- `/auth/callback` OAuth redirect handler for Supabase providers
 - `/reset-password` reset target page used from Supabase email link
 - `/barracks` protected page (requires logged-in user)
 
@@ -44,7 +45,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - Next.js app scaffold (TypeScript, App Router)
 - Supabase browser/server clients
 - Supabase middleware session refresh
-- Auth form (email/password sign in + sign up + reset email)
+- Auth form (email/password sign in + sign up + Google + Discord + reset email)
 - Protected barracks shell and sign-out button
 - Hero detail page, favorites/notes/team management, Aether Resort prototype
 
@@ -68,6 +69,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 4. **Supabase Auth settings**
    - Add site URL (prod) and redirect URLs (including `/reset-password`).
+   - If you want Google and Discord login, enable those providers in `Authentication -> Providers`.
+   - Add OAuth redirect URLs for both local and prod:
+     - `http://localhost:3000/auth/callback`
+     - `https://feh-barracks-manager.vercel.app/auth/callback`
    - Verify password reset email flow reaches `https://<your-domain>/reset-password`.
 
 5. **Post-deploy smoke test**

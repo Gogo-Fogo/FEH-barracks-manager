@@ -4,8 +4,12 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deriveDefaultDisplayName } from "@/lib/profile-defaults";
+import type { Provider } from "@supabase/supabase-js";
 
 type Mode = "login" | "signup";
+type AuthFormProps = {
+  initialMessage?: string;
+};
 
 async function ensureProfileAfterAuth(
   supabase: ReturnType<typeof createClient>,
@@ -36,13 +40,23 @@ async function ensureProfileAfterAuth(
   }
 }
 
-export function AuthForm() {
+function buildOAuthRedirectUrl() {
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent("/barracks")}`;
+}
+
+function providerLabel(provider: Provider) {
+  if (provider === "google") return "Google";
+  if (provider === "discord") return "Discord";
+  return provider;
+}
+
+export function AuthForm({ initialMessage = "" }: AuthFormProps) {
   const [mode, setMode] = useState<Mode>("login");
   const [resetMode, setResetMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(initialMessage || null);
+  const [pendingAction, setPendingAction] = useState<"form" | "google" | "discord" | null>(null);
   const router = useRouter();
 
   const title = useMemo(
@@ -50,9 +64,40 @@ export function AuthForm() {
     [mode]
   );
 
+  const onOAuth = async (provider: Provider) => {
+    setPendingAction(provider === "discord" ? "discord" : "google");
+    setMessage(null);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: buildOAuthRedirectUrl(),
+          queryParams:
+            provider === "google"
+              ? {
+                  access_type: "offline",
+                  prompt: "consent",
+                }
+              : undefined,
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+      }
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Unexpected error";
+      setMessage(text);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPending(true);
+    setPendingAction("form");
     setMessage(null);
 
     try {
@@ -114,12 +159,41 @@ export function AuthForm() {
       const text = error instanceof Error ? error.message : "Unexpected error";
       setMessage(text);
     } finally {
-      setPending(false);
+      setPendingAction(null);
     }
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {!resetMode ? (
+        <>
+          <div className="grid gap-3">
+            {(["google", "discord"] as const).map((provider) => (
+              <button
+                key={provider}
+                type="button"
+                onClick={() => onOAuth(provider)}
+                disabled={pendingAction !== null}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:bg-white/10 disabled:opacity-60"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/12 bg-zinc-900/80 text-[11px] font-semibold uppercase text-zinc-200">
+                  {provider === "google" ? "G" : "D"}
+                </span>
+                <span>
+                  {pendingAction === provider ? "Redirecting..." : `Continue with ${providerLabel(provider)}`}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-zinc-500">
+            <span className="h-px flex-1 bg-white/10" />
+            <span>Email</span>
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+        </>
+      ) : null}
+
       <div>
         <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-zinc-200">
           Email
@@ -159,10 +233,10 @@ export function AuthForm() {
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pendingAction !== null}
         className="w-full rounded-2xl bg-amber-300 px-4 py-3 font-semibold text-zinc-950 transition hover:bg-amber-200 disabled:opacity-60"
       >
-        {pending ? "Working..." : resetMode ? "Send reset email" : title}
+        {pendingAction === "form" ? "Working..." : resetMode ? "Send reset email" : title}
       </button>
 
       <button
@@ -171,6 +245,7 @@ export function AuthForm() {
           setResetMode(false);
           setMode(mode === "login" ? "signup" : "login");
         }}
+        disabled={pendingAction !== null}
         className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-zinc-200 transition hover:bg-white/10"
       >
         {mode === "login"
@@ -181,6 +256,7 @@ export function AuthForm() {
       <button
         type="button"
         onClick={() => setResetMode((v) => !v)}
+        disabled={pendingAction !== null}
         className="w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-zinc-300 transition hover:bg-white/5"
       >
         {resetMode ? "Back to login/signup" : "Forgot password?"}

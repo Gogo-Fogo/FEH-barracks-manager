@@ -3,7 +3,13 @@ import { AuthForm } from "@/components/auth-form";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    message?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-100">
@@ -28,6 +34,9 @@ export default async function LoginPage() {
     redirect("/barracks");
   }
 
+  const params = (await searchParams) || {};
+  const initialMessage = String(params.message || "").trim();
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(245,197,66,0.15),_transparent_28%),linear-gradient(135deg,_#050816_0%,_#0b1222_48%,_#06070c_100%)] px-4 text-zinc-100">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,_rgba(255,255,255,0.04),_transparent_28%,_transparent_72%,_rgba(255,209,102,0.08))]" />
@@ -45,7 +54,7 @@ export default async function LoginPage() {
           </p>
 
           <div className="mt-7">
-            <AuthForm />
+            <AuthForm initialMessage={initialMessage} />
           </div>
         </section>
 
