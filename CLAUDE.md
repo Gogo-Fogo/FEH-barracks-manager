@@ -97,7 +97,7 @@ Full protocol in `context/workflow.md`. Summary:
 8. After pushing a release tag:
    - `npm run release:assets` — builds `feh-assets-full-bundle.zip` and uploads to latest GitHub release (replaces old copy automatically). Requires `gh` CLI.
    - `npm run release:launcher` — builds `FEH-Barracks-Launcher.exe` (portable) and uploads to latest GitHub release. Requires `gh` CLI.
-- **Banner image**: release notes must use a version-specific raw asset URL under `assets/release/` (for example `banner-v0.4.0.webp`), not the shared `banner.webp` path. Reusing one banner URL across releases will retroactively change older release pages.
+- **Banner image**: release notes must use a version-specific raw asset URL under `assets/release/` (for example `banner-v0.3.4.webp`) and pin that URL to the release tag or commit SHA, not `main`. Reusing one moving banner URL will retroactively change older release pages.
 
 **Missing unit recovery:** `npm run reconcile:index [-- --archive-url=<url>]` then `build_parser.js --only=<slug>.json`
 
