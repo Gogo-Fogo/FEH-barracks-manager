@@ -182,7 +182,7 @@ export async function GET(request: Request) {
   lines.push("- Prioritize recommendations using ONLY heroes owned in this file unless user explicitly asks for wishlist/summon targets.");
   lines.push("- Use team presets + barracks + notes together to infer playstyle and gaps.");
   lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, and available merges matter.");
-  lines.push("- Use tracked blessings, inherited skills, fodder on hand, and project tags from barracks entries when recommending builds or inheritance.");
+  lines.push("- Use tracked blessings and any saved inherited-skill or fodder data from barracks entries when recommending builds or inheritance.");
   lines.push("- If user asks summon advice for a specific banner, first identify banner units from user input (or ask for banner roster) and compare against owned roster + roles.");
   lines.push("- If banner roster is not provided in this export, ask follow-up for banner unit list before final recommendation.");
   lines.push("- Keep advice concise: top 1-3 summon priorities, why, and what role gap each fills.");
@@ -229,9 +229,6 @@ export async function GET(request: Request) {
       if (parsedEntry.inventory.fodder.length) {
         lines.push(`  - Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
       }
-      if (parsedEntry.inventory.resources.length) {
-        lines.push(`  - Other Resources: ${parsedEntry.inventory.resources.join(", ")}`);
-      }
       if (parsedEntry.notes) lines.push(`  - Player Notes: ${sanitizeText(parsedEntry.notes)}`);
       lines.push(`  - Updated: ${entry.updated_at || "-"}`);
     }
@@ -267,9 +264,6 @@ export async function GET(request: Request) {
       }
       if (parsedEntry.inventory.fodder.length) {
         lines.push(`- Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
-      }
-      if (parsedEntry.inventory.resources.length) {
-        lines.push(`- Other Resources: ${parsedEntry.inventory.resources.join(", ")}`);
       }
       if (parsedEntry.notes) {
         lines.push(`- Player Notes: ${sanitizeText(parsedEntry.notes)}`);

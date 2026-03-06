@@ -117,6 +117,8 @@ body {
 
 .library-card-details > summary {
   list-style: none;
+  cursor: pointer;
+  user-select: none;
 }
 
 .library-card-details > summary::-webkit-details-marker {
