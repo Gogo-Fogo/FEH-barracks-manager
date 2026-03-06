@@ -38,7 +38,10 @@ type SkillTagSelectorProps = {
   multiple?: boolean;
 };
 
+const EMPTY_SELECTED_VALUES: BarracksTrackedSkill[] = [];
+
 let sharedSkillCatalogPromise: Promise<SkillCatalogOption[]> | null = null;
+let sharedSkillCatalogData: SkillCatalogOption[] | null = null;
 
 function normalizeText(value: string) {
   return String(value || "")
@@ -68,6 +71,10 @@ function normalizeSkillValue(value: BarracksTrackedSkill | SkillCatalogOption | 
 }
 
 async function loadSkillCatalog() {
+  if (sharedSkillCatalogData) {
+    return sharedSkillCatalogData;
+  }
+
   if (!sharedSkillCatalogPromise) {
     sharedSkillCatalogPromise = fetch("/api/skill-catalog")
       .then(async (response) => {
@@ -76,7 +83,10 @@ async function loadSkillCatalog() {
         }
         return response.json() as Promise<SkillCatalogResponse>;
       })
-      .then((payload) => payload.items || []);
+      .then((payload) => {
+        sharedSkillCatalogData = payload.items || [];
+        return sharedSkillCatalogData;
+      });
   }
 
   return sharedSkillCatalogPromise;
@@ -138,36 +148,32 @@ export function SkillTagSelector({
   inputName,
   label,
   helperText,
-  selectedValues = [],
-  selectedValue = null,
+  selectedValues,
+  selectedValue,
   placeholder = "Search skill name",
   emptyStateText = "No matching skills found.",
   allowedCategories,
   multiple = true,
 }: SkillTagSelectorProps) {
-  const [catalog, setCatalog] = useState<SkillCatalogOption[]>([]);
+  const effectiveSelectedValues = selectedValues ?? EMPTY_SELECTED_VALUES;
+  const effectiveSelectedValue = selectedValue ?? null;
+  const [catalog, setCatalog] = useState<SkillCatalogOption[]>(() => sharedSkillCatalogData ?? []);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<BarracksTrackedSkill[]>(() =>
-    dedupeSelected(multiple ? selectedValues : [selectedValue])
+    dedupeSelected(multiple ? effectiveSelectedValues : [effectiveSelectedValue])
   );
 
   useEffect(() => {
-    setSelected(dedupeSelected(multiple ? selectedValues : [selectedValue]));
-  }, [multiple, selectedValue, selectedValues]);
+    setSelected(dedupeSelected(multiple ? effectiveSelectedValues : [effectiveSelectedValue]));
+  }, [multiple, effectiveSelectedValue, effectiveSelectedValues]);
 
   useEffect(() => {
     let active = true;
 
-    if (!open) {
-      return () => {
-        active = false;
-      };
-    }
-
-    if (catalog.length || isLoading || loadError) {
+    if (catalog.length || loadError) {
       return () => {
         active = false;
       };
@@ -191,7 +197,7 @@ export function SkillTagSelector({
     return () => {
       active = false;
     };
-  }, [catalog.length, isLoading, loadError, open]);
+  }, [catalog.length, loadError]);
 
   const selectedSet = useMemo(() => new Set(selected.map((value) => value.id)), [selected]);
   const normalizedQuery = normalizeText(query);

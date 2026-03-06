@@ -252,7 +252,15 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             <h1 className="text-2xl font-semibold">My Barracks</h1>
             <p className="text-sm text-zinc-300">Signed in as {user.email}</p>
           </div>
-          <AuthSignOutButton />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/account"
+              className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+            >
+              Account settings
+            </Link>
+            <AuthSignOutButton />
+          </div>
         </header>
 
         <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:mt-8 sm:p-5">
@@ -293,6 +301,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
                 My Heroes
+              </Link>
+              <Link
+                href="/account"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Settings
               </Link>
               <Link
                 href="/tavern"

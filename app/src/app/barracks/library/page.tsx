@@ -32,6 +32,7 @@ type LibraryPageProps = {
     minTier?: string;
     favorite?: string;
     sort?: string;
+    edit?: string;
     notice?: string;
     tone?: string;
   }>;
@@ -192,6 +193,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const minTier = toNum(minTierRaw);
   const favoriteOnly = params.favorite === "1";
   const sort = (params.sort || "tier_desc").trim();
+  const edit = (params.edit || "").trim();
   const notice = (params.notice || "").trim();
   const tone = (params.tone || "success").trim();
 
@@ -341,6 +343,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
     favoriteOnly,
     sort,
   });
+  const editingHero = edit ? libraryAll.find((hero) => hero.hero_slug === edit) ?? null : null;
 
   return (
     <div className="min-h-screen bg-zinc-950 px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
@@ -493,177 +496,15 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
 
                 {hero.notes ? <p className="pointer-events-none relative z-20 mt-2 line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
 
-                <details className="library-card-details relative z-30 mt-3 rounded-xl border border-zinc-800/80 bg-zinc-900/55 p-2 pointer-events-auto open:border-cyan-800/70 open:bg-zinc-900/80">
-                  <summary className="flex list-none items-center gap-2 rounded-lg border border-zinc-800/70 bg-zinc-950/75 px-2.5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/60">
-                    <span className="library-card-chevron flex h-7 w-7 items-center justify-center rounded-full border border-cyan-700/90 bg-cyan-950/70 text-base font-semibold text-cyan-200">
-                      ▸
-                    </span>
-                    <span>Manage merges, dupes, blessings, notes</span>
-                  </summary>
-                  <form action={updateBarracksEntry} className="mt-3 space-y-3">
-                    <input type="hidden" name="id" value={hero.id} readOnly />
-                    <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">Merges</label>
-                        <select
-                          name="merges"
-                          defaultValue={String(hero.merges)}
-                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                        >
-                          {buildSelectOptions(MERGE_OPTIONS, hero.merges).map((value) => (
-                            <option key={`${hero.hero_slug}-merge-${value}`} value={value}>
-                              +{value}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs text-zinc-400">Dupes owned</label>
-                        <select
-                          name="copies_owned"
-                          defaultValue={String(hero.copies_owned)}
-                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                        >
-                          {buildSelectOptions(DUPE_OPTIONS_BASE, hero.copies_owned).map((value) => (
-                            <option key={`${hero.hero_slug}-dupe-${value}`} value={value}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tracked Blessings</p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Blessings stay synced with the hero entry and are included in AI exports.
-                        </p>
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs text-zinc-400">Blessings</label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {HERO_BLESSING_OPTIONS.map((blessing) => {
-                            const meta = HERO_BLESSING_META[blessing];
-                            const accentStyle = ACCENT_STYLES[meta.accent];
-
-                            return (
-                              <label
-                                key={`${hero.hero_slug}-${blessing}`}
-                                className={`flex items-start gap-3 rounded-xl border px-3 py-2 text-xs text-zinc-300 ${accentStyle.panel}`}
-                              >
-                              <input
-                                type="checkbox"
-                                name="inventory_blessings"
-                                value={blessing}
-                                defaultChecked={hero.inventory.blessings.includes(blessing)}
-                                className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-cyan-400"
-                              />
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span
-                                      className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${accentStyle.badge}`}
-                                    >
-                                      {meta.badge}
-                                    </span>
-                                    <span className="font-medium text-zinc-100">{blessing}</span>
-                                  </div>
-                                  <p className="mt-1 text-[11px] text-zinc-500">{meta.description}</p>
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Current Build</p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Track the actual FEH build slots using the shared Game8-based skill catalog.
-                        </p>
-                      </div>
-                      <div className="grid gap-3 xl:grid-cols-2">
-                        {EQUIPPED_SKILL_SLOTS.map((slot) => {
-                          const accentStyle = ACCENT_STYLES[slot.accent];
-
-                          return (
-                            <div
-                              key={`${hero.hero_slug}-${slot.key}`}
-                              className={`rounded-xl border p-3 ${accentStyle.panel}`}
-                            >
-                              <div className="mb-3 flex items-start gap-3">
-                                <span
-                                  className={`inline-flex min-w-[3.25rem] items-center justify-center rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${accentStyle.badge}`}
-                                >
-                                  {slot.shortLabel}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-zinc-100">{slot.label}</p>
-                                  <p className="mt-1 text-xs text-zinc-500">{slot.helperText}</p>
-                                </div>
-                              </div>
-                              <SkillTagSelector
-                                inputName={`equipped_${slot.key}`}
-                                selectedValue={hero.inventory.equipped[slot.key]}
-                                multiple={false}
-                                allowedCategories={[...slot.allowedCategories]}
-                                placeholder={slot.placeholder}
-                                emptyStateText={slot.emptyStateText}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900/55 p-3">
-                        <SkillTagSelector
-                          inputName="inventory_fodder"
-                          label="Fodder / manuals on hand"
-                          helperText="Track inheritance pieces, duplicate manuals, and spare seals you own for this hero or project."
-                          selectedValues={hero.inventory.fodder}
-                          placeholder="Search fodder, manuals, seals..."
-                          emptyStateText="No matching fodder skills found."
-                        />
-                      </div>
-                      {hero.inventory.legacy_skills.length ? (
-                        <div className="rounded-lg border border-amber-800/60 bg-amber-950/25 p-3 text-xs text-amber-100">
-                          <p className="font-semibold uppercase tracking-[0.16em] text-amber-200">Legacy tracked skills</p>
-                          <p className="mt-1 text-amber-100/80">
-                            These came from the older generic skill tracker. Re-save this hero after filling the slot-specific fields if you want to fully migrate them.
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {hero.inventory.legacy_skills.map((skill) => (
-                              <span
-                                key={`${hero.hero_slug}-legacy-${skill.id}`}
-                                className="rounded-full border border-amber-700/60 bg-amber-950/40 px-2 py-0.5 text-[11px]"
-                              >
-                                {skill.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-zinc-400">Notes</label>
-                      <textarea
-                        name="notes"
-                        defaultValue={hero.notes ?? ""}
-                        placeholder="Build / IV / project notes"
-                        rows={3}
-                        className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="submit"
-                        className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </form>
-                </details>
+                <Link
+                  href={`${redirectTo}${redirectTo.includes("?") ? "&" : "?"}edit=${encodeURIComponent(hero.hero_slug)}`}
+                  className="relative z-30 mt-3 flex items-center gap-2 rounded-lg border border-zinc-800/70 bg-zinc-950/75 px-2.5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/60"
+                >
+                  <span className="library-card-chevron flex h-7 w-7 items-center justify-center rounded-full border border-cyan-700/90 bg-cyan-950/70 text-base font-semibold text-cyan-200">
+                    ▸
+                  </span>
+                  <span>Manage merges, dupes, blessings, notes</span>
+                </Link>
 
                 <form action={removeBarracksEntry} className="relative z-30 mt-3 pointer-events-auto">
                   <input type="hidden" name="id" value={hero.id} readOnly />
@@ -684,6 +525,233 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
           </section>
         )}
       </main>
+
+      {editingHero ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6">
+          <Link
+            href={redirectTo}
+            aria-label="Close hero editor"
+            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+          />
+          <section className="app-scrollbar relative z-[121] max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-cyan-900/60 bg-zinc-950/98 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.7)] sm:p-6">
+            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Hero Editor</p>
+                <h2 className="mt-1 text-2xl font-semibold text-zinc-100">{editingHero.hero_name}</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Manage merges, dupes, blessings, build slots, fodder, and notes without stretching the card grid.
+                </p>
+              </div>
+              <Link
+                href={redirectTo}
+                className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Close
+              </Link>
+            </header>
+
+            <form action={updateBarracksEntry} className="mt-5 space-y-4">
+              <input type="hidden" name="id" value={editingHero.id} readOnly />
+              <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                  <div className="flex gap-4">
+                    <img
+                      src={`/api/headshots/${editingHero.hero_slug}`}
+                      alt={`${editingHero.hero_name} headshot`}
+                      className="h-24 w-24 rounded-2xl border border-zinc-700 object-cover"
+                      loading="lazy"
+                    />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-lg font-medium text-zinc-100">{editingHero.hero_name}</p>
+                      <p className="text-sm text-zinc-400">Tier: {editingHero.tier ?? "-"}</p>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
+                        <span>{rarityStarsText(editingHero.rarity)}</span>
+                        <span>{editingHero.weapon || "-"}</span>
+                        <span>{editingHero.move || "-"}</span>
+                        <span>{editingHero.tag || "-"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                    <label className="mb-1 block text-xs text-zinc-400">Merges</label>
+                    <select
+                      name="merges"
+                      defaultValue={String(editingHero.merges)}
+                      className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
+                    >
+                      {buildSelectOptions(MERGE_OPTIONS, editingHero.merges).map((value) => (
+                        <option key={`${editingHero.hero_slug}-merge-${value}`} value={value}>
+                          +{value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                    <label className="mb-1 block text-xs text-zinc-400">Dupes owned</label>
+                    <select
+                      name="copies_owned"
+                      defaultValue={String(editingHero.copies_owned)}
+                      className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
+                    >
+                      {buildSelectOptions(DUPE_OPTIONS_BASE, editingHero.copies_owned).map((value) => (
+                        <option key={`${editingHero.hero_slug}-dupe-${value}`} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tracked Blessings</p>
+                  <p className="mt-1 text-xs text-zinc-500">Blessings stay synced with the entry and are included in AI exports.</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {HERO_BLESSING_OPTIONS.map((blessing) => {
+                    const meta = HERO_BLESSING_META[blessing];
+                    const accentStyle = ACCENT_STYLES[meta.accent];
+
+                    return (
+                      <label
+                        key={`${editingHero.hero_slug}-${blessing}`}
+                        title={meta.description}
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-zinc-300 ${accentStyle.panel}`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="inventory_blessings"
+                          value={blessing}
+                          defaultChecked={editingHero.inventory.blessings.includes(blessing)}
+                          className="h-4 w-4 shrink-0 rounded border-zinc-700 bg-zinc-950 text-cyan-400"
+                        />
+                        <span
+                          className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${accentStyle.badge}`}
+                        >
+                          {meta.badge}
+                        </span>
+                        <span className="truncate font-medium text-zinc-100">{blessing}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Current Build</p>
+                  <p className="mt-1 text-xs text-zinc-500">Track equipped slots and spare fodder for AI exports.</p>
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {EQUIPPED_SKILL_SLOTS.map((slot) => {
+                    const accentStyle = ACCENT_STYLES[slot.accent];
+
+                    return (
+                      <div
+                        key={`${editingHero.hero_slug}-${slot.key}`}
+                        className={`rounded-xl border p-3 ${accentStyle.panel}`}
+                      >
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex min-w-[3.25rem] items-center justify-center rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${accentStyle.badge}`}
+                          >
+                            {slot.shortLabel}
+                          </span>
+                          <p className="text-sm font-medium text-zinc-100">{slot.label}</p>
+                        </div>
+                        <div className="mb-3 text-xs text-zinc-500">{slot.helperText}</div>
+                        <SkillTagSelector
+                          inputName={`equipped_${slot.key}`}
+                          selectedValue={editingHero.inventory.equipped[slot.key]}
+                          multiple={false}
+                          allowedCategories={[...slot.allowedCategories]}
+                          placeholder={slot.placeholder}
+                          emptyStateText={slot.emptyStateText}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/55 p-3">
+                  <SkillTagSelector
+                    inputName="inventory_fodder"
+                    label="Fodder / manuals on hand"
+                    helperText="Track inheritance pieces, duplicate manuals, and spare seals for this project."
+                    selectedValues={editingHero.inventory.fodder}
+                    placeholder="Search fodder, manuals, seals..."
+                    emptyStateText="No matching fodder skills found."
+                  />
+                </div>
+
+                {editingHero.inventory.legacy_skills.length ? (
+                  <div className="rounded-lg border border-amber-800/60 bg-amber-950/25 p-3 text-xs text-amber-100">
+                    <p className="font-semibold uppercase tracking-[0.16em] text-amber-200">Legacy tracked skills</p>
+                    <p className="mt-1 text-amber-100/80">
+                      These came from the older generic skill tracker. Re-save this hero after filling the slot-specific fields if you want to fully migrate them.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {editingHero.inventory.legacy_skills.map((skill) => (
+                        <span
+                          key={`${editingHero.hero_slug}-legacy-${skill.id}`}
+                          className="rounded-full border border-amber-700/60 bg-amber-950/40 px-2 py-0.5 text-[11px]"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/65 p-4">
+                <label className="mb-1 block text-xs text-zinc-400">Notes</label>
+                <textarea
+                  name="notes"
+                  defaultValue={editingHero.notes ?? ""}
+                  placeholder="Build / IV / project notes"
+                  rows={4}
+                  className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Link
+                  href={redirectTo}
+                  className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  className="rounded-md border border-cyan-700 bg-cyan-950/60 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-900/70"
+                >
+                  Save and close
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-3 flex justify-start">
+              <form action={removeBarracksEntry}>
+                <input type="hidden" name="id" value={editingHero.id} readOnly />
+                <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+                <button
+                  type="submit"
+                  className="rounded-md border border-rose-800 px-3 py-2 text-sm text-rose-300 hover:bg-rose-950"
+                >
+                  Remove from barracks
+                </button>
+              </form>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
