@@ -443,7 +443,7 @@ export function TavernClient(props: TavernClientProps) {
         />
 
         {/* ── Top bar ── */}
-        <div className="absolute left-0 right-0 top-0 z-30 flex h-11 items-center gap-2 px-3">
+        <div className="absolute left-0 right-0 top-0 z-30 flex h-10 items-center gap-2 px-2 sm:h-11 sm:px-3">
           {/* Frosted pill for back button */}
           <Link
             href="/barracks"
@@ -456,7 +456,7 @@ export function TavernClient(props: TavernClientProps) {
           <div className="flex-1 text-center">
             <span
               className="font-semibold text-amber-100 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]"
-              style={{ fontSize: "clamp(14px, 3vw, 18px)", fontFamily: "Georgia, serif", letterSpacing: "0.06em" }}
+              style={{ fontSize: "clamp(13px, 3vw, 18px)", fontFamily: "Georgia, serif", letterSpacing: "0.06em" }}
             >
               The Tavern
             </span>
@@ -475,8 +475,8 @@ export function TavernClient(props: TavernClientProps) {
 
         {/* ── Stage area — heroes fill the portrait ── */}
         <div
-          className="absolute bottom-0 left-0 right-0 top-11 z-10 flex items-end justify-around px-1"
-          style={{ paddingBottom: "clamp(56px, 14%, 96px)" }}
+          className="absolute bottom-0 left-0 right-0 top-10 z-10 flex items-end justify-around px-1 sm:top-11"
+          style={{ paddingBottom: "clamp(72px, 16%, 108px)" }}
           onClick={(e) => {
             const t = e.target as HTMLElement;
             if (!t.closest("[data-info-card]") && !t.closest("[data-hero-portrait]")) {
@@ -495,7 +495,7 @@ export function TavernClient(props: TavernClientProps) {
               <div
                 key={p.userId}
                 className="relative flex flex-col items-center"
-                style={{ flex: 1, maxWidth: "45%" }}
+                style={{ flex: 1, maxWidth: "48%" }}
               >
                 {/* Floating name */}
                 <div
@@ -517,7 +517,7 @@ export function TavernClient(props: TavernClientProps) {
                 <div
                   data-hero-portrait
                   className="relative w-full cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95"
-                  style={{ height: "clamp(160px, 55cqh, 520px)" }}
+                  style={{ height: "clamp(150px, 49cqh, 520px)" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveCard(isOpen ? null : p.userId);
@@ -528,7 +528,7 @@ export function TavernClient(props: TavernClientProps) {
                     <img
                       src={portraitSrc}
                       alt={p.displayName}
-                      className="h-full w-full object-contain object-bottom drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
+                      className="pointer-events-none h-full w-full object-contain object-bottom drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
                       draggable={false}
                     />
                   ) : (
@@ -543,7 +543,7 @@ export function TavernClient(props: TavernClientProps) {
                 {isOpen && (
                   <div
                     data-info-card
-                    className="absolute bottom-[calc(100%+8px)] left-1/2 z-40 w-52 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/97 p-4 shadow-[0_0_24px_rgba(0,0,0,0.9)] backdrop-blur-md"
+                    className="absolute bottom-[calc(100%+8px)] left-1/2 z-40 w-48 -translate-x-1/2 rounded-xl border border-amber-700/50 bg-zinc-900/97 p-4 shadow-[0_0_24px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-52"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="mb-3 flex items-center gap-3">
@@ -597,7 +597,7 @@ export function TavernClient(props: TavernClientProps) {
 
         {/* ── Floating action buttons (Wizardry-style) ── */}
         <div
-          className="absolute right-3 z-20 flex flex-col items-end gap-2"
+          className="absolute right-2 z-20 flex flex-col items-end gap-2 sm:right-3"
           style={{ bottom: "clamp(56px, 13%, 96px)" }}
         >
           {TAB_META.map(({ key, icon, label }) => {
@@ -608,14 +608,14 @@ export function TavernClient(props: TavernClientProps) {
                 key={key}
                 type="button"
                 onClick={() => openPanel(key)}
-                className={`relative flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium backdrop-blur-sm transition-colors ${
+                className={`relative flex items-center gap-2 rounded-xl border px-2.5 py-2 text-sm font-medium backdrop-blur-sm transition-colors sm:gap-2.5 sm:px-4 sm:py-2.5 ${
                   active
                     ? "border-amber-500/60 bg-amber-900/70 text-amber-100"
                     : "border-white/20 bg-black/55 text-zinc-200 hover:bg-black/75 hover:text-white"
                 }`}
               >
-                <span className="text-lg leading-none">{icon}</span>
-                <span>{label}</span>
+                <span className="text-base leading-none sm:text-lg">{icon}</span>
+                <span className="hidden sm:inline">{label}</span>
                 {badge && (
                   <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black">
                     {pendingCount}
@@ -628,10 +628,10 @@ export function TavernClient(props: TavernClientProps) {
           {/* Leave button (Wizardry feel) */}
           <Link
             href="/barracks"
-            className="mt-1 flex items-center gap-2.5 rounded-xl border border-white/15 bg-black/45 px-4 py-2.5 text-sm font-medium text-zinc-400 backdrop-blur-sm hover:bg-black/65 hover:text-zinc-200"
+            className="mt-1 flex items-center gap-2 rounded-xl border border-white/15 bg-black/45 px-2.5 py-2 text-sm font-medium text-zinc-400 backdrop-blur-sm hover:bg-black/65 hover:text-zinc-200 sm:gap-2.5 sm:px-4 sm:py-2.5"
           >
-            <span className="text-lg leading-none">🚪</span>
-            <span>Leave Tavern</span>
+            <span className="text-base leading-none sm:text-lg">🚪</span>
+            <span className="hidden sm:inline">Leave Tavern</span>
           </Link>
         </div>
 
@@ -645,19 +645,19 @@ export function TavernClient(props: TavernClientProps) {
 
         {/* ── Popup modal — centred in the portrait frame ── */}
         <div
-          className={`absolute left-1/2 z-30 flex w-[92%] max-h-[72%] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-amber-900/40 bg-zinc-900/98 shadow-[0_8px_48px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all duration-200 ${
+          className={`absolute left-1/2 z-30 flex w-[96%] max-h-[78%] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-amber-900/40 bg-zinc-900/98 shadow-[0_8px_48px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all duration-200 sm:w-[92%] sm:max-h-[72%] ${
             panelOpen
               ? "opacity-100 scale-100 pointer-events-auto"
               : "opacity-0 scale-95 pointer-events-none"
           }`}
-          style={{ top: "12%" }}
+          style={{ top: "8%" }}
         >
           {/* Panel header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-zinc-700/50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <h3 className="text-sm font-semibold text-zinc-100">{panelTitle}</h3>
+          <div className="flex shrink-0 flex-col gap-2 border-b border-zinc-700/50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+              <h3 className="min-w-0 text-sm font-semibold text-zinc-100">{panelTitle}</h3>
               {/* Tab switcher pills */}
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {TAB_META.map(({ key, icon }) => (
                   <button
                     key={key}
@@ -681,14 +681,14 @@ export function TavernClient(props: TavernClientProps) {
             <button
               type="button"
               onClick={() => setPanelOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 sm:static"
             >
               ✕
             </button>
           </div>
 
           {/* Scrollable content */}
-          <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+          <div ref={chatScrollRef} className="app-scrollbar flex-1 overflow-y-auto px-3 py-3 sm:px-4">
 
             {/* ─── Leaderboard ─────────────────────────────────────────── */}
             {activeTab === "leaderboard" && (
@@ -741,7 +741,7 @@ export function TavernClient(props: TavernClientProps) {
               <div className="space-y-5">
                 <div>
                   <p className="mb-2 text-xs text-zinc-400">Display name (shown to friends)</p>
-                  <form onSubmit={handleSaveName} className="flex gap-2">
+                  <form onSubmit={handleSaveName} className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
                       value={displayNameInput}
@@ -761,7 +761,7 @@ export function TavernClient(props: TavernClientProps) {
 
                 <div>
                   <p className="mb-2 text-xs text-zinc-400">Avatar hero (shown on the stage)</p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                     {selectedSlug || props.myAvatarSlug ? (
                       <img
                         src={`/api/headshots/${selectedSlug || props.myAvatarSlug}`}
@@ -772,7 +772,7 @@ export function TavernClient(props: TavernClientProps) {
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-zinc-600 bg-zinc-800 text-xl text-zinc-500">?</div>
                     )}
                     {props.myBarracks.length > 0 ? (
-                      <form onSubmit={handleSetAvatar} className="flex min-w-0 flex-1 gap-2">
+                      <form onSubmit={handleSetAvatar} className="flex min-w-0 w-full flex-col gap-2 sm:flex-1 sm:flex-row">
                         <select
                           value={selectedSlug}
                           onChange={(e) => setSelectedSlug(e.target.value)}
@@ -806,7 +806,7 @@ export function TavernClient(props: TavernClientProps) {
                     <h3 className="mb-2 text-xs font-semibold text-amber-300">🔔 Pending Requests</h3>
                     <ul className="space-y-2">
                       {props.pendingRequests.map((req) => (
-                        <li key={req.id} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                        <li key={req.id} className="flex flex-col items-start gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                           <span className="min-w-0 truncate text-xs text-zinc-200">{req.requesterName}</span>
                           <div className="flex shrink-0 gap-1.5">
                             <button type="button" onClick={() => handleAccept(req.id)} className="rounded border border-emerald-700 bg-emerald-900/30 px-2 py-0.5 text-[10px] text-emerald-300 hover:bg-emerald-900/60">
@@ -829,7 +829,7 @@ export function TavernClient(props: TavernClientProps) {
                   ) : (
                     <ul className="space-y-2">
                       {props.friends.map((f) => (
-                        <li key={f.friendshipId} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-2">
+                        <li key={f.friendshipId} className="flex flex-col items-start gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex min-w-0 items-center gap-2">
                             {f.avatarHeroSlug ? (
                               <img src={`/api/headshots/${f.avatarHeroSlug}`} alt={f.displayName} className="h-8 w-8 shrink-0 rounded-full border border-zinc-600 object-cover" />
@@ -871,7 +871,7 @@ export function TavernClient(props: TavernClientProps) {
                       {profileTarget.displayName}
                       {profileTarget.isMe && <span className="ml-2 text-xs text-amber-400">You</span>}
                     </div>
-                    <div className="mt-0.5 flex gap-3 text-[10px] text-zinc-400">
+                    <div className="mt-0.5 flex flex-wrap gap-3 text-[10px] text-zinc-400">
                       <span>⚔ {profileTarget.totalHeroes}</span>
                       <span>★ {profileTarget.fiveStarHeroes}</span>
                       <span>❤ {profileTarget.favoritesCount}</span>
@@ -881,7 +881,7 @@ export function TavernClient(props: TavernClientProps) {
                 </div>
 
                 {/* Sub-tabs */}
-                <div className="flex gap-1 rounded-lg border border-zinc-700/50 bg-zinc-800/40 p-1">
+                <div className="flex flex-wrap gap-1 rounded-lg border border-zinc-700/50 bg-zinc-800/40 p-1">
                   {(["heroes", "favorites", "teams"] as const).map((t) => (
                     <button
                       key={t}
@@ -908,7 +908,7 @@ export function TavernClient(props: TavernClientProps) {
                   profileDetails.heroes.length === 0 ? (
                     <p className="py-4 text-center text-xs text-zinc-500">No heroes in barracks.</p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {profileDetails.heroes.map((h) => (
                         <div key={h.hero_slug} className="flex flex-col items-center gap-1 rounded-lg border border-zinc-700/40 bg-zinc-800/50 p-2">
                           <img
@@ -931,7 +931,7 @@ export function TavernClient(props: TavernClientProps) {
                   profileDetails.favorites.length === 0 ? (
                     <p className="py-4 text-center text-xs text-zinc-500">No favorites yet.</p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {profileDetails.favorites.map((h) => (
                         <div key={h.hero_slug} className="flex flex-col items-center gap-1 rounded-lg border border-rose-900/40 bg-rose-950/20 p-2">
                           <img
@@ -986,7 +986,7 @@ export function TavernClient(props: TavernClientProps) {
             {/* ─── Add Friend ───────────────────────────────────────────── */}
             {activeTab === "add" && (
               <div className="space-y-3">
-                <form onSubmit={handleSearch} className="flex gap-2">
+                <form onSubmit={handleSearch} className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
                     value={searchQuery}
@@ -1002,7 +1002,7 @@ export function TavernClient(props: TavernClientProps) {
                 {searchResults.length > 0 ? (
                   <ul className="space-y-2">
                     {searchResults.map((r) => (
-                      <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2">
+                      <li key={r.id} className="flex flex-col items-start gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                         <span className="min-w-0 truncate text-xs text-zinc-200">{r.displayName}</span>
                         <button type="button" onClick={() => handleSendRequest(r.id)} className="shrink-0 rounded border border-amber-700 bg-amber-900/30 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-900/60">
                           Add
@@ -1071,7 +1071,7 @@ export function TavernClient(props: TavernClientProps) {
           {/* ── Chat input bar — pinned below the scrollable area ── */}
           {panelOpen && activeTab === "chat" && (
             <div className="shrink-0 border-t border-zinc-700/50 px-4 py-2.5">
-              <form onSubmit={handleSendChat} className="flex gap-2">
+              <form onSubmit={handleSendChat} className="flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={chatInput}

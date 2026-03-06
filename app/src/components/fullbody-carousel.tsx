@@ -43,8 +43,9 @@ export function FullbodyCarousel({
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setQuoteIndex(safeQuotes.length > 1 ? Math.floor(Math.random() * safeQuotes.length) : 0);
     setIsHydrated(true);
-  }, []);
+  }, [heroSlug, safeQuotes.length]);
 
   if (!isHydrated) {
     return (

@@ -6014,7 +6014,11 @@
     "move": "Cavalry",
     "tag": "Old Hero",
     "rarities": null,
-    "rarity": null
+    "rarity": "5/4",
+    "hero_slug": "yarne___happy_new_year",
+    "archive_id": 401734,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T15:56:53.843Z"
   },
   {
     "name": "Panne - Welcoming Dawn",
@@ -11607,7 +11611,11 @@
     "move": "Infantry",
     "tag": "Old Hero",
     "rarities": null,
-    "rarity": null
+    "rarity": "5",
+    "hero_slug": "kiran___hero_summoner",
+    "archive_id": 317540,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T15:56:53.983Z"
   },
   {
     "name": "Raphael - Muscle-Monger",
@@ -15237,7 +15245,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Sanaki - Begnion's Apostle",
@@ -15255,7 +15263,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Olivia - Blushing Beauty",
@@ -15273,7 +15281,7 @@
       3,
       4
     ],
-    "rarity": "4/3"
+    "rarity": "3/4"
   },
   {
     "name": "Marth - Enigmatic Blade",
@@ -15291,7 +15299,7 @@
       4,
       5
     ],
-    "rarity": "5/4"
+    "rarity": "4/5"
   },
   {
     "name": "Luke - Rowdy Squire",
@@ -15309,7 +15317,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Eldigan - Lionheart",
@@ -15327,7 +15335,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Celica - Imprisoned Soul",
@@ -15345,7 +15353,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Canas - Wisdom Seeker",
@@ -15363,7 +15371,7 @@
       4,
       5
     ],
-    "rarity": "5/4"
+    "rarity": "4/5"
   },
   {
     "name": "Alm - Hero of Prophecy",
@@ -15381,7 +15389,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Shiro - Raw Talent",
@@ -15399,7 +15407,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Quan - Luminous Lancer",
@@ -15417,7 +15425,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Hardin - Dark Emperor",
@@ -15435,7 +15443,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "Eliwood - Devoted Love",
@@ -15453,7 +15461,7 @@
       4,
       5
     ],
-    "rarity": "5/4"
+    "rarity": "4/5"
   },
   {
     "name": "Delthea - Free Spirit",
@@ -15471,7 +15479,7 @@
       4,
       5
     ],
-    "rarity": "5"
+    "rarity": "4/5"
   },
   {
     "name": "New Year Fjorm",
@@ -15720,10 +15728,14 @@
     "move": "Infantry",
     "tag": "Old Hero",
     "hero_slug": "kagero___honorable_ninja",
-    "rarity": "4/3",
+    "rarity": "3/4",
     "archive_id": 267386,
     "discovered_via": "alias_canonical_backfill",
-    "discovered_at": "2026-03-06T03:21:34.980Z"
+    "discovered_at": "2026-03-06T03:21:34.980Z",
+    "rarities": [
+      3,
+      4
+    ]
   },
   {
     "name": "Tiki - Naga's Voice",
@@ -15734,10 +15746,14 @@
     "move": "Infantry",
     "tag": "Old Hero",
     "hero_slug": "tiki___naga_s_voice",
-    "rarity": null,
+    "rarity": "3/4",
     "archive_id": 267116,
     "discovered_via": "archive_url_backfill",
-    "discovered_at": "2026-02-20T23:03:20.210Z"
+    "discovered_at": "2026-02-20T23:03:20.210Z",
+    "rarities": [
+      3,
+      4
+    ]
   },
   {
     "name": "Saber - Driven Mercenary",
@@ -15748,9 +15764,2253 @@
     "move": "Infantry",
     "tag": "Old Hero",
     "hero_slug": "saber___driven_mercenary",
-    "rarity": "5",
+    "rarity": "4/5",
     "archive_id": 267131,
     "discovered_via": "archive_url_backfill",
-    "discovered_at": "2026-03-06T03:21:52.657Z"
+    "discovered_at": "2026-03-06T03:21:52.657Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Chrom - Knight Exalt",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267191",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "chrom___knight_exalt",
+    "rarity": "4/5",
+    "archive_id": 267191,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T04:22:01.159Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Alfonse - Prince of Askr",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267209",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "alfonse___prince_of_askr",
+    "rarity": "4",
+    "archive_id": 267209,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:03:03.985Z",
+    "rarities": [
+      4
+    ]
+  },
+  {
+    "name": "Anna - Wealth-Wisher",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/275367",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Bow",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "anna___wealth_wisher",
+    "rarity": "4/5",
+    "archive_id": 275367,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:03:04.210Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Ares - Black Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267206",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "ares___black_knight",
+    "rarity": "3/4",
+    "archive_id": 267206,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:03:04.570Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Arvis - Emperor of Flame",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267205",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "arvis___emperor_of_flame",
+    "rarity": "3/4",
+    "archive_id": 267205,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:03:05.244Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Athena - Borderland Sword",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267204",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "athena___borderland_sword",
+    "rarity": "3/4",
+    "archive_id": 267204,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:03:05.575Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Eirika - Anamnesis Lady",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267188",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "eirika___anamnesis_lady",
+    "rarity": "4/5",
+    "archive_id": 267188,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:14:59.804Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Bartre - Earsome Warrior",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/284314",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "bartre___earsome_warrior",
+    "rarity": "4/5",
+    "archive_id": 284314,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:16:57.693Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Basilio - Feroxi West-Khan",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/351518",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Axe",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "basilio___feroxi_west_khan",
+    "rarity": "3/4",
+    "archive_id": 351518,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:18:36.312Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Brady - Daunting Priest",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267895",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "brady___daunting_priest",
+    "rarity": "3/4",
+    "archive_id": 267895,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:36.766Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Caeda - Talys's Heart",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267200",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "caeda___talys_s_heart",
+    "rarity": "3/4",
+    "archive_id": 267200,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:37.063Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Cain - The Bull",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267199",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "cain___the_bull",
+    "rarity": "3/4",
+    "archive_id": 267199,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:37.285Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Camilla - Flower of Fantasy",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267198",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "camilla___flower_of_fantasy",
+    "rarity": "4/5",
+    "archive_id": 267198,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:37.528Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Camilla - Holiday Traveler",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267197",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "camilla___holiday_traveler",
+    "rarity": "4/5",
+    "archive_id": 267197,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:37.895Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Summer Camilla",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267300",
+    "tier": "7.5",
+    "img_url": "https://img.game8.co/3252724/58b2270fff54666aefc8e9bd119232ff.png/show",
+    "weapon": "Blue Tome",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "summer_camilla",
+    "rarity": "5",
+    "archive_id": 267300,
+    "discovered_via": "legacy_id_scout",
+    "discovered_at": "2026-02-19T22:48:00.535Z"
+  },
+  {
+    "name": "Camus - Sable Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267299",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "camus___sable_knight",
+    "rarity": "3/4",
+    "archive_id": 267299,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:38.468Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Catria - Middle Whitewing",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267298",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "catria___middle_whitewing",
+    "rarity": "3/4",
+    "archive_id": 267298,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:38.664Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Catria - Spring Whitewing",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267297",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "catria___spring_whitewing",
+    "rarity": "4/5",
+    "archive_id": 267297,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:39.003Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Chad - Lycian Wildcat",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/275276",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Colorless Dagger",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "chad___lycian_wildcat",
+    "rarity": "3/4",
+    "archive_id": 275276,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:39.399Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Charlotte - Money Maiden",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267296",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "charlotte___money_maiden",
+    "rarity": "4/5",
+    "archive_id": 267296,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:40.129Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Chrom - Exalted Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267192",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "chrom___exalted_prince",
+    "rarity": "3/4",
+    "archive_id": 267192,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:40.270Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Clair - Highborn Flier",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267295",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "clair___highborn_flier",
+    "rarity": "3/4",
+    "archive_id": 267295,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:40.635Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Clive - Idealistic Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267294",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "clive___idealistic_knight",
+    "rarity": "4/5",
+    "archive_id": 267294,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:40.857Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Cordelia - Knight Paradise",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267293",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "cordelia___knight_paradise",
+    "rarity": "4/5",
+    "archive_id": 267293,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:41.155Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Corrin - Dream Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267289",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Blue Breath",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "corrin___dream_prince",
+    "rarity": "4/5",
+    "archive_id": 267289,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:41.678Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Corrin - Fateful Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267190",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "corrin___fateful_prince",
+    "rarity": "3/4",
+    "archive_id": 267190,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:42.399Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Corrin - Fateful Princess",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267291",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Blue Breath",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "corrin___fateful_princess",
+    "rarity": "3/4",
+    "archive_id": 267291,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:42.742Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Corrin - Novice Vacationer",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267290",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "corrin___novice_vacationer",
+    "rarity": "4/5",
+    "archive_id": 267290,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:43.328Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Darros - Seawalker",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/292528",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Axe",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "darros___seawalker",
+    "rarity": "4/5",
+    "archive_id": 292528,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:43.459Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Death Knight - The Reaper",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/269024",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "death_knight___the_reaper",
+    "rarity": "3/5",
+    "archive_id": 269024,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:43.915Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Donnel - Village Hero",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267287",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "donnel___village_hero",
+    "rarity": "3/4",
+    "archive_id": 267287,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:44.048Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Draug - Gentle Giant",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267189",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Armored",
+    "tag": "Old Hero",
+    "hero_slug": "draug___gentle_giant",
+    "rarity": "3/4",
+    "archive_id": 267189,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:44.223Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Effie - Army of One",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267286",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Armored",
+    "tag": "Old Hero",
+    "hero_slug": "effie___army_of_one",
+    "rarity": "3/4",
+    "archive_id": 267286,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:44.641Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Eir - Renewed Life",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/275369",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Dagger",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "eir___renewed_life",
+    "rarity": "4/5",
+    "archive_id": 275369,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:44.759Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Eirika - Restoration Lady",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267186",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "eirika___restoration_lady",
+    "rarity": "3/4",
+    "archive_id": 267186,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:44.879Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Elise - Bubbling Flower",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267108",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Dagger",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "elise___bubbling_flower",
+    "rarity": "4/5",
+    "archive_id": 267108,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:45.003Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Emmeryn - Gentle Exalt",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/289813",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "emmeryn___gentle_exalt",
+    "rarity": "3/4",
+    "archive_id": 289813,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:45.338Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Ephraim - Restoration Lord",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267283",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "ephraim___restoration_lord",
+    "rarity": "4/5",
+    "archive_id": 267283,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:45.458Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Eremiya - Bishop of Woe",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/292142",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "eremiya___bishop_of_woe",
+    "rarity": "3/5",
+    "archive_id": 292142,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:45.792Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Est - Junior Whitewing",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267282",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "est___junior_whitewing",
+    "rarity": "3/4",
+    "archive_id": 267282,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:46.488Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Fiora - Defrosted Illian",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/268514",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "fiora___defrosted_illian",
+    "rarity": "5/4",
+    "archive_id": 268514,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:46.669Z"
+  },
+  {
+    "name": "Fir - Sword Student",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267182",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "fir___sword_student",
+    "rarity": "3/4",
+    "archive_id": 267182,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.022Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Flora - Cold as Ice",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267181",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Dagger",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "flora___cold_as_ice",
+    "rarity": "4/5",
+    "archive_id": 267181,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.141Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Florina - Lovely Flier",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267279",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "florina___lovely_flier",
+    "rarity": "3/4",
+    "archive_id": 267279,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.255Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Galle - Azure Rider",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/309188",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "galle___azure_rider",
+    "rarity": "3/5",
+    "archive_id": 309188,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.590Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Gray - Wry Comrade",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267178",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "gray___wry_comrade",
+    "rarity": "4/5",
+    "archive_id": 267178,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.762Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Gunnthrá - Beaming Smile",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267921",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Colorless Dagger",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "gunnthr____beaming_smile",
+    "rarity": "4/5",
+    "archive_id": 267921,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:47.883Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Gwendolyn - Adorable Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267278",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Armored",
+    "tag": "Old Hero",
+    "hero_slug": "gwendolyn___adorable_knight",
+    "rarity": "3/4",
+    "archive_id": 267278,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:48.013Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Hana - Focused Samurai",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267177",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "hana___focused_samurai",
+    "rarity": "3/4",
+    "archive_id": 267177,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:48.124Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Heath - Wandering Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/280826",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "heath___wandering_knight",
+    "rarity": "3/5",
+    "archive_id": 280826,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:48.613Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Helbindi - Seaside Scourge",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267920",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "helbindi___seaside_scourge",
+    "rarity": "4/5",
+    "archive_id": 267920,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:48.782Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Henry - Twisted Mind",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267176",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "henry___twisted_mind",
+    "rarity": "3/4",
+    "archive_id": 267176,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:48.966Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Hinata - Wild Samurai",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267175",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "hinata___wild_samurai",
+    "rarity": "3/4",
+    "archive_id": 267175,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.094Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Hinoka - Warrior Princess",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267275",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "hinoka___warrior_princess",
+    "rarity": "4/5",
+    "archive_id": 267275,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.217Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Hríd - Resolute Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267104",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "hr_d___resolute_prince",
+    "rarity": "4/5",
+    "archive_id": 267104,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.333Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Hubert - Sinister Servant",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/269005",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "hubert___sinister_servant",
+    "rarity": "4/5",
+    "archive_id": 269005,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.766Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Ike - Young Mercenary",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/258281",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "ike___young_mercenary",
+    "rarity": "4/5",
+    "archive_id": 258281,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.873Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Ishtar - Thunder Goddess",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267274",
+    "tier": "7.5",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "ishtar___thunder_goddess",
+    "rarity": "4/5",
+    "archive_id": 267274,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:49.991Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Jagen - Veteran Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267273",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "jagen___veteran_knight",
+    "rarity": "3/4",
+    "archive_id": 267273,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:50.284Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Joshua - Tempest King",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267171",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "joshua___tempest_king",
+    "rarity": "4/5",
+    "archive_id": 267171,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:50.766Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Kana - Dragon Spawn",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267272",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Breath",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "kana___dragon_spawn",
+    "rarity": "3/5",
+    "archive_id": 267272,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:50.891Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Karel - Sword Demon",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267169",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "karel___sword_demon",
+    "rarity": "4/5",
+    "archive_id": 267169,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:51.237Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Katarina - Wayward One",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267167",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "katarina___wayward_one",
+    "rarity": "4/5",
+    "archive_id": 267167,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:51.353Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Laegjarn - New Experiences",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267214",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "laegjarn___new_experiences",
+    "rarity": "4/5",
+    "archive_id": 267214,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:51.483Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "L'Arachel - Harvest Princess",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/270956",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Green Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "l_arachel___harvest_princess",
+    "rarity": "4/5",
+    "archive_id": 270956,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:51.598Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "L'Arachel - Princess of Light",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267270",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "l_arachel___princess_of_light",
+    "rarity": "3/4",
+    "archive_id": 267270,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:51.723Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Lena - Tender Angel",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/291968",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lena___tender_angel",
+    "rarity": "3/4",
+    "archive_id": 291968,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:52.063Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Leo - Seashore's Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267161",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "leo___seashore_s_prince",
+    "rarity": "4/5",
+    "archive_id": 267161,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:52.303Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Leo - Sorcerous Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267160",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "leo___sorcerous_prince",
+    "rarity": "4/5",
+    "archive_id": 267160,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:52.698Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Linde - Light Mage",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267269",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "linde___light_mage",
+    "rarity": "4/5",
+    "archive_id": 267269,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:53.199Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Linhardt - Hevring's Heir",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/321579",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "linhardt___hevring_s_heir",
+    "rarity": "3/4",
+    "archive_id": 321579,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:53.405Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Lloyd - White Wolf",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267158",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lloyd___white_wolf",
+    "rarity": "3/5",
+    "archive_id": 267158,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:53.604Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Lon'qu - Solitary Blade",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267157",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lon_qu___solitary_blade",
+    "rarity": "3/4",
+    "archive_id": 267157,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:53.782Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Lorenz - Highborn Heat",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/291623",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lorenz___highborn_heat",
+    "rarity": "4/5",
+    "archive_id": 291623,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:53.991Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Lucina - Spring Exalt",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267266",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lucina___spring_exalt",
+    "rarity": "4/5",
+    "archive_id": 267266,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:54.339Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Lukas - Sharp Soldier",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267265",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lukas___sharp_soldier",
+    "rarity": "3/4",
+    "archive_id": 267265,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:54.779Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Lute - Prodigy",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267264",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lute___prodigy",
+    "rarity": "4/5",
+    "archive_id": 267264,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:55.201Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Lyn - Lady of the Plains",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267154",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "lyn___lady_of_the_plains",
+    "rarity": "4/5",
+    "archive_id": 267154,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:55.644Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Mae - Bundle of Energy",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267262",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "mae___bundle_of_energy",
+    "rarity": "3/4",
+    "archive_id": 267262,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:55.765Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Marisa - Crimson Rabbit",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267212",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "marisa___crimson_rabbit",
+    "rarity": "4/5",
+    "archive_id": 267212,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:56.237Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Mercedes - Kindly Devotee",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/269004",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "mercedes___kindly_devotee",
+    "rarity": "3/4",
+    "archive_id": 269004,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:56.356Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Mercedes - Unfussed Basker",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/335292",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "mercedes___unfussed_basker",
+    "rarity": "4/5",
+    "archive_id": 335292,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:56.619Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Morgan - Lass from Afar",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267259",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "morgan___lass_from_afar",
+    "rarity": "4/5",
+    "archive_id": 267259,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:56.738Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Narcian - Vernal General",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/284212",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "narcian___vernal_general",
+    "rarity": "4/5",
+    "archive_id": 284212,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:57.078Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Natasha - Sacred Healer",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/312478",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "natasha___sacred_healer",
+    "rarity": "3/4",
+    "archive_id": 312478,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:57.195Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Niles - Forbidden Tease",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267257",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Bow",
+    "move": "Armored",
+    "tag": "Old Hero",
+    "hero_slug": "niles___forbidden_tease",
+    "rarity": "4/5",
+    "archive_id": 267257,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:57.309Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Oboro - Fierce Fighter",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267253",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "oboro___fierce_fighter",
+    "rarity": "3/4",
+    "archive_id": 267253,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:57.751Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Odin - Potent Force",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267252",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "odin___potent_force",
+    "rarity": "3/4",
+    "archive_id": 267252,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:57.878Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Ogma - Loyal Blade",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267142",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "ogma___loyal_blade",
+    "rarity": "3/4",
+    "archive_id": 267142,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:58.536Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Oliver - Admirer of Beauty",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267251",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "oliver___admirer_of_beauty",
+    "rarity": "3/5",
+    "archive_id": 267251,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:20:59.900Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Olwen - Blue Mage Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267250",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "olwen___blue_mage_knight",
+    "rarity": "4/5",
+    "archive_id": 267250,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:00.910Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Oscar - Agile Horseman",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267248",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "oscar___agile_horseman",
+    "rarity": "3/4",
+    "archive_id": 267248,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:01.025Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Palla - Eldest Whitewing",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267138",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "palla___eldest_whitewing",
+    "rarity": "3/4",
+    "archive_id": 267138,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:01.542Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Peri - Playful Slayer",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267247",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "peri___playful_slayer",
+    "rarity": "3/4",
+    "archive_id": 267247,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:01.673Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Raigh - Dark Child",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267137",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "raigh___dark_child",
+    "rarity": "3/4",
+    "archive_id": 267137,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:01.794Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Rhys - Gentle Basker",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/290767",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Staff",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "rhys___gentle_basker",
+    "rarity": "4/5",
+    "archive_id": 290767,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:02.096Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Robin - Festive Tactician",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267243",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Armored",
+    "tag": "Old Hero",
+    "hero_slug": "robin___festive_tactician",
+    "rarity": "4/5",
+    "archive_id": 267243,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:02.572Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Robin - High Deliverer",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267242",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "robin___high_deliverer",
+    "rarity": "3/4",
+    "archive_id": 267242,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:03.123Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Robin - Seaside Tactician",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267244",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "robin___seaside_tactician",
+    "rarity": "4/5",
+    "archive_id": 267244,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:04.092Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Roderick - Steady Squire",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267241",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "roderick___steady_squire",
+    "rarity": "3/4",
+    "archive_id": 267241,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:05.413Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Roy - Young Lion",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267134",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "roy___young_lion",
+    "rarity": "3/4",
+    "archive_id": 267134,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:06.026Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Ryoma - Samurai at Ease",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267215",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "ryoma___samurai_at_ease",
+    "rarity": "4/5",
+    "archive_id": 267215,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:06.552Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Saias - Bishop of Flame",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267239",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "saias___bishop_of_flame",
+    "rarity": "3/5",
+    "archive_id": 267239,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:07.277Z",
+    "rarities": [
+      3,
+      5
+    ]
+  },
+  {
+    "name": "Saleh - Vernal Sage",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/322962",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Axe",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "saleh___vernal_sage",
+    "rarity": "4/5",
+    "archive_id": 322962,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:07.766Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Selena - Cutting Wit",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267129",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "selena___cutting_wit",
+    "rarity": "3/4",
+    "archive_id": 267129,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:08.204Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Seth - Silver Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267127",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "seth___silver_knight",
+    "rarity": "3/4",
+    "archive_id": 267127,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:08.670Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Shanna - Sprightly Flier",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267238",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "shanna___sprightly_flier",
+    "rarity": "3/4",
+    "archive_id": 267238,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:09.356Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Sharena - Princess of Askr",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267237",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "sharena___princess_of_askr",
+    "rarity": "4",
+    "archive_id": 267237,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:09.619Z",
+    "rarities": [
+      4
+    ]
+  },
+  {
+    "name": "Sigrun - Steadfast Bride",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267853",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "sigrun___steadfast_bride",
+    "rarity": "4/5",
+    "archive_id": 267853,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:09.959Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Silas - Loyal Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267233",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "silas___loyal_knight",
+    "rarity": "3/4",
+    "archive_id": 267233,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:10.499Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Soren - Addled Strategist",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267222",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "soren___addled_strategist",
+    "rarity": "4/5",
+    "archive_id": 267222,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:10.670Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Stahl - Viridian Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267121",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "stahl___viridian_knight",
+    "rarity": "3/4",
+    "archive_id": 267121,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:10.915Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Subaki - Perfect Expert",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267232",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "subaki___perfect_expert",
+    "rarity": "3/4",
+    "archive_id": 267232,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:11.071Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Sully - Crimson Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267231",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "sully___crimson_knight",
+    "rarity": "3/4",
+    "archive_id": 267231,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:11.282Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Tailtiu - Thunder Noble",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267229",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Blue Tome",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "tailtiu___thunder_noble",
+    "rarity": "3/4",
+    "archive_id": 267229,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:11.415Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Tana - Winged Princess",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267228",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "tana___winged_princess",
+    "rarity": "4/5",
+    "archive_id": 267228,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:11.936Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Tanith - Forthright Heart",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267852",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "tanith___forthright_heart",
+    "rarity": "4/5",
+    "archive_id": 267852,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:12.071Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Tanya - Dagdar's Kid",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/275274",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Colorless Bow",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "tanya___dagdar_s_kid",
+    "rarity": "3/4",
+    "archive_id": 275274,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:12.208Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Titania - Warm Knight",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267106",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Red Tome",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "titania___warm_knight",
+    "rarity": "4/5",
+    "archive_id": 267106,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:12.353Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Tobin - The Clueless One",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267113",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Sword",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "tobin___the_clueless_one",
+    "rarity": "4/5",
+    "archive_id": 267113,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:12.914Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Ursula - Clear-Blue Crow",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/268513",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Colorless Dagger",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "ursula___clear_blue_crow",
+    "rarity": "4/5",
+    "archive_id": 268513,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:13.301Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Valter - Dark Moonstone",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267225",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Flying",
+    "tag": "Old Hero",
+    "hero_slug": "valter___dark_moonstone",
+    "rarity": "3/4",
+    "archive_id": 267225,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:13.446Z",
+    "rarities": [
+      3,
+      4
+    ]
+  },
+  {
+    "name": "Wolt - Sunbeam Archer",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/268512",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Green Bow",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "wolt___sunbeam_archer",
+    "rarity": "4/5",
+    "archive_id": 268512,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:13.831Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Xander - Spring Prince",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267224",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Lance",
+    "move": "Cavalry",
+    "tag": "Old Hero",
+    "hero_slug": "xander___spring_prince",
+    "rarity": "4/5",
+    "archive_id": 267224,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:13.988Z",
+    "rarities": [
+      4,
+      5
+    ]
+  },
+  {
+    "name": "Ylgr - Breaking the Ice",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/267917",
+    "tier": "7.0",
+    "img_url": "",
+    "weapon": "Axe",
+    "move": "Infantry",
+    "tag": "Old Hero",
+    "hero_slug": "ylgr___breaking_the_ice",
+    "rarity": "4/5",
+    "archive_id": 267917,
+    "discovered_via": "archive_url_backfill",
+    "discovered_at": "2026-03-06T05:21:14.321Z",
+    "rarities": [
+      4,
+      5
+    ]
   }
 ]

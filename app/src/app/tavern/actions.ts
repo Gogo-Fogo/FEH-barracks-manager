@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { deriveDefaultDisplayName } from "@/lib/profile-defaults";
+import { ensureProfileRow } from "@/lib/ensure-profile";
 
 type ActionResult = { ok: boolean; message: string };
 
@@ -122,6 +124,8 @@ export async function searchUsersAction(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
+
+  await ensureProfileRow(supabase, user);
 
   // Exclude self and anyone already in a relationship (any status)
   const { data: existing } = await supabase
@@ -303,7 +307,10 @@ export async function sendTavernMessage(content: string): Promise<ActionResult> 
     .eq("id", user.id)
     .maybeSingle();
 
-  const displayName = profile?.display_name || user.email?.split("@")[0] || "Summoner";
+  const displayName =
+    profile?.display_name ||
+    (await ensureProfileRow(supabase, user)) ||
+    deriveDefaultDisplayName(user);
   const avatarHeroSlug = profile?.avatar_hero_slug ?? null;
 
   const { error } = await supabase.from("tavern_messages").insert({

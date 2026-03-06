@@ -308,7 +308,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       <main className="mx-auto w-full max-w-5xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">Hero Browser</h1>
+            <h1 className="text-2xl font-semibold">View All Heroes</h1>
             <p className="text-sm text-zinc-300">Find heroes and add them to your barracks.</p>
           </div>
           <Link

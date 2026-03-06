@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import { buildAliasTermsBySlug, normalizeHeroSearchText, normalizeHeroSlugSearchText } from "@/lib/hero-typeahead";
+import { removeBarracksEntry, toggleFavorite, updateBarracksEntry } from "../actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,6 +23,8 @@ type LibraryPageProps = {
     minTier?: string;
     favorite?: string;
     sort?: string;
+    notice?: string;
+    tone?: string;
   }>;
 };
 
@@ -35,6 +38,7 @@ type HeroMeta = {
 };
 
 type LibraryEntry = {
+  id: string;
   hero_slug: string;
   hero_name: string;
   merges: number;
@@ -57,6 +61,29 @@ function toNum(value: string | undefined) {
   if (!value || !value.trim()) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildLibraryRedirectPath(params: {
+  q: string;
+  weapon: string;
+  move: string;
+  tag: string;
+  minTier: string;
+  favoriteOnly: boolean;
+  sort: string;
+}) {
+  const nextParams = new URLSearchParams();
+
+  if (params.q) nextParams.set("q", params.q);
+  if (params.weapon) nextParams.set("weapon", params.weapon);
+  if (params.move) nextParams.set("move", params.move);
+  if (params.tag) nextParams.set("tag", params.tag);
+  if (params.minTier) nextParams.set("minTier", params.minTier);
+  if (params.favoriteOnly) nextParams.set("favorite", "1");
+  if (params.sort && params.sort !== "tier_desc") nextParams.set("sort", params.sort);
+
+  const query = nextParams.toString();
+  return query ? `/barracks/library?${query}` : "/barracks/library";
 }
 
 async function loadLocalRarityBySlug() {
@@ -97,6 +124,8 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const minTier = toNum(minTierRaw);
   const favoriteOnly = params.favorite === "1";
   const sort = (params.sort || "tier_desc").trim();
+  const notice = (params.notice || "").trim();
+  const tone = (params.tone || "success").trim();
 
   const supabase = await createClient();
   const {
@@ -110,7 +139,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const [{ data: barracks }, { data: favorites }] = await Promise.all([
     supabase
       .from("user_barracks")
-      .select("hero_slug,hero_name,merges,copies_owned,notes,updated_at")
+      .select("id,hero_slug,hero_name,merges,copies_owned,notes,updated_at")
       .eq("user_id", user.id)
       .order("hero_name", { ascending: true }),
     supabase.from("user_favorites").select("hero_slug").eq("user_id", user.id),
@@ -163,6 +192,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const libraryAll: LibraryEntry[] = (barracks || []).map((entry) => {
     const meta = heroMetaBySlug.get(entry.hero_slug);
     return {
+      id: entry.id,
       hero_slug: entry.hero_slug,
       hero_name: entry.hero_name,
       merges: entry.merges ?? 0,
@@ -232,13 +262,22 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
   const tagOptions = Array.from(new Set(libraryAll.map((r) => r.tag).filter((v): v is string => Boolean(v)))).sort((a, b) =>
     a.localeCompare(b)
   );
+  const redirectTo = buildLibraryRedirectPath({
+    q,
+    weapon,
+    move,
+    tag,
+    minTier: minTierRaw,
+    favoriteOnly,
+    sort,
+  });
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
-      <main className="mx-auto w-full max-w-7xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+    <div className="min-h-screen bg-zinc-950 px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
+      <main className="mx-auto w-full max-w-7xl rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 lg:p-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">My Wifus</h1>
+            <h1 className="text-2xl font-semibold">My Heroes</h1>
             <p className="text-sm text-zinc-300">All owned units on one page, default sorted by tier hierarchy.</p>
           </div>
           <Link
@@ -248,6 +287,18 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
             Back to barracks
           </Link>
         </header>
+
+        {notice ? (
+          <p
+            className={`mt-6 rounded-lg border p-3 text-sm ${
+              tone === "warn"
+                ? "border-amber-800 bg-amber-950/40 text-amber-200"
+                : "border-emerald-800 bg-emerald-950/40 text-emerald-200"
+            }`}
+          >
+            {notice}
+          </p>
+        ) : null}
 
         <HeroBrowserFilters
           heroes={typeaheadHeroes}
@@ -275,61 +326,154 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
         ) : (
           <section className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((hero) => (
-              <Link
+              <article
                 key={hero.hero_slug}
-                href={`/heroes/${hero.hero_slug}`}
-                className="group block rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition-all hover:-translate-y-1 hover:border-zinc-700 hover:bg-zinc-900/80"
+                className="library-card-shell rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition-all hover:border-zinc-700 hover:bg-zinc-900/80"
               >
-                <article>
-                  <img
-                    src={`/api/headshots/${hero.hero_slug}`}
-                    alt={`${hero.hero_name} headshot`}
-                    className="h-28 w-28 rounded-xl border border-zinc-700 object-cover transition-transform group-hover:scale-105"
-                    loading="lazy"
-                  />
-                <div className="mt-3 space-y-1">
-                  <p className="line-clamp-2 font-medium group-hover:text-indigo-300">
-                    {hero.favorite ? "★ " : ""}
-                    {hero.hero_name}
-                  </p>
-                  <p className="text-xs text-zinc-400">Tier: {hero.tier ?? "-"}</p>
-                  <div className="flex items-center gap-2 text-xs text-zinc-300">
-                    {rarityIconName(hero.rarity) ? (
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/heroes/${hero.hero_slug}`}
+                    className="library-card-primary block min-w-0 flex-1 rounded-xl"
+                  >
+                    <div className="flex gap-3">
                       <img
-                        src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIconName(hero.rarity) || "")}`}
-                        alt={`${hero.rarity || "Rarity"} icon`}
-                        className="h-4 w-4 rounded-sm"
+                        src={`/api/headshots/${hero.hero_slug}`}
+                        alt={`${hero.hero_name} headshot`}
+                        className="library-card-media h-20 w-20 rounded-xl border border-zinc-700 object-cover sm:h-24 sm:w-24"
+                        loading="lazy"
                       />
-                    ) : null}
-                    <span>{rarityStarsText(hero.rarity)}</span>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="line-clamp-2 font-medium text-zinc-100">
+                          {hero.favorite ? "★ " : ""}
+                          {hero.hero_name}
+                        </p>
+                        <p className="text-xs text-zinc-400">Tier: {hero.tier ?? "-"}</p>
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          {rarityIconName(hero.rarity) ? (
+                            <img
+                              src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIconName(hero.rarity) || "")}`}
+                              alt={`${hero.rarity || "Rarity"} icon`}
+                              className="h-4 w-4 rounded-sm"
+                            />
+                          ) : null}
+                          <span>{rarityStarsText(hero.rarity)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          {weaponIconName(hero.weapon) ? (
+                            <img
+                              src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIconName(hero.weapon) || "")}`}
+                              alt={`${hero.weapon || "Weapon"} icon`}
+                              className="h-4 w-4 rounded-sm"
+                            />
+                          ) : null}
+                          <span>{hero.weapon || "-"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          {moveIconName(hero.move) ? (
+                            <img
+                              src={`/api/shared-icons/move?name=${encodeURIComponent(moveIconName(hero.move) || "")}`}
+                              alt={`${hero.move || "Move"} icon`}
+                              className="h-4 w-4 rounded-sm"
+                            />
+                          ) : null}
+                          <span>{hero.move || "-"}</span>
+                        </div>
+                        <p className="text-xs text-zinc-400">Tag: {hero.tag || "-"}</p>
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <form action={toggleFavorite}>
+                      <input type="hidden" name="hero_slug" value={hero.hero_slug} readOnly />
+                      <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+                      <button
+                        type="submit"
+                        className="rounded-md border border-amber-700 px-2 py-1 text-xs text-amber-300 hover:bg-amber-950"
+                      >
+                        {hero.favorite ? "★" : "☆"}
+                      </button>
+                    </form>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-300">
-                    {weaponIconName(hero.weapon) ? (
-                      <img
-                        src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIconName(hero.weapon) || "")}`}
-                        alt={`${hero.weapon || "Weapon"} icon`}
-                        className="h-4 w-4 rounded-sm"
-                      />
-                    ) : null}
-                    <span>{hero.weapon || "-"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-300">
-                    {moveIconName(hero.move) ? (
-                      <img
-                        src={`/api/shared-icons/move?name=${encodeURIComponent(moveIconName(hero.move) || "")}`}
-                        alt={`${hero.move || "Move"} icon`}
-                        className="h-4 w-4 rounded-sm"
-                      />
-                    ) : null}
-                    <span>{hero.move || "-"}</span>
-                  </div>
-                  <p className="text-xs text-zinc-400">Tag: {hero.tag || "-"}</p>
-                  <p className="text-xs text-zinc-300">Merges: +{hero.merges}</p>
-                  <p className="text-xs text-cyan-300">Dupes owned: {hero.copies_owned}</p>
-                  {hero.notes ? <p className="line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
                 </div>
-                </article>
-              </Link>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-zinc-300">
+                    Merges: +{hero.merges}
+                  </span>
+                  <span className="rounded border border-cyan-800 px-1.5 py-0.5 text-cyan-300">
+                    Dupes: {hero.copies_owned}
+                  </span>
+                </div>
+
+                {hero.notes ? <p className="mt-2 line-clamp-2 text-xs text-zinc-500">{hero.notes}</p> : null}
+
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
+                    Edit merges / dupes / notes
+                  </summary>
+                  <form action={updateBarracksEntry} className="mt-3 space-y-3">
+                    <input type="hidden" name="id" value={hero.id} readOnly />
+                    <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-zinc-400">Merges</label>
+                        <input
+                          name="merges"
+                          type="number"
+                          min={0}
+                          max={20}
+                          defaultValue={hero.merges}
+                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-zinc-400">Dupes owned</label>
+                        <input
+                          name="copies_owned"
+                          type="number"
+                          min={0}
+                          max={999}
+                          defaultValue={hero.copies_owned}
+                          className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-zinc-400">Notes</label>
+                      <textarea
+                        name="notes"
+                        defaultValue={hero.notes ?? ""}
+                        placeholder="Build/IV notes"
+                        rows={3}
+                        className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="submit"
+                        className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                </details>
+
+                <form action={removeBarracksEntry} className="mt-3">
+                  <input type="hidden" name="id" value={hero.id} readOnly />
+                  <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+                  <button
+                    type="submit"
+                    className="rounded-md border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
+                  >
+                    Remove from barracks
+                  </button>
+                </form>
+
+                <p className="mt-3 text-xs text-zinc-500">
+                  Last updated: {hero.updated_at ? new Date(hero.updated_at).toLocaleString() : "-"}
+                </p>
+              </article>
             ))}
           </section>
         )}

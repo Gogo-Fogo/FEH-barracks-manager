@@ -97,7 +97,7 @@ export function TeamSlotTypeahead({
 
       {label ? <label className="mb-1 block text-[11px] text-zinc-400">{label}</label> : null}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={query}
           onChange={(event) => {
@@ -126,7 +126,7 @@ export function TeamSlotTypeahead({
       </div>
 
       {open ? (
-        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded border border-zinc-700 bg-zinc-900 shadow-xl">
+        <div className="app-scrollbar absolute z-20 mt-1 max-h-56 w-full overflow-y-auto overflow-x-hidden rounded border border-zinc-700 bg-zinc-900 shadow-xl">
           {filteredHeroes.length ? (
             filteredHeroes.map((hero) => (
               <button

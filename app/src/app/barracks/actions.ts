@@ -73,6 +73,7 @@ export async function addToBarracks(formData: FormData) {
 
   if (existing?.id) {
     revalidatePath("/barracks");
+    revalidatePath("/barracks/library");
     redirect(withNotice(redirectTo, `${heroRow.name} is already in your barracks.`, "warn"));
   }
 
@@ -85,6 +86,7 @@ export async function addToBarracks(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/barracks");
+  revalidatePath("/barracks/library");
   redirect(withNotice(redirectTo, `${heroRow.name} added to your barracks.`));
 }
 
@@ -125,6 +127,7 @@ export async function updateBarracksEntry(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/barracks");
+  revalidatePath("/barracks/library");
   redirect(withNotice(redirectTo, "Barracks entry saved."));
 }
 
@@ -148,6 +151,7 @@ export async function removeBarracksEntry(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/barracks");
+  revalidatePath("/barracks/library");
   redirect(withNotice(redirectTo, "Barracks entry removed."));
 }
 
@@ -178,6 +182,7 @@ export async function toggleFavorite(formData: FormData) {
     if (error) throw new Error(error.message);
     revalidatePath("/heroes");
     revalidatePath("/barracks");
+    revalidatePath("/barracks/library");
     redirect(withNotice(redirectTo, "Removed from favorites.", "warn"));
   } else {
     const { error } = await supabase.from("user_favorites").insert({
@@ -187,6 +192,7 @@ export async function toggleFavorite(formData: FormData) {
     if (error) throw new Error(error.message);
     revalidatePath("/heroes");
     revalidatePath("/barracks");
+    revalidatePath("/barracks/library");
     redirect(withNotice(redirectTo, "Added to favorites."));
   }
 }

@@ -12,16 +12,17 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 import { fetchAllPages } from "@/lib/supabase-pagination";
+import { ensureProfileRow } from "@/lib/ensure-profile";
+import { fetchOfficialFehNews } from "@/lib/official-feh-news";
+import { fetchRecentFehVideos } from "@/lib/youtube-feh-videos";
 import {
   addToBarracks,
   createUserNote,
   createUserTeam,
-  removeBarracksEntry,
   removeUserNote,
   removeUserTeam,
   toggleFavorite,
   updateUserNote,
-  updateBarracksEntry,
   updateUserTeam,
 } from "./actions";
 
@@ -118,6 +119,8 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   if (!user) {
     redirect("/login");
   }
+
+  await ensureProfileRow(supabase, user);
 
   const fetchHeroesWithRarity = async (from: number, to: number) =>
     supabase
@@ -238,10 +241,12 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
   const barracksNameBySlug = new Map((barracks || []).map((entry) => [entry.hero_slug, entry.hero_name]));
   const resolveTeamHeroName = (heroSlug: string) =>
     barracksNameBySlug.get(heroSlug) || heroMetaBySlug.get(heroSlug)?.name || heroSlug;
+  const officialNews = await fetchOfficialFehNews(4);
+  const recentVideos = await fetchRecentFehVideos(officialNews, 6);
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
-      <main className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+    <div className="min-h-screen bg-zinc-950 px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
+      <main className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 lg:p-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">My Barracks</h1>
@@ -250,7 +255,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           <AuthSignOutButton />
         </header>
 
-        <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+        <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:mt-8 sm:p-5">
           {notice ? (
             <p
               className={`mb-4 rounded-lg border p-3 text-sm ${
@@ -281,7 +286,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 href="/heroes"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
-                Hero Browser
+                View All Heroes
               </Link>
               <Link
                 href="/barracks/library"
@@ -313,152 +318,102 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
           )}
 
           <div className="mt-6 border-t border-zinc-800 pt-5">
-            <h3 className="text-lg font-semibold">My Wifus</h3>
-
-            {!barracks?.length ? (
-              <p className="mt-3 text-sm text-zinc-300">No heroes in your barracks yet.</p>
-            ) : (
-              <div className="mt-4 max-h-[430px] space-y-2 overflow-y-auto pr-1">
-                {barracks.map((entry) => (
-                  <form
-                    key={entry.id}
-                    action={updateBarracksEntry}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3"
+            <div className="grid gap-4 xl:grid-cols-[0.84fr_1.16fr]">
+              <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-base font-semibold">Official FEH News</h4>
+                    <p className="text-sm text-zinc-400">Latest notices and events from Nintendo.</p>
+                  </div>
+                  <a
+                    href="https://fire-emblem-heroes.com/en/topics/index.html"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
                   >
-                    <input type="hidden" name="id" value={entry.id} readOnly />
-                    <input type="hidden" name="redirect_to" value="/barracks" readOnly />
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Link
-                        href={`/heroes/${entry.hero_slug}`}
-                        className="group flex min-w-0 items-center gap-2 rounded-lg px-1 py-1 transition-all hover:-translate-y-0.5 hover:bg-zinc-800/40"
+                    Open official updates
+                  </a>
+                </div>
+
+                {officialNews.length ? (
+                  <div className="mt-4 space-y-3">
+                    {officialNews.map((item) => (
+                      <a
+                        key={`${item.date}-${item.title}`}
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-lg border border-zinc-800 bg-zinc-950/70 p-3 hover:border-zinc-700 hover:bg-zinc-900"
                       >
-                        <img
-                          src={`/api/headshots/${entry.hero_slug}`}
-                          alt={`${entry.hero_name} headshot`}
-                          className="h-10 w-10 rounded-lg border border-zinc-700 object-cover transition-transform group-hover:scale-105"
-                          loading="lazy"
-                        />
-                        <span className="truncate font-medium group-hover:text-indigo-300">
-                          {entry.hero_name}
-                        </span>
-                        {(() => {
-                          const meta = heroMetaBySlug.get(entry.hero_slug);
-                          const rarityIcon = rarityIconName(meta?.rarity || null);
-                          const weaponIcon = weaponIconName(meta?.weapon || null);
-                          const moveIcon = moveIconName(meta?.move || null);
-                          return (
-                            <span className="flex items-center gap-1 text-[11px] text-zinc-400">
-                              {rarityIcon ? (
-                                <img
-                                  src={`/api/shared-icons/rarity?name=${encodeURIComponent(rarityIcon)}`}
-                                  alt={`${meta?.rarity || "Rarity"} icon`}
-                                  className="h-3.5 w-3.5 rounded-sm"
-                                />
-                              ) : null}
-                              <span>{rarityStarsText(meta?.rarity || null)}</span>
-                              {weaponIcon ? (
-                                <img
-                                  src={`/api/shared-icons/weapon_type?name=${encodeURIComponent(weaponIcon)}`}
-                                  alt={`${meta?.weapon || "Weapon"} icon`}
-                                  className="h-3.5 w-3.5 rounded-sm"
-                                />
-                              ) : null}
-                              {moveIcon ? (
-                                <img
-                                  src={`/api/shared-icons/move?name=${encodeURIComponent(moveIcon)}`}
-                                  alt={`${meta?.move || "Move"} icon`}
-                                  className="h-3.5 w-3.5 rounded-sm"
-                                />
-                              ) : null}
-                              <span>{meta?.tier != null ? `T${meta.tier}` : "T-"}</span>
-                            </span>
-                          );
-                        })()}
-                        <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
-                          +{entry.merges ?? 0}
-                        </span>
-                        <span className="rounded border border-cyan-800 px-1.5 py-0.5 text-[11px] text-cyan-300">
-                          Dupes: {entry.copies_owned ?? 0}
-                        </span>
-                      </Link>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="rounded-full border border-sky-800 px-2 py-0.5 text-sky-300">{item.kind}</span>
+                          <span className="text-zinc-500">{item.date}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-medium text-zinc-100">{item.title}</p>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3 text-sm text-zinc-400">
+                    Live updates are unavailable right now. Use the official updates page link above.
+                  </p>
+                )}
+              </section>
 
-                      <div className="flex items-center gap-2">
-                        <input type="hidden" name="hero_slug" value={entry.hero_slug} readOnly />
-                        <button
-                          type="submit"
-                          formAction={toggleFavorite}
-                          className="rounded-md border border-amber-700 px-2 py-1 text-xs text-amber-300 hover:bg-amber-950"
-                        >
-                          {favoriteSet.has(entry.hero_slug) ? "★ Unfavorite" : "☆ Favorite"}
-                        </button>
-                        <button
-                          type="submit"
-                          formAction={removeBarracksEntry}
-                          className="rounded-md border border-rose-800 px-2 py-1 text-xs text-rose-300 hover:bg-rose-950"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
+              <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-base font-semibold">Recent FEH Videos</h4>
+                    <p className="text-sm text-zinc-400">Recent, high-signal YouTube videos seeded from the latest FEH headlines.</p>
+                  </div>
+                  <a
+                    href="https://www.youtube.com/results?search_query=Fire+Emblem+Heroes"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+                  >
+                    Open YouTube
+                  </a>
+                </div>
 
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-zinc-400 hover:text-zinc-200">
-                        Edit merges / dupes / notes
-                      </summary>
-
-                      <div className="mt-2 grid gap-3 md:grid-cols-[120px_120px_1fr_auto]">
-                        <div>
-                          <label className="mb-1 block text-xs text-zinc-400">Merges</label>
-                          <input
-                            name="merges"
-                            type="number"
-                            min={0}
-                            max={20}
-                            defaultValue={entry.merges ?? 0}
-                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                {recentVideos.length ? (
+                  <div className="app-scrollbar mt-4 max-h-[520px] space-y-3 overflow-y-auto px-2 py-2 pr-2 sm:max-h-[458px]">
+                    {recentVideos.map((video) => (
+                      <a
+                        key={video.videoId}
+                        href={video.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="video-feed-card block rounded-lg border border-zinc-800 bg-zinc-950/70 p-3 hover:border-zinc-700 hover:bg-zinc-900"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={`${video.title} thumbnail`}
+                            className="h-32 w-full rounded-lg border border-zinc-800 object-cover sm:h-24 sm:w-44"
+                            loading="lazy"
                           />
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-sm font-medium text-zinc-100">{video.title}</p>
+                            <p className="mt-1 text-xs text-zinc-400">{video.channel}</p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {video.publishedText} • {video.viewCountText || "-"} • {video.durationText || "-"}
+                            </p>
+                            <p className="mt-2 line-clamp-1 text-[11px] text-sky-300">
+                              Related to: {video.sourceTopicTitle}
+                            </p>
+                          </div>
                         </div>
-
-                        <div>
-                          <label className="mb-1 block text-xs text-zinc-400">Dupes owned</label>
-                          <input
-                            name="copies_owned"
-                            type="number"
-                            min={0}
-                            max={999}
-                            defaultValue={entry.copies_owned ?? 0}
-                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-1 block text-xs text-zinc-400">Notes</label>
-                          <input
-                            name="notes"
-                            defaultValue={entry.notes ?? ""}
-                            placeholder="Build/IV notes"
-                            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                          />
-                        </div>
-
-                        <div className="self-end">
-                          <button
-                            type="submit"
-                            className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    </details>
-
-                    <p className="mt-2 text-xs text-zinc-500">
-                      Last updated: {entry.updated_at ? new Date(entry.updated_at).toLocaleString() : "-"}
-                    </p>
-                  </form>
-                ))}
-              </div>
-            )}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3 text-sm text-zinc-400">
+                    Recent FEH videos are unavailable right now. Use the YouTube link above.
+                  </p>
+                )}
+              </section>
+            </div>
           </div>
 
           <div className="mt-6">
@@ -474,7 +429,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             <h3 className="text-lg font-semibold">Favorites</h3>
             {!favorites?.length ? (
               <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-sm text-zinc-300">
-                <p>No favorites yet. Use ☆ Favorite in Hero Browser.</p>
+                <p>No favorites yet. Use ☆ Favorite in View All Heroes.</p>
                 <Link
                   href="/heroes"
                   className="mt-2 inline-block rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
@@ -485,7 +440,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
             ) : (
               <>
                 <p className="mt-2 text-xs text-zinc-400">{favorites.length} favorite(s) synced to your account.</p>
-                <div className="mt-3 max-h-[320px] overflow-y-auto pr-1">
+                <div className="app-scrollbar mt-3 max-h-[320px] overflow-y-auto pr-1">
                 <div className="flex flex-wrap gap-2">
                 {heroes
                   .filter((h) => favoriteSet.has(h.hero_slug))
@@ -595,13 +550,13 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
               <div className="grid gap-2 md:grid-cols-2">
                 {[1, 2, 3, 4].map((slot) => (
                   <div key={`new_team_slot_${slot}`} className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[11px] text-zinc-500">Slot {slot}</span>
                       <input
                         name={`label_${slot}`}
                         placeholder="Role (optional)"
                         list="slot-role-suggestions"
-                        className="w-32 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs"
+                        className="w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs sm:w-32"
                       />
                     </div>
                     <TeamSlotTypeahead
@@ -639,7 +594,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                           {team.updated_at ? new Date(team.updated_at).toLocaleString() : "-"} · Edit ▾
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {slotPairs.map(({ slug, label }, i) => (
                           <div key={`${team.id}_summary_${i}`} className="flex flex-col items-center gap-1">
                             {label ? (
@@ -692,7 +647,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                                 defaultValue={label}
                                 placeholder="Role (Leader, Support…)"
                                 list="slot-role-suggestions"
-                                className="w-36 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs"
+                                className="w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs sm:w-36"
                               />
                             </div>
                             <div className="mt-2">

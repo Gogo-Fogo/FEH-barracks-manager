@@ -63,8 +63,8 @@ export function HeroBrowserFilters({
   );
 
   return (
-    <form method="GET" className="mt-6 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
+    <form method="GET" className="mt-6 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
         <select
           name="weapon"
           defaultValue={initialWeapon}
@@ -154,7 +154,7 @@ export function HeroBrowserFilters({
         />
 
         {open ? (
-          <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+          <div className="app-scrollbar absolute z-20 mt-1 max-h-72 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
             {filteredHeroes.length ? (
               <>
                 {filteredHeroes.map((hero) => {

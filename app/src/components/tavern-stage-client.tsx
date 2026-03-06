@@ -140,7 +140,7 @@ export function TavernStageClient({ participants }: TavernStageClientProps) {
                   <img
                     src={portraitSrc}
                     alt={p.displayName}
-                    className="h-full w-full object-contain object-bottom drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]"
+                    className="pointer-events-none h-full w-full object-contain object-bottom drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]"
                     draggable={false}
                   />
                 ) : (

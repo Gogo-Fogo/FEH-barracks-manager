@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --site-scrollbar-thumb: linear-gradient(180deg, rgba(56, 189, 248, 0.78), rgba(59, 130, 246, 0.72));
+  --site-scrollbar-thumb-hover: linear-gradient(180deg, rgba(125, 211, 252, 0.85), rgba(96, 165, 250, 0.8));
+  --site-scrollbar-track: rgba(10, 14, 28, 0.78);
+  --site-scrollbar-border: rgba(9, 14, 28, 0.88);
+  --site-scrollbar-color: rgba(56, 189, 248, 0.65);
 }
 
 @theme inline {
@@ -23,6 +28,42 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.app-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--site-scrollbar-color) transparent;
+  scrollbar-gutter: stable;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.app-scrollbar::-webkit-scrollbar-track {
+  background: var(--site-scrollbar-track);
+  border-radius: 999px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--site-scrollbar-thumb);
+  border: 1px solid var(--site-scrollbar-border);
+  border-radius: 999px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--site-scrollbar-thumb-hover);
+}
+
+.app-scrollbar::-webkit-scrollbar-button,
+.app-scrollbar::-webkit-scrollbar-corner,
+.app-scrollbar::-webkit-resizer {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
 }
 
 :where(button, a, img, [role="button"]) {
@@ -49,6 +90,56 @@ body {
   transform: translateY(0) scale(0.985);
 }
 
+.library-card-shell {
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.library-card-shell:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 10px rgba(120, 175, 255, 0.34),
+    0 0 22px rgba(120, 175, 255, 0.22),
+    0 0 36px rgba(120, 175, 255, 0.14);
+}
+
+.library-card-shell :where(button, a, img, [role="button"]):hover,
+.library-card-shell :where(button, a, img, [role="button"]):active,
+.library-card-shell :where(button, a, img, [role="button"]):hover *,
+.library-card-shell :where(button, a, img, [role="button"]):active * {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.video-feed-card {
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.video-feed-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 10px rgba(120, 175, 255, 0.34),
+    0 0 22px rgba(120, 175, 255, 0.22),
+    0 0 36px rgba(120, 175, 255, 0.14);
+}
+
+.video-feed-card :where(button, a, img, [role="button"]):hover,
+.video-feed-card :where(button, a, img, [role="button"]):active,
+.video-feed-card :where(button, a, img, [role="button"]):hover *,
+.video-feed-card :where(button, a, img, [role="button"]):active * {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
 /* Treat character art background + foreground as one interactive composite */
 .hero-art-composite img,
 .hero-art-composite img:hover,
@@ -61,4 +152,17 @@ body {
 /* Tooltips should stay anchored and readable (no parent hover transform jitter) */
 .group.relative {
   transform: none !important;
+}
+
+@media (hover: none) {
+  :where(button, a, img, [role="button"]):hover {
+    transform: none;
+    box-shadow: none;
+    filter: none;
+  }
+
+  .library-card-shell:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }

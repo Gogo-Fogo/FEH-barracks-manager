@@ -72,13 +72,23 @@ export function AddHeroTypeahead({
 
   const singleMatchSlug = filteredHeroes.length === 1 ? filteredHeroes[0]?.hero_slug || "" : "";
   const resolvedSlug = selectedSlug || exactMatch?.hero_slug || aliasMatchSlug || singleMatchSlug || "";
+  const resolvedHero = heroes.find((hero) => hero.hero_slug === resolvedSlug) || null;
+  const resolvedRedirectTo = resolvedHero
+    ? (() => {
+        const params = new URLSearchParams({
+          q: resolvedHero.name,
+          sort: "updated_desc",
+        });
+        return `/barracks/library?${params.toString()}`;
+      })()
+    : redirectTo;
 
   return (
-    <form action={addAction} className="mt-4 flex flex-wrap items-end gap-3">
-      <input type="hidden" name="redirect_to" value={redirectTo} readOnly />
+    <form action={addAction} className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <input type="hidden" name="redirect_to" value={resolvedRedirectTo} readOnly />
       <input type="hidden" name="hero_slug" value={resolvedSlug} readOnly />
 
-      <div className="relative min-w-72 flex-1">
+      <div className="relative min-w-0 w-full flex-1">
         <label htmlFor="hero_query" className="mb-1 block text-sm text-zinc-300">
           Hero
         </label>
@@ -100,7 +110,7 @@ export function AddHeroTypeahead({
         />
 
         {open ? (
-          <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+          <div className="app-scrollbar absolute z-20 mt-1 max-h-72 w-full overflow-y-auto overflow-x-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
             {filteredHeroes.length ? (
               <>
                 {filteredHeroes.map((hero) => {
@@ -161,7 +171,7 @@ export function AddHeroTypeahead({
       <button
         type="submit"
         disabled={!resolvedSlug}
-        className="rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
       >
         Add
       </button>

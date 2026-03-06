@@ -385,20 +385,43 @@ function fetchLatestRelease() {
               .find(Boolean);
             resolve({
               tag:         json.tag_name || pkg.version,
+              name:        json.name || json.tag_name || pkg.version,
+              body:        json.body || "",
               assetName:   asset?.name ?? null,
               downloadUrl: asset?.browser_download_url ?? null,
               assetSize:   asset?.size ?? 0,
             });
           } catch {
-            resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 });
+            resolve({
+              tag: pkg.version,
+              name: pkg.version,
+              body: "",
+              assetName: null,
+              downloadUrl: null,
+              assetSize: 0,
+            });
           }
         });
       }
     );
-    req.on("error", () => resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 }));
+    req.on("error", () => resolve({
+      tag: pkg.version,
+      name: pkg.version,
+      body: "",
+      assetName: null,
+      downloadUrl: null,
+      assetSize: 0,
+    }));
     req.setTimeout(8000, () => {
       req.destroy();
-      resolve({ tag: pkg.version, assetName: null, downloadUrl: null, assetSize: 0 });
+      resolve({
+        tag: pkg.version,
+        name: pkg.version,
+        body: "",
+        assetName: null,
+        downloadUrl: null,
+        assetSize: 0,
+      });
     });
   });
 }
@@ -483,7 +506,7 @@ function extractZip(zipPath, destDir) {
 // ── Window factories ───────────────────────────────────────────────────────────
 function createSplash() {
   splashWin = new BrowserWindow({
-    width: 780, height: 460,
+    width: 980, height: 620,
     frame: false, resizable: false, center: true,
     icon: getIconPath(),
     backgroundColor: "#0a0a1a",
@@ -640,6 +663,16 @@ app.whenReady().then(async () => {
     installedVer !== release.tag ||
     !unitsExist ||
     preferredMissing;
+
+  send(splashWin, "update-info", {
+    hasUpdate: Boolean(release.downloadUrl && needsDownload),
+    installedVersion: formatDisplayVersion(installedVer),
+    latestVersion: release.tag,
+    releaseName: release.name || release.tag,
+    notes: release.body || "",
+    firstInstall: !installedVer,
+    refreshOnly: Boolean(installedVer && installedVer === release.tag && needsDownload),
+  });
 
   send(splashWin, "log",
     `Version check — installed: ${installedVer ?? "none"}, latest: ${release.tag}, units on disk: ${unitsExist}, bundle on disk: ${installedBundle ?? "unknown"}, release bundle: ${release.assetName ?? "none"}, fullbody on disk: ${fullbodyExists}`

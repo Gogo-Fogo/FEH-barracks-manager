@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { deriveDefaultDisplayName } from "@/lib/profile-defaults";
+import { ensureProfileRow } from "@/lib/ensure-profile";
 import {
   TavernClient,
   type TavernParticipant,
@@ -104,6 +106,8 @@ export default async function TavernPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const ensuredDisplayName = await ensureProfileRow(supabase, user);
+
   // ── Own profile ──────────────────────────────────────────────────────────
   const { data: myProfile } = await supabase
     .from("profiles")
@@ -111,7 +115,7 @@ export default async function TavernPage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  const myDisplayName = myProfile?.display_name || user.email?.split("@")[0] || "Summoner";
+  const myDisplayName = myProfile?.display_name || ensuredDisplayName || deriveDefaultDisplayName(user);
   const myAvatarSlug: string | null = myProfile?.avatar_hero_slug ?? null;
 
   // ── Own stats ────────────────────────────────────────────────────────────

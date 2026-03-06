@@ -49,28 +49,16 @@ export default async function LoginPage() {
           </div>
         </section>
 
-        <section className="order-2 overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(145deg,_rgba(255,255,255,0.08),_rgba(255,255,255,0.02))] shadow-[0_24px_70px_rgba(0,0,0,0.38)] md:min-h-[720px]">
-          <div className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,_rgba(246,211,101,0.26),_transparent_30%),linear-gradient(110deg,_rgba(6,8,20,0.92)_0%,_rgba(6,8,20,0.72)_42%,_rgba(6,8,20,0.12)_100%)]" />
-            <div className="relative z-10 max-w-sm p-6 md:p-10">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100/75">
-                Sharena - Hopeful Princess
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-white md:text-3xl">
-                A brighter front door for the barracks.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-200/85">
-                Sharena reads as unmistakably Fire Emblem Heroes, welcoming, and a lot safer for portfolio screenshots than the current summer splash art.
-              </p>
-            </div>
-
-            <img
-              src="/api/fullbody/sharena___hopeful_princess?pose=portrait"
-              alt="Sharena - Hopeful Princess full body art"
-              className="pointer-events-none relative z-10 mx-auto h-[320px] w-full max-w-[640px] select-none object-contain object-bottom md:absolute md:inset-y-0 md:right-0 md:mx-0 md:h-full md:max-w-none md:object-right"
-              loading="eager"
-            />
-          </div>
+        <section className="order-2 relative hidden min-h-[720px] overflow-visible md:block">
+          <div className="pointer-events-none absolute left-[8%] top-[16%] h-52 w-52 rounded-full bg-amber-200/12 blur-3xl" />
+          <div className="pointer-events-none absolute right-[12%] top-[12%] h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[12%] right-[8%] h-64 w-64 rounded-full bg-amber-100/6 blur-3xl" />
+          <img
+            src="/api/fullbody/sharena___hopeful_princess?pose=portrait"
+            alt="Sharena - Hopeful Princess full body art"
+            className="pointer-events-none absolute inset-y-0 right-0 h-full w-full select-none object-contain object-right drop-shadow-[0_18px_48px_rgba(0,0,0,0.45)]"
+            loading="eager"
+          />
         </section>
       </main>
     </div>

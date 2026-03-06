@@ -67,7 +67,10 @@ function parseRarityFromRawText(rawText) {
   const text = String(rawText).replace(/\s+/g, " ");
   const lower = text.toLowerCase();
   const rarityIndex = lower.indexOf(" rarity ");
-  const searchWindow = rarityIndex >= 0 ? text.slice(rarityIndex, rarityIndex + 260) : text.slice(0, 260);
+  const searchWindow =
+    rarityIndex >= 0
+      ? text.slice(rarityIndex, rarityIndex + 260)
+      : text.slice(0, 260);
 
   const stars = [];
   const starWordPattern = /([1-5])\s*star/gi;
@@ -87,9 +90,12 @@ function parseRarityFromRawText(rawText) {
 }
 
 function readUnitFileBySlug(heroSlug) {
-  const normalizedSlug = String(heroSlug || "").trim().toLowerCase();
+  const normalizedSlug = String(heroSlug || "")
+    .trim()
+    .toLowerCase();
   if (!normalizedSlug) return null;
-  if (unitFileCache.has(normalizedSlug)) return unitFileCache.get(normalizedSlug);
+  if (unitFileCache.has(normalizedSlug))
+    return unitFileCache.get(normalizedSlug);
 
   const unitPath = path.join(ROOT, "db", "units", `${normalizedSlug}.json`);
   try {
@@ -108,7 +114,9 @@ function listUnitSlugs() {
   try {
     return fs
       .readdirSync(unitsDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".json"))
+      .filter(
+        (entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".json"),
+      )
       .map((entry) => entry.name.replace(/\.json$/i, "").toLowerCase())
       .filter(Boolean);
   } catch {
@@ -132,7 +140,9 @@ function normalizeLegacyWeapon(weapon) {
 }
 
 function cleanLegacyHeroName(name) {
-  const text = String(name || "").replace(/\s+/g, " ").trim();
+  const text = String(name || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!text) return "";
 
   return text
@@ -145,7 +155,7 @@ function cleanLegacyHeroName(name) {
 
 function looksLikeGuideTitle(name) {
   return /\b(builds?|best\s+refine|best\s+build|tier\s+list|ratings?)\b/i.test(
-    String(name || "")
+    String(name || ""),
   );
 }
 
@@ -154,15 +164,17 @@ function parseLegacyHeroMetadata(rawText) {
   if (!text) return null;
 
   const heroMatch = text.match(
-    /This is a ranking page for the hero\s+([^\.]+?)\s+from the game Fire Emblem Heroes/i
+    /This is a ranking page for the hero\s+([^\.]+?)\s+from the game Fire Emblem Heroes/i,
   );
   if (!heroMatch) return null;
 
   const weaponMoveMatch = text.match(
-    /Color\s*\/\s*Weapon Type\s*\/\s*Move Type\s+[^\/\n]+\s*\/\s*([^\/\n]+?)\s*\/\s*(Infantry|Armored|Cavalry|Flying)/i
+    /Color\s*\/\s*Weapon Type\s*\/\s*Move Type\s+[^\/\n]+\s*\/\s*([^\/\n]+?)\s*\/\s*(Infantry|Armored|Cavalry|Flying)/i,
   );
 
-  const tierMatch = text.match(/Overall Rating\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*10/i);
+  const tierMatch = text.match(
+    /Overall Rating\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*10/i,
+  );
   const tier = tierMatch ? tierMatch[1] : null;
 
   return {
@@ -185,7 +197,8 @@ function isLikelyHeroUnitRow(row) {
   if (!/^https?:\/\//i.test(url)) return false;
   if (tag === "Legacy ID Snipe") return false;
 
-  const hasValidWeaponMove = HERO_WEAPON_TYPES.has(weapon) && HERO_MOVE_TYPES.has(move);
+  const hasValidWeaponMove =
+    HERO_WEAPON_TYPES.has(weapon) && HERO_MOVE_TYPES.has(move);
   return hasValidWeaponMove;
 }
 
@@ -232,7 +245,10 @@ function readIndex() {
 }
 
 function toHeroRow(hero) {
-  const heroSlug = String(hero.hero_slug || "").trim().toLowerCase() || safeSlug(hero.name);
+  const heroSlug =
+    String(hero.hero_slug || "")
+      .trim()
+      .toLowerCase() || safeSlug(hero.name);
   const unitFile = readUnitFileBySlug(heroSlug);
   const parsedRarity = parseRarityFromRawText(unitFile?.raw_text_data);
   const tierNum = Number.parseFloat(String(hero.tier ?? ""));
@@ -257,7 +273,7 @@ async function run() {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing env: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required"
+      "Missing env: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required",
     );
   }
 
@@ -267,10 +283,10 @@ async function run() {
 
   const indexRows = readIndex();
   const indexSlugs = new Set(
-    indexRows.map((hero) => safeSlug(hero?.name)).filter(Boolean)
+    indexRows.map((hero) => safeSlug(hero?.name)).filter(Boolean),
   );
   const indexUrls = new Set(
-    indexRows.map((hero) => String(hero?.url || "").trim()).filter(Boolean)
+    indexRows.map((hero) => String(hero?.url || "").trim()).filter(Boolean),
   );
 
   const supplementalRows = [];
@@ -306,21 +322,30 @@ async function run() {
 
   if (supplementalStats.missingFromIndex > 0) {
     console.warn(
-      `WARN: ${supplementalStats.missingFromIndex} unit file(s) are missing from db/index.json. Supplemental import summary: added=${supplementalStats.added}, skipped_not_likely_hero=${supplementalStats.skippedNotLikelyHero}, skipped_duplicate_url=${supplementalStats.skippedDuplicateUrl}`
+      `WARN: ${supplementalStats.missingFromIndex} unit file(s) are missing from db/index.json. Supplemental import summary: added=${supplementalStats.added}, skipped_not_likely_hero=${supplementalStats.skippedNotLikelyHero}, skipped_duplicate_url=${supplementalStats.skippedDuplicateUrl}`,
     );
   }
 
   const sourceRows = [...indexRows, ...supplementalRows];
-  const heroRows = sourceRows.map(toHeroRow).filter((h) => h.hero_slug && h.name);
+  const heroRows = sourceRows
+    .map(toHeroRow)
+    .filter((h) => h.hero_slug && h.name);
 
-  const supplementalByUrl = supplementalRows
-    .map((row) => ({
-      hero_slug: String(row.hero_slug || "").trim().toLowerCase(),
-      source_url: String(row.url || "").trim(),
-    }))
-    .filter((row) => row.hero_slug && row.source_url);
+  const canonicalByUrl = Array.from(
+    new Map(
+      heroRows
+        .map((row) => ({
+          hero_slug: String(row.hero_slug || "")
+            .trim()
+            .toLowerCase(),
+          source_url: String(row.source_url || "").trim(),
+        }))
+        .filter((row) => row.hero_slug && row.source_url)
+        .map((row) => [row.source_url, row]),
+    ).values(),
+  );
 
-  for (const row of supplementalByUrl) {
+  for (const row of canonicalByUrl) {
     const { error: staleUrlError } = await supabase
       .from("heroes")
       .delete()
@@ -329,7 +354,7 @@ async function run() {
 
     if (staleUrlError) {
       console.warn(
-        `WARN: stale duplicate cleanup failed for ${row.source_url}: ${staleUrlError.message}`
+        `WARN: stale duplicate cleanup failed for ${row.source_url}: ${staleUrlError.message}`,
       );
     }
   }
@@ -340,7 +365,9 @@ async function run() {
     .eq("tag", "Legacy ID Snipe");
 
   if (cleanupLegacyTagError) {
-    console.warn(`WARN: cleanup for Legacy ID Snipe rows failed: ${cleanupLegacyTagError.message}`);
+    console.warn(
+      `WARN: cleanup for Legacy ID Snipe rows failed: ${cleanupLegacyTagError.message}`,
+    );
   }
 
   const batchSize = 500;
@@ -353,7 +380,9 @@ async function run() {
 
     if (error && String(error.message || "").includes("rarity")) {
       if (!warnedMissingRarityColumn) {
-        console.warn("WARN: heroes.rarity column not found in DB. Retrying import without rarity field.");
+        console.warn(
+          "WARN: heroes.rarity column not found in DB. Retrying import without rarity field.",
+        );
         warnedMissingRarityColumn = true;
       }
       const withoutRarity = batch.map(({ rarity, ...rest }) => rest);
@@ -363,10 +392,14 @@ async function run() {
     }
 
     if (error) {
-      throw new Error(`Batch ${i}-${i + batch.length} failed: ${error.message}`);
+      throw new Error(
+        `Batch ${i}-${i + batch.length} failed: ${error.message}`,
+      );
     }
 
-    console.log(`Imported ${Math.min(i + batch.length, heroRows.length)}/${heroRows.length}`);
+    console.log(
+      `Imported ${Math.min(i + batch.length, heroRows.length)}/${heroRows.length}`,
+    );
   }
 
   console.log(`DONE: imported ${heroRows.length} heroes into public.heroes`);

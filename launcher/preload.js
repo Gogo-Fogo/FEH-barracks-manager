@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("launcher", {
   onInit:       (cb) => ipcRenderer.on("init",       (_, data) => cb(data)),
   onLog:        (cb) => ipcRenderer.on("log",        (_, msg)  => cb(msg)),
   onProgress:   (cb) => ipcRenderer.on("progress",   (_, data) => cb(data)),
+  onUpdateInfo: (cb) => ipcRenderer.on("update-info", (_, data) => cb(data)),
   onDone:       (cb) => ipcRenderer.on("done",        (_, s)   => cb(s)),
   onNeedToken:  (cb) => ipcRenderer.on("need-token",  ()       => cb()),
   submitToken:  (t)  => ipcRenderer.send("submit-token", t),

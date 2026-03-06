@@ -204,7 +204,7 @@ export function AetherResortClient({ options, initialSlots, initialBackgroundNam
         Select up to 4 heroes from your barracks/favorites. They will roam slowly around the resort map.
       </p>
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="app-scrollbar mt-4 overflow-x-auto">
         <div className="flex min-w-max gap-2">
           {Array.from({ length: 4 }).map((_, idx) => {
             const heroSlug = slots[idx] || "";

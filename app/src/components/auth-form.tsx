@@ -3,8 +3,38 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { deriveDefaultDisplayName } from "@/lib/profile-defaults";
 
 type Mode = "login" | "signup";
+
+async function ensureProfileAfterAuth(
+  supabase: ReturnType<typeof createClient>,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } | null | undefined
+) {
+  if (!user) return;
+
+  const fallbackName = deriveDefaultDisplayName(user);
+
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (String(profile?.display_name || "").trim()) {
+      return;
+    }
+
+    await supabase.from("profiles").upsert({
+      id: user.id,
+      display_name: fallbackName,
+      updated_at: new Date().toISOString(),
+    });
+  } catch {
+    // Best-effort only; do not block auth flow on profile bootstrap.
+  }
+}
 
 export function AuthForm() {
   const [mode, setMode] = useState<Mode>("login");
@@ -45,7 +75,7 @@ export function AuthForm() {
       }
 
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -55,12 +85,14 @@ export function AuthForm() {
           return;
         }
 
+        await ensureProfileAfterAuth(supabase, data.user);
+
         router.push("/barracks");
         router.refresh();
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
@@ -68,6 +100,10 @@ export function AuthForm() {
       if (error) {
         setMessage(error.message);
         return;
+      }
+
+      if (data.session?.user) {
+        await ensureProfileAfterAuth(supabase, data.session.user);
       }
 
       setMessage(
