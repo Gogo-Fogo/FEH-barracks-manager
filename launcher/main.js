@@ -115,6 +115,11 @@ const send = (win, ch, ...a) => {
   if (win && !win.isDestroyed()) win.webContents.send(ch, ...a);
 };
 
+function formatDisplayVersion(value) {
+  const normalized = String(value || "").trim();
+  return normalized || "Not installed";
+}
+
 function inferMime(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".webp") return "image/webp";
@@ -478,7 +483,7 @@ function extractZip(zipPath, destDir) {
 // ── Window factories ───────────────────────────────────────────────────────────
 function createSplash() {
   splashWin = new BrowserWindow({
-    width: 480, height: 300,
+    width: 780, height: 460,
     frame: false, resizable: false, center: true,
     icon: getIconPath(),
     backgroundColor: "#0a0a1a",
@@ -533,7 +538,13 @@ function createMainWindow(appUrl) {
   const label = isLocal ? "Loading local server…" : "Opening FEH Barracks…";
   const tick = setInterval(() => {
     pct = Math.min(pct + (isLocal ? 3 : 0.6), 98);
-    send(splashWin, "progress", { pct, label });
+    send(splashWin, "progress", {
+      pct,
+      label,
+      detail: isLocal
+        ? "Waiting for localhost:3000 to finish loading."
+        : "Hosted app is responding. Opening the main window next.",
+    });
   }, 150);
 
   mainWin.webContents.once("did-finish-load", () => {
@@ -548,7 +559,11 @@ function createMainWindow(appUrl) {
   mainWin.webContents.on("did-fail-load", (_e, code, desc) => {
     clearInterval(tick);
     send(splashWin, "log",      `Load failed: ${desc} (${code})`);
-    send(splashWin, "progress", { pct: 0, label: "Connection failed — check your internet." });
+    send(splashWin, "progress", {
+      pct: 0,
+      label: "Connection failed — check your internet.",
+      detail: "The launcher could not finish loading the FEH Barracks app window.",
+    });
   });
 
   mainWin.loadURL(appUrl);
@@ -564,19 +579,42 @@ ipcMain.on("get-asset-path", (event, name) => {
 // ── Boot ───────────────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   createSplash();
-  send(splashWin, "progress", { pct: 5, label: "Connecting…" });
+  send(splashWin, "progress", {
+    pct: 5,
+    label: "Connecting…",
+    detail: "Preparing launcher state and checking the local data folder.",
+  });
 
   const rootInfo = getDataRootInfo();
   send(splashWin, "log", `Data location: ${rootInfo.path} (${rootInfo.reason})`);
 
   // Probe local dev server and fetch release metadata in parallel.
   const [isLocal, release] = await Promise.all([probeLocalServer(), fetchLatestRelease()]);
-  send(splashWin, "init", { version: release.tag });
+  const installedVer = readInstalledVersion();
+  send(splashWin, "init", {
+    launcherVersion: pkg.version,
+    latestVersion: release.tag,
+    installedVersion: formatDisplayVersion(installedVer),
+  });
+  send(
+    splashWin,
+    "log",
+    `Checking for updates — installed: ${installedVer ?? "none"}, latest: ${release.tag}`
+  );
+  send(splashWin, "progress", {
+    pct: 8,
+    label: "Checking for updates…",
+    detail: `Installed ${formatDisplayVersion(installedVer)} | Latest ${release.tag}`,
+  });
 
   // ── Local dev mode ─────────────────────────────────────────────────────────
   if (isLocal) {
     send(splashWin, "log",      "Local dev server detected — loading localhost:3000");
-    send(splashWin, "progress", { pct: 55, label: "Local server detected…" });
+    send(splashWin, "progress", {
+      pct: 55,
+      label: "Local server detected…",
+      detail: "Launcher will open the development server instead of the hosted Vercel app.",
+    });
     createMainWindow(LOCAL_URL);
     return;
   }
@@ -585,7 +623,6 @@ app.whenReady().then(async () => {
   const dataRoot     = getDataRoot();
   const unitsDir     = path.join(getDbRoot(), "units");
   const fullbodyDir  = path.join(getDbRoot(), "unit_assets", "fandom", "fullbody");
-  const installedVer = readInstalledVersion();
   const installedBundle = readInstalledBundleName();
 
   // Force re-download if version matches but units/ is actually missing —
@@ -624,10 +661,14 @@ app.whenReady().then(async () => {
       ? `Local data missing despite version match — re-downloading ${zipName} (${release.tag})…`
       : preferredMissing
       ? `Preferred bundle not fully present locally — downloading ${zipName} (${release.tag})…`
-      : `Update available: ${installedVer} → ${release.tag}`;
+      : `Update available: ${installedVer} -> ${release.tag}`;
 
     send(splashWin, "log", reason);
-    send(splashWin, "progress", { pct: 5, label: `Downloading ${zipName}…` });
+    send(splashWin, "progress", {
+      pct: 5,
+      label: !installedVer ? `Installing ${release.tag}…` : `Updating ${installedVer} -> ${release.tag}`,
+      detail: `Downloading ${zipName} into ${dataRoot}`,
+    });
 
     let downloadOk = false;
     try {
@@ -639,7 +680,11 @@ app.whenReady().then(async () => {
           const pct = Math.round(5 + (rx / tot) * 52); // 5% → 57%
           const mb  = (rx  / 1024 / 1024).toFixed(1);
           const tmb = (tot / 1024 / 1024).toFixed(1);
-          send(splashWin, "progress", { pct, label: `Downloading ${zipName}… ${mb} / ${tmb} MB` });
+          send(splashWin, "progress", {
+            pct,
+            label: `Downloading ${zipName}… ${mb} / ${tmb} MB`,
+            detail: `Applying ${installedVer ?? "none"} -> ${release.tag}`,
+          });
         }
       );
       downloadOk = true;
@@ -650,7 +695,11 @@ app.whenReady().then(async () => {
     }
 
     if (downloadOk) {
-      send(splashWin, "progress", { pct: 60, label: "Extracting data…" });
+      send(splashWin, "progress", {
+        pct: 60,
+        label: "Extracting data…",
+        detail: `Installing ${zipName} for release ${release.tag}`,
+      });
       send(splashWin, "log", "Extracting bundle…");
       try {
         extractZip(zipDest, dataRoot);
@@ -681,10 +730,18 @@ app.whenReady().then(async () => {
       }
     }
 
-    send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
+    send(splashWin, "progress", {
+      pct: 72,
+      label: "Building asset index…",
+      detail: `Preparing local headshots and icons for ${release.tag}`,
+    });
   } else {
     send(splashWin, "log", `Data up to date (${installedVer})`);
-    send(splashWin, "progress", { pct: 72, label: "Building asset index…" });
+    send(splashWin, "progress", {
+      pct: 72,
+      label: "Building asset index…",
+      detail: `Installed ${installedVer} already matches latest ${release.tag}`,
+    });
   }
 
   // ── Register local protocol and start interception if data is present ──────
@@ -702,7 +759,11 @@ app.whenReady().then(async () => {
     send(splashWin, "log", "No local data bundle found — all assets will load from CDN");
   }
 
-  send(splashWin, "progress", { pct: 90, label: "Opening FEH Barracks…" });
+  send(splashWin, "progress", {
+    pct: 90,
+    label: "Opening FEH Barracks…",
+    detail: `Launching hosted app for release ${release.tag}`,
+  });
   createMainWindow(REMOTE_URL);
 });
 

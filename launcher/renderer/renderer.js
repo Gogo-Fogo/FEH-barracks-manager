@@ -1,14 +1,21 @@
 "use strict";
 
 // ── Background image ──────────────────────────────────────────
-const imgPath = window.launcher.getAssetPath("edelgard_husk.png");
+const imgPath = window.launcher.getAssetPath("edelgard_husk.webp");
 document.getElementById("bg").style.backgroundImage =
   `url('${imgPath.replace(/\\/g, "/")}')`;
 
 // ── Version label ─────────────────────────────────────────────
-window.launcher.onInit(({ version }) => {
-  const el = document.getElementById("version");
-  if (el) el.textContent = version;
+window.launcher.onInit(({ launcherVersion, latestVersion, installedVersion }) => {
+  const versionEl = document.getElementById("version");
+  const launcherEl = document.getElementById("launcher-version");
+  const latestEl = document.getElementById("latest-version");
+  const installedEl = document.getElementById("installed-version");
+
+  if (versionEl) versionEl.textContent = `Latest ${latestVersion || "-"}`;
+  if (launcherEl) launcherEl.textContent = launcherVersion || "-";
+  if (latestEl) latestEl.textContent = latestVersion || "-";
+  if (installedEl) installedEl.textContent = installedVersion || "Not installed";
 });
 
 // ── Log ───────────────────────────────────────────────────────
@@ -30,12 +37,16 @@ window.launcher.onLog((msg) => {
 });
 
 // ── Progress ──────────────────────────────────────────────────
-const bar   = document.getElementById("progress-bar");
+const bar = document.getElementById("progress-bar");
 const label = document.getElementById("progress-label");
+const note = document.getElementById("status-note");
+const heading = document.getElementById("status-heading");
 
-window.launcher.onProgress(({ pct, label: text }) => {
+window.launcher.onProgress(({ pct, label: text, detail }) => {
   bar.style.width = Math.min(100, Math.max(0, pct)) + "%";
   if (text) label.textContent = text;
+  if (text && heading) heading.textContent = text;
+  if (detail && note) note.textContent = detail;
 });
 
 // ── Done ──────────────────────────────────────────────────────

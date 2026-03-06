@@ -10,29 +10,63 @@
 <body>
   <div id="bg"></div>
   <div id="overlay"></div>
+  <div id="art-credit">Edelgard - Hegemon Husk</div>
 
-  <div id="ui">
-    <div id="header">
-      <span id="title">FEH Barracks Manager</span>
-      <span id="version"></span>
-    </div>
+  <main id="shell">
+    <section id="panel">
+      <p id="eyebrow">Portable launcher</p>
 
-    <div id="log-area"></div>
-
-    <!-- Token input — hidden until needed -->
-    <div id="token-section" class="hidden">
-      <p id="token-prompt">Repository appears private. Enter a GitHub token:</p>
-      <div id="token-row">
-        <input id="token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" spellcheck="false" />
-        <button id="token-submit">Submit</button>
+      <div id="header">
+        <div>
+          <h1 id="title">FEH Barracks Manager</h1>
+          <p id="subtitle">Updater, launcher, and local asset sync for the desktop app.</p>
+        </div>
+        <span id="version"></span>
       </div>
-    </div>
 
-    <div id="progress-wrap">
-      <div id="progress-bar"></div>
-      <div id="progress-label">Initializing...</div>
-    </div>
-  </div>
+      <div id="meta-grid">
+        <div class="meta-pill">
+          <span class="meta-label">Launcher</span>
+          <span class="meta-value" id="launcher-version">-</span>
+        </div>
+        <div class="meta-pill">
+          <span class="meta-label">Installed</span>
+          <span class="meta-value" id="installed-version">-</span>
+        </div>
+        <div class="meta-pill">
+          <span class="meta-label">Latest</span>
+          <span class="meta-value" id="latest-version">-</span>
+        </div>
+      </div>
+
+      <section id="status-card">
+        <p id="status-heading">Preparing launch</p>
+        <p id="status-note">Waiting for update check...</p>
+
+        <div id="progress-wrap">
+          <div id="progress-bar"></div>
+          <div id="progress-label">Initializing...</div>
+        </div>
+      </section>
+
+      <!-- Token input — hidden until needed -->
+      <div id="token-section" class="hidden">
+        <p id="token-prompt">Repository appears private. Enter a GitHub token:</p>
+        <div id="token-row">
+          <input id="token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" spellcheck="false" />
+          <button id="token-submit">Submit</button>
+        </div>
+      </div>
+
+      <section id="log-card">
+        <div id="log-header">
+          <span>Activity</span>
+          <span id="log-hint">latest 60 lines</span>
+        </div>
+        <div id="log-area"></div>
+      </section>
+    </section>
+  </main>
 
   <script src="renderer.js"></script>
 </body>
