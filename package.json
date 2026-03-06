@@ -9,6 +9,7 @@
     "scrape:banner-guides": "node scraper/game8_banner_pull_scraper.js",
     "scrape:fandom-rarities": "node scraper/fandom_rarity_updater.js",
     "reconcile:index": "node scripts/reconcile-index-from-units.js",
+    "build:skill-catalog": "node scripts/build-skill-catalog.js",
     "build:local-assets-bundle": "node scripts/build-local-assets-bundle.js",
     "build:data-bundle": "node scripts/build-data-bundle.js",
     "release:assets": "node scripts/release-full-assets.js",

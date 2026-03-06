@@ -4,6 +4,7 @@ import Link from "next/link";
 import { dbRoot } from "@/lib/db-root";
 import { redirect } from "next/navigation";
 import { HeroBrowserFilters } from "@/components/hero-browser-filters";
+import { SkillTagSelector } from "@/components/skill-tag-selector";
 import { listHeroAliasOptionsBySlug } from "@/lib/hero-aliases";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -95,6 +96,12 @@ function buildInventorySummary(hero: LibraryEntry) {
   const parts: string[] = [];
   if (hero.inventory.blessings.length) {
     parts.push(...hero.inventory.blessings);
+  }
+  if (hero.inventory.skills.length) {
+    parts.push(`Skills ${hero.inventory.skills.length}`);
+  }
+  if (hero.inventory.fodder.length) {
+    parts.push(`Fodder ${hero.inventory.fodder.length}`);
   }
   return parts;
 }
@@ -357,7 +364,7 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                   className="absolute inset-0 z-10 rounded-xl cursor-pointer"
                 />
 
-                <div className="relative z-20 flex items-start justify-between gap-3">
+                <div className="pointer-events-none relative z-20 flex items-start justify-between gap-3">
                   <div className="pointer-events-none min-w-0 flex-1">
                     <div className="flex gap-3">
                       <img
@@ -511,6 +518,30 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                           ))}
                         </div>
                       </div>
+                    </div>
+                    <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tracked Skills and Fodder</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Search from the shared Game8-based skill catalog instead of typing freeform text.
+                        </p>
+                      </div>
+                      <SkillTagSelector
+                        inputName="inventory_skills"
+                        label="Skills on this hero"
+                        helperText="Track equipped or inherited skills you want the exporter to remember."
+                        selectedValues={hero.inventory.skills}
+                        placeholder="Search weapons, specials, passives, emblems..."
+                        emptyStateText="No matching skills found."
+                      />
+                      <SkillTagSelector
+                        inputName="inventory_fodder"
+                        label="Fodder / manuals on hand"
+                        helperText="Track inheritance pieces you own for this hero or project."
+                        selectedValues={hero.inventory.fodder}
+                        placeholder="Search fodder, manuals, seals..."
+                        emptyStateText="No matching fodder skills found."
+                      />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs text-zinc-400">Notes</label>
