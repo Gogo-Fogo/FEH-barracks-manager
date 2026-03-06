@@ -70,9 +70,10 @@ Open [http://localhost:3000](http://localhost:3000).
 4. **Supabase Auth settings**
    - Add site URL (prod) and redirect URLs (including `/reset-password`).
    - If you want Google and Discord login, enable those providers in `Authentication -> Providers`.
-   - Add OAuth redirect URLs for both local and prod:
+   - Add these app callback URLs to Supabase's redirect allow list:
      - `http://localhost:3000/auth/callback`
      - `https://feh-barracks-manager.vercel.app/auth/callback`
+   - In Google and Discord provider dashboards, register the Supabase callback URL shown on each provider page (usually `https://<project-ref>.supabase.co/auth/v1/callback`).
    - Verify password reset email flow reaches `https://<your-domain>/reset-password`.
 
 5. **Post-deploy smoke test**
