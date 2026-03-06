@@ -142,7 +142,9 @@ jobs:
       - name: Create release body with banner
         run: |
           cat > RELEASE_BODY.md << 'EOF'
-          ![](https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner.webp)
+          <p align="center">
+            <img src="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner.webp" alt="${{ github.ref_name }} banner" width="760" />
+          </p>
 
           EOF
 
