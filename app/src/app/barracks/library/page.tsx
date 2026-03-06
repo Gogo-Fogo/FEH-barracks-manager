@@ -11,6 +11,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import { buildAliasTermsBySlug, normalizeHeroSearchText, normalizeHeroSlugSearchText } from "@/lib/hero-typeahead";
 import {
+  countEquippedSkills,
+  EQUIPPED_SKILL_SLOTS,
   HERO_BLESSING_OPTIONS,
   type BarracksEntryInventory,
   parseBarracksEntryNotes,
@@ -97,11 +99,15 @@ function buildInventorySummary(hero: LibraryEntry) {
   if (hero.inventory.blessings.length) {
     parts.push(...hero.inventory.blessings);
   }
-  if (hero.inventory.skills.length) {
-    parts.push(`Skills ${hero.inventory.skills.length}`);
+  const equippedCount = countEquippedSkills(hero.inventory);
+  if (equippedCount) {
+    parts.push(`Build ${equippedCount}`);
   }
   if (hero.inventory.fodder.length) {
     parts.push(`Fodder ${hero.inventory.fodder.length}`);
+  }
+  if (hero.inventory.legacy_skills.length) {
+    parts.push(`Legacy ${hero.inventory.legacy_skills.length}`);
   }
   return parts;
 }
@@ -521,19 +527,26 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                     </div>
                     <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tracked Skills and Fodder</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Current Build</p>
                         <p className="mt-1 text-xs text-zinc-500">
-                          Search from the shared Game8-based skill catalog instead of typing freeform text.
+                          Track the actual FEH build slots using the shared Game8-based skill catalog.
                         </p>
                       </div>
-                      <SkillTagSelector
-                        inputName="inventory_skills"
-                        label="Skills on this hero"
-                        helperText="Track equipped or inherited skills you want the exporter to remember."
-                        selectedValues={hero.inventory.skills}
-                        placeholder="Search weapons, specials, passives, emblems..."
-                        emptyStateText="No matching skills found."
-                      />
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        {EQUIPPED_SKILL_SLOTS.map((slot) => (
+                          <SkillTagSelector
+                            key={`${hero.hero_slug}-${slot.key}`}
+                            inputName={`equipped_${slot.key}`}
+                            label={slot.label}
+                            helperText={`Search ${slot.label.toLowerCase()} options from the shared catalog.`}
+                            selectedValue={hero.inventory.equipped[slot.key]}
+                            multiple={false}
+                            allowedCategories={[...slot.allowedCategories]}
+                            placeholder={`Search ${slot.label.toLowerCase()}`}
+                            emptyStateText={`No matching ${slot.label.toLowerCase()} skills found.`}
+                          />
+                        ))}
+                      </div>
                       <SkillTagSelector
                         inputName="inventory_fodder"
                         label="Fodder / manuals on hand"
@@ -542,6 +555,24 @@ export default async function BarracksLibraryPage({ searchParams }: LibraryPageP
                         placeholder="Search fodder, manuals, seals..."
                         emptyStateText="No matching fodder skills found."
                       />
+                      {hero.inventory.legacy_skills.length ? (
+                        <div className="rounded-lg border border-amber-800/60 bg-amber-950/25 p-3 text-xs text-amber-100">
+                          <p className="font-semibold uppercase tracking-[0.16em] text-amber-200">Legacy tracked skills</p>
+                          <p className="mt-1 text-amber-100/80">
+                            These came from the older generic skill tracker. Re-save this hero after filling the slot-specific fields if you want to fully migrate them.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {hero.inventory.legacy_skills.map((skill) => (
+                              <span
+                                key={`${hero.hero_slug}-legacy-${skill.id}`}
+                                className="rounded-full border border-amber-700/60 bg-amber-950/40 px-2 py-0.5 text-[11px]"
+                              >
+                                {skill.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs text-zinc-400">Notes</label>

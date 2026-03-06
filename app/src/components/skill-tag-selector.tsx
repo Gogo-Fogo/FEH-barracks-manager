@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  serializeTrackedSkillInput,
+  type BarracksTrackedSkill,
+} from "@/lib/barracks-entry-metadata";
 
 type SkillCatalogOption = {
   id: string;
@@ -20,9 +24,12 @@ type SkillTagSelectorProps = {
   inputName: string;
   label: string;
   helperText?: string;
-  selectedValues?: string[];
+  selectedValues?: BarracksTrackedSkill[];
+  selectedValue?: BarracksTrackedSkill | null;
   placeholder?: string;
   emptyStateText?: string;
+  allowedCategories?: string[];
+  multiple?: boolean;
 };
 
 let sharedSkillCatalogPromise: Promise<SkillCatalogOption[]> | null = null;
@@ -34,6 +41,18 @@ function normalizeText(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function normalizeSkillValue(value: BarracksTrackedSkill | SkillCatalogOption | null | undefined): BarracksTrackedSkill | null {
+  if (!value?.name) return null;
+  return {
+    id: String(value.id || "").trim() || `${value.category}__${normalizeText(value.name).replace(/\s+/g, "_")}`,
+    name: String(value.name || "").trim(),
+    category: String(value.category || "").trim() || "legacy",
+    category_label: String((value as SkillCatalogOption).category_label || "").trim() || null,
+    subcategory: String(value.subcategory || "").trim() || null,
+    source_url: String(value.source_url || "").trim() || null,
+  };
 }
 
 async function loadSkillCatalog() {
@@ -55,31 +74,45 @@ function buildSearchText(option: SkillCatalogOption) {
   return normalizeText([option.name, option.category_label, option.subcategory].filter(Boolean).join(" "));
 }
 
+function dedupeSelected(values: Array<BarracksTrackedSkill | null>) {
+  const seen = new Set<string>();
+  const result: BarracksTrackedSkill[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeSkillValue(value);
+    if (!normalized) continue;
+    const key = normalized.id || `${normalized.category}:${normalized.name.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+
+  return result;
+}
+
 export function SkillTagSelector({
   inputName,
   label,
   helperText,
   selectedValues = [],
+  selectedValue = null,
   placeholder = "Search skill name",
   emptyStateText = "No matching skills found.",
+  allowedCategories,
+  multiple = true,
 }: SkillTagSelectorProps) {
   const [catalog, setCatalog] = useState<SkillCatalogOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>(() => {
-    const seen = new Set<string>();
-    const values: string[] = [];
-    for (const value of selectedValues) {
-      const cleanValue = String(value || "").trim();
-      const key = cleanValue.toLowerCase();
-      if (!cleanValue || seen.has(key)) continue;
-      seen.add(key);
-      values.push(cleanValue);
-    }
-    return values;
-  });
+  const [selected, setSelected] = useState<BarracksTrackedSkill[]>(() =>
+    dedupeSelected(multiple ? selectedValues : [selectedValue])
+  );
+
+  useEffect(() => {
+    setSelected(dedupeSelected(multiple ? selectedValues : [selectedValue]));
+  }, [multiple, selectedValue, selectedValues]);
 
   useEffect(() => {
     let active = true;
@@ -116,18 +149,18 @@ export function SkillTagSelector({
     };
   }, [catalog.length, isLoading, loadError, open]);
 
-  const selectedSet = useMemo(() => new Set(selected.map((value) => value.toLowerCase())), [selected]);
-  const catalogByName = useMemo(
-    () => new Map(catalog.map((option) => [option.name.toLowerCase(), option])),
-    [catalog]
-  );
+  const selectedSet = useMemo(() => new Set(selected.map((value) => value.id)), [selected]);
   const normalizedQuery = normalizeText(query);
 
   const matches = useMemo(() => {
     if (!catalog.length) return [] as SkillCatalogOption[];
 
-    const ranked = catalog
-      .filter((option) => !selectedSet.has(option.name.toLowerCase()))
+    const filteredCatalog = catalog.filter((option) =>
+      allowedCategories?.length ? allowedCategories.includes(option.category) : true
+    );
+
+    const ranked = filteredCatalog
+      .filter((option) => !selectedSet.has(option.id))
       .map((option) => {
         const searchText = buildSearchText(option);
         if (!normalizedQuery) {
@@ -157,23 +190,27 @@ export function SkillTagSelector({
       .map((entry) => entry.option);
 
     return ranked.slice(0, 12);
-  }, [catalog, normalizedQuery, selectedSet]);
+  }, [allowedCategories, catalog, normalizedQuery, selectedSet]);
 
-  function addSelection(value: string) {
-    const cleanValue = String(value || "").trim();
-    if (!cleanValue) return;
-    const key = cleanValue.toLowerCase();
+  function addSelection(option: SkillCatalogOption) {
+    const normalized = normalizeSkillValue(option);
+    if (!normalized) return;
+
     setSelected((current) => {
-      if (current.some((item) => item.toLowerCase() === key)) return current;
-      return [...current, cleanValue];
+      if (!multiple) {
+        return [normalized];
+      }
+      if (current.some((item) => item.id === normalized.id)) {
+        return current;
+      }
+      return [...current, normalized];
     });
     setQuery("");
     setOpen(false);
   }
 
-  function removeSelection(value: string) {
-    const key = value.toLowerCase();
-    setSelected((current) => current.filter((item) => item.toLowerCase() !== key));
+  function removeSelection(skillId: string) {
+    setSelected((current) => current.filter((item) => item.id !== skillId));
   }
 
   return (
@@ -184,28 +221,25 @@ export function SkillTagSelector({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {selected.map((value) => {
-          const option = catalogByName.get(value.toLowerCase());
-          return (
-            <span
-              key={`${inputName}-${value}`}
-              className="inline-flex items-center gap-2 rounded-full border border-cyan-800/70 bg-cyan-950/30 px-2.5 py-1 text-xs text-cyan-100"
-            >
-              <input type="hidden" name={inputName} value={value} readOnly />
-              <span className="truncate">{value}</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-zinc-300">
-                {option?.subcategory || option?.category_label || "Legacy"}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeSelection(value)}
-                className="rounded-full border border-cyan-700/60 px-1.5 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-900/40"
-              >
-                Remove
-              </button>
+        {selected.map((value) => (
+          <span
+            key={`${inputName}-${value.id}`}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-800/70 bg-cyan-950/30 px-2.5 py-1 text-xs text-cyan-100"
+          >
+            <input type="hidden" name={inputName} value={serializeTrackedSkillInput(value)} readOnly />
+            <span className="truncate">{value.name}</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-zinc-300">
+              {value.subcategory || value.category_label || "Legacy"}
             </span>
-          );
-        })}
+            <button
+              type="button"
+              onClick={() => removeSelection(value.id)}
+              className="rounded-full border border-cyan-700/60 px-1.5 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-900/40"
+            >
+              Remove
+            </button>
+          </span>
+        ))}
       </div>
 
       <div className="relative">
@@ -233,7 +267,7 @@ export function SkillTagSelector({
                 <button
                   key={`${inputName}-${option.id}`}
                   type="button"
-                  onClick={() => addSelection(option.name)}
+                  onClick={() => addSelection(option)}
                   className="flex w-full items-start justify-between gap-3 border-b border-zinc-800 px-2 py-2 text-left hover:bg-zinc-800"
                 >
                   <span className="min-w-0">

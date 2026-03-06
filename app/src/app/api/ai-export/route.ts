@@ -3,7 +3,13 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { dbRoot } from "@/lib/db-root";
-import { hasTrackedInventory, parseBarracksEntryNotes } from "@/lib/barracks-entry-metadata";
+import {
+  countEquippedSkills,
+  EQUIPPED_SKILL_SLOTS,
+  hasTrackedInventory,
+  parseBarracksEntryNotes,
+  type BarracksTrackedSkill,
+} from "@/lib/barracks-entry-metadata";
 
 type UnitFile = {
   name?: string;
@@ -35,6 +41,12 @@ const DEFAULT_RAW_TEXT_LIMIT = 6000;
 
 function sanitizeText(value: string | null | undefined) {
   return (value || "").replace(/\s+/g, " ").trim();
+}
+
+function describeTrackedSkill(skill: BarracksTrackedSkill | null | undefined) {
+  if (!skill) return null;
+  const suffix = skill.subcategory || skill.category_label || skill.category || "Skill";
+  return `${skill.name} [${suffix}]`;
 }
 
 async function readUnitFile(heroSlug: string): Promise<UnitFile | null> {
@@ -223,11 +235,28 @@ export async function GET(request: Request) {
       if (parsedEntry.inventory.blessings.length) {
         lines.push(`  - Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
       }
-      if (parsedEntry.inventory.skills.length) {
-        lines.push(`  - Tracked Skills: ${parsedEntry.inventory.skills.join(", ")}`);
+      if (countEquippedSkills(parsedEntry.inventory)) {
+        lines.push("  - Build Slots:");
+        for (const slot of EQUIPPED_SKILL_SLOTS) {
+          const value = describeTrackedSkill(parsedEntry.inventory.equipped[slot.key]);
+          if (!value) continue;
+          lines.push(`    - ${slot.label}: ${value}`);
+        }
       }
       if (parsedEntry.inventory.fodder.length) {
-        lines.push(`  - Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
+        lines.push(
+          `  - Fodder / Manuals: ${parsedEntry.inventory.fodder
+            .map((skill) => describeTrackedSkill(skill))
+            .filter(Boolean)
+            .join(", ")}`
+        );
+      }
+      if (parsedEntry.inventory.legacy_skills.length) {
+        lines.push(
+          `  - Legacy Tracked Skills: ${parsedEntry.inventory.legacy_skills
+            .map((skill) => skill.name)
+            .join(", ")}`
+        );
       }
       if (parsedEntry.notes) lines.push(`  - Player Notes: ${sanitizeText(parsedEntry.notes)}`);
       lines.push(`  - Updated: ${entry.updated_at || "-"}`);
@@ -259,11 +288,28 @@ export async function GET(request: Request) {
       if (parsedEntry.inventory.blessings.length) {
         lines.push(`- Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
       }
-      if (parsedEntry.inventory.skills.length) {
-        lines.push(`- Tracked Skills: ${parsedEntry.inventory.skills.join(", ")}`);
+      if (countEquippedSkills(parsedEntry.inventory)) {
+        lines.push("- Build Slots:");
+        for (const slot of EQUIPPED_SKILL_SLOTS) {
+          const value = describeTrackedSkill(parsedEntry.inventory.equipped[slot.key]);
+          if (!value) continue;
+          lines.push(`  - ${slot.label}: ${value}`);
+        }
       }
       if (parsedEntry.inventory.fodder.length) {
-        lines.push(`- Fodder / Manuals: ${parsedEntry.inventory.fodder.join(", ")}`);
+        lines.push(
+          `- Fodder / Manuals: ${parsedEntry.inventory.fodder
+            .map((skill) => describeTrackedSkill(skill))
+            .filter(Boolean)
+            .join(", ")}`
+        );
+      }
+      if (parsedEntry.inventory.legacy_skills.length) {
+        lines.push(
+          `- Legacy Tracked Skills: ${parsedEntry.inventory.legacy_skills
+            .map((skill) => skill.name)
+            .join(", ")}`
+        );
       }
       if (parsedEntry.notes) {
         lines.push(`- Player Notes: ${sanitizeText(parsedEntry.notes)}`);

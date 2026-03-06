@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveHeroAliasToSlug } from "@/lib/hero-aliases";
-import { serializeBarracksEntryNotes } from "@/lib/barracks-entry-metadata";
+import {
+  type BarracksEquippedSkills,
+  EQUIPPED_SKILL_SLOTS,
+  parseBarracksEntryNotes,
+  parseTrackedSkillInput,
+  serializeBarracksEntryNotes,
+} from "@/lib/barracks-entry-metadata";
 
 function requireText(value: FormDataEntryValue | null, label: string) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -101,16 +107,11 @@ export async function updateBarracksEntry(formData: FormData) {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter(Boolean);
-  const skills = formData
-    .getAll("inventory_skills")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
   const fodder = formData
     .getAll("inventory_fodder")
     .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
+    .map((value) => parseTrackedSkillInput(value))
+    .filter((value): value is NonNullable<typeof value> => Boolean(value));
   const redirectTo = safeRedirectPath(optionalText(formData.get("redirect_to")), "/barracks");
 
   const merges = Number.parseInt(mergesRaw ?? "0", 10);
@@ -125,11 +126,34 @@ export async function updateBarracksEntry(formData: FormData) {
 
   if (!user) throw new Error("You must be logged in.");
 
+  const { data: existingEntry } = await supabase
+    .from("user_barracks")
+    .select("notes")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const existingInventory = parseBarracksEntryNotes(existingEntry?.notes).inventory;
+  const equipped = EQUIPPED_SKILL_SLOTS.reduce<BarracksEquippedSkills>((result, slot) => {
+    result[slot.key] = parseTrackedSkillInput(optionalText(formData.get(`equipped_${slot.key}`))) || null;
+    return result;
+  }, {
+    weapon: null,
+    assist: null,
+    special: null,
+    passive_a: null,
+    passive_b: null,
+    passive_c: null,
+    sacred_seal: null,
+    attuned: null,
+    emblem: null,
+  });
+
   const serializedNotes = serializeBarracksEntryNotes(notes, {
     blessings,
-    skills,
+    equipped,
     fodder,
-    resources: [],
+    legacy_skills: existingInventory.legacy_skills,
   });
 
   let { error } = await supabase
