@@ -5,6 +5,8 @@ dist/
 # --- CI-generated launcher assets ---
 launcher/assets/*.ico
 release_local/
+FEH-Barracks-Launcher.exe
+feh-data-bundle.zip
 feh-assets-bundle.zip
 feh-assets-full-bundle.zip
 
@@ -40,6 +42,7 @@ db/failed_maintenance_units.json
 db/failed_build_parser_units.json
 db/banner_pull_guides.json
 db/banner_pull_discovered_urls.json
+feh-data/
 
 # --- Next.js build output ---
 .next/

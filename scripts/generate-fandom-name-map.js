@@ -23,6 +23,10 @@ const path = require("node:path");
 const ROOT      = path.resolve(__dirname, "..");
 const UNITS_DIR = path.join(ROOT, "db", "units");
 const OUT_FILE  = path.join(ROOT, "app", "src", "lib", "fandom-name-map.json");
+const MANUAL_OVERRIDES = {
+  // Fandom uses a pun title that does not match the Game8/raw-text epithet.
+  yarne___happy_new_year: "Yarne Hoppy New Year",
+};
 
 /**
  * Mirrors extractLegacyHeroNameFromRaw() in local-unit-data.ts
@@ -79,6 +83,10 @@ async function main() {
     } catch {
       skipped++;
     }
+  }
+
+  for (const [slug, fandomBase] of Object.entries(MANUAL_OVERRIDES)) {
+    map[slug] = fandomBase;
   }
 
   // Stable alphabetical order for clean diffs

@@ -7,6 +7,7 @@ const INDEX_PATH = path.join(DB_ROOT, 'index.json');
 const OUT_ROOT = path.join(DB_ROOT, 'unit_assets/fandom/headshots');
 const MANIFEST_DIR = path.join(DB_ROOT, 'unit_assets_manifest/fandom');
 const MANIFEST_PATH = path.join(MANIFEST_DIR, 'headshots_manifest.json');
+const FANDOM_NAME_MAP_PATH = path.join(__dirname, '../app/src/lib/fandom-name-map.json');
 
 const COUNT_ARG = process.argv.find((a) => a.startsWith('--count='));
 const ONLY_ARG = process.argv.find((a) => a.startsWith('--only='));
@@ -19,6 +20,10 @@ const ONLY = ONLY_ARG
         .filter(Boolean)
     )
   : null;
+
+const FANDOM_NAME_MAP = fs.existsSync(FANDOM_NAME_MAP_PATH)
+  ? JSON.parse(fs.readFileSync(FANDOM_NAME_MAP_PATH, 'utf8'))
+  : {};
 
 function safeSlug(name) {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -74,6 +79,35 @@ function clearDir(dirPath) {
     const full = path.join(dirPath, entry);
     if (fs.statSync(full).isFile()) fs.unlinkSync(full);
   }
+}
+
+function readExistingManifest() {
+  try {
+    return JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function mergeManifestForOnlyRun(manifest, selectedSlugs) {
+  if (!ONLY) return manifest;
+
+  const existing = readExistingManifest();
+  if (!existing) return manifest;
+
+  const keepItem = (entry) => !selectedSlugs.has(String(entry?.game8_slug || '').toLowerCase());
+
+  return {
+    ...existing,
+    updated_at: manifest.updated_at,
+    source: manifest.source,
+    dataset: manifest.dataset,
+    items: [...(existing.items || []).filter(keepItem), ...manifest.items],
+    missing_mapping: [
+      ...(existing.missing_mapping || []).filter(keepItem),
+      ...manifest.missing_mapping,
+    ],
+  };
 }
 
 function apiGetJson(url) {
@@ -167,6 +201,7 @@ async function main() {
   const selected = index
     .filter((hero) => !ONLY || ONLY.has(safeSlug(hero.name)))
     .slice(0, LIMIT || index.length);
+  const selectedSlugs = new Set(selected.map((hero) => safeSlug(hero.name)));
 
   const fandomBases = await getAllFaceFcBases();
   const baseByKey = new Map();
@@ -185,9 +220,13 @@ async function main() {
 
   for (const hero of selected) {
     const game8Slug = safeSlug(hero.name);
-    const fandomBase = buildLookupKeys(hero.name)
+    const mappedBase = String(FANDOM_NAME_MAP[game8Slug] || '').trim();
+    const fandomBase = (
+      (mappedBase && (baseByKey.get(normalizeKey(mappedBase)) || mappedBase)) ||
+      buildLookupKeys(hero.name)
       .map((key) => baseByKey.get(key))
-      .find(Boolean);
+      .find(Boolean)
+    );
     if (!fandomBase) {
       manifest.missing_mapping.push({ game8_name: hero.name, game8_slug: game8Slug });
       console.log(`MISS map: ${hero.name}`);
@@ -231,8 +270,9 @@ async function main() {
     console.log(`${hero.name}: saved 1/1`);
   }
 
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
-  console.log(`DONE headshots items=${manifest.items.length} missing_maps=${manifest.missing_mapping.length}`);
+  const finalManifest = mergeManifestForOnlyRun(manifest, selectedSlugs);
+  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(finalManifest, null, 2));
+  console.log(`DONE headshots items=${finalManifest.items.length} missing_maps=${finalManifest.missing_mapping.length}`);
   console.log(`manifest ${MANIFEST_PATH.replace(/\\/g, '/')}`);
 }
 

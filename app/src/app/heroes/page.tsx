@@ -10,10 +10,10 @@ import { HeroBrowserFilters } from "@/components/hero-browser-filters";
 import { listHeroAliasOptionsBySlug, resolveHeroAliasToSlug } from "@/lib/hero-aliases";
 import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
 import { normalizeHeroSearchText } from "@/lib/hero-typeahead";
+import { fetchAllPages } from "@/lib/supabase-pagination";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const HERO_QUERY_MAX_ROWS = 5000;
 
 type HeroesPageProps = {
   searchParams: Promise<{
@@ -27,6 +27,27 @@ type HeroesPageProps = {
     notice?: string;
     tone?: string;
   }>;
+};
+
+type HeroRowWithRarity = {
+  hero_slug: string;
+  name: string;
+  rarity: string | null;
+  weapon: string | null;
+  move: string | null;
+  tier: number | null;
+  tag: string | null;
+  updated_at: string | null;
+};
+
+type HeroRowWithoutRarity = {
+  hero_slug: string;
+  name: string;
+  weapon: string | null;
+  move: string | null;
+  tier: number | null;
+  tag: string | null;
+  updated_at: string | null;
 };
 
 function safeSlug(name: string) {
@@ -100,12 +121,12 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
   const currentPath = `/heroes${currentQuery.toString() ? `?${currentQuery.toString()}` : ""}`;
   const localRarityBySlug = await loadLocalRarityBySlug();
 
-  const buildHeroesQueryWithRarity = () => {
+  const buildHeroesQueryWithRarity = (from: number, to: number) => {
     let query = supabase
       .from("heroes")
       .select("hero_slug,name,rarity,weapon,move,tier,tag,updated_at")
       .order("hero_slug", { ascending: true })
-      .range(0, HERO_QUERY_MAX_ROWS - 1);
+      .range(from, to);
 
     // q is intentionally NOT passed to Supabase — ILIKE is not accent-aware so
     // "Celine" would miss "Céline". We apply normalizeHeroSearchText in JS below.
@@ -116,12 +137,12 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     return query;
   };
 
-  const buildHeroesQueryWithoutRarity = () => {
+  const buildHeroesQueryWithoutRarity = (from: number, to: number) => {
     let query = supabase
       .from("heroes")
       .select("hero_slug,name,weapon,move,tier,tag,updated_at")
       .order("hero_slug", { ascending: true })
-      .range(0, HERO_QUERY_MAX_ROWS - 1);
+      .range(from, to);
 
     if (weapon) query = query.eq("weapon", weapon);
     if (move) query = query.eq("move", move);
@@ -130,21 +151,12 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
     return query;
   };
 
-  const heroesResult = await buildHeroesQueryWithRarity();
-  let heroRows: Array<{
-    hero_slug: string;
-    name: string;
-    rarity: string | null;
-    weapon: string | null;
-    move: string | null;
-    tier: number | null;
-    tag: string | null;
-    updated_at: string | null;
-  }> = [];
+  const heroesResult = await fetchAllPages<HeroRowWithRarity>(buildHeroesQueryWithRarity);
+  let heroRows: HeroRowWithRarity[] = [];
 
-  if (heroesResult.error?.message.includes("rarity")) {
-    const fallback = await buildHeroesQueryWithoutRarity();
-    heroRows = (fallback.data || []).map((h) => ({
+  if (heroesResult.error?.message?.includes("rarity")) {
+    const fallback = await fetchAllPages<HeroRowWithoutRarity>(buildHeroesQueryWithoutRarity);
+    heroRows = fallback.data.map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
       rarity: localRarityBySlug.get(h.hero_slug) ?? null,
@@ -155,7 +167,7 @@ export default async function HeroesPage({ searchParams }: HeroesPageProps) {
       updated_at: h.updated_at,
     }));
   } else {
-    heroRows = (heroesResult.data || []).map((h) => ({
+    heroRows = heroesResult.data.map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
       rarity: h.rarity ?? localRarityBySlug.get(h.hero_slug) ?? null,

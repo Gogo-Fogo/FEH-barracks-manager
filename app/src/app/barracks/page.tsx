@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { moveIconName, rarityIconName, rarityStarsText, weaponIconName } from "@/lib/feh-icons";
 import { loadUnitRarityBySlugs } from "@/lib/local-unit-data";
+import { fetchAllPages } from "@/lib/supabase-pagination";
 import {
   addToBarracks,
   createUserNote,
@@ -23,8 +24,6 @@ import {
   updateBarracksEntry,
   updateUserTeam,
 } from "./actions";
-
-const HERO_QUERY_MAX_ROWS = 5000;
 
 function looksLikeGuideTitle(name: string) {
   return /\b(builds?|best\s+refine|best\s+build|tier\s+list|ratings?)\b/i.test(name);
@@ -85,6 +84,23 @@ type BarracksPageProps = {
   }>;
 };
 
+type HeroRowWithRarity = {
+  hero_slug: string;
+  name: string;
+  rarity: string | null;
+  weapon: string | null;
+  move: string | null;
+  tier: number | null;
+};
+
+type HeroRowWithoutRarity = {
+  hero_slug: string;
+  name: string;
+  weapon: string | null;
+  move: string | null;
+  tier: number | null;
+};
+
 export default async function BarracksPage({ searchParams }: BarracksPageProps) {
   if (!isSupabaseConfigured()) {
     redirect("/login");
@@ -103,34 +119,27 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
     redirect("/login");
   }
 
-  const fetchHeroesWithRarity = async () =>
+  const fetchHeroesWithRarity = async (from: number, to: number) =>
     supabase
       .from("heroes")
       .select("hero_slug,name,rarity,weapon,move,tier")
       .order("hero_slug", { ascending: true })
-      .range(0, HERO_QUERY_MAX_ROWS - 1);
+      .range(from, to);
 
-  const fetchHeroesWithoutRarity = async () =>
+  const fetchHeroesWithoutRarity = async (from: number, to: number) =>
     supabase
       .from("heroes")
       .select("hero_slug,name,weapon,move,tier")
       .order("hero_slug", { ascending: true })
-      .range(0, HERO_QUERY_MAX_ROWS - 1);
+      .range(from, to);
 
-  const heroesResult = await fetchHeroesWithRarity();
+  const heroesResult = await fetchAllPages<HeroRowWithRarity>(fetchHeroesWithRarity);
   const localRarityBySlug = await loadLocalRarityBySlug();
-  let heroRows: Array<{
-    hero_slug: string;
-    name: string;
-    rarity: string | null;
-    weapon: string | null;
-    move: string | null;
-    tier: number | null;
-  }> = [];
+  let heroRows: HeroRowWithRarity[] = [];
 
-  if (heroesResult.error?.message.includes("rarity")) {
-    const fallback = await fetchHeroesWithoutRarity();
-    heroRows = (fallback.data || []).map((h) => ({
+  if (heroesResult.error?.message?.includes("rarity")) {
+    const fallback = await fetchAllPages<HeroRowWithoutRarity>(fetchHeroesWithoutRarity);
+    heroRows = fallback.data.map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
       rarity: localRarityBySlug.get(h.hero_slug) ?? null,
@@ -139,7 +148,7 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
       tier: h.tier,
     }));
   } else {
-    heroRows = (heroesResult.data || []).map((h) => ({
+    heroRows = heroesResult.data.map((h) => ({
       hero_slug: h.hero_slug,
       name: h.name,
       rarity: h.rarity ?? localRarityBySlug.get(h.hero_slug) ?? null,
@@ -266,25 +275,25 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 href="/aether-resort"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
-                Open Aether Resort
+                Aether Resort
               </Link>
               <Link
                 href="/heroes"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
-                Open hero browser
+                Hero Browser
               </Link>
               <Link
                 href="/barracks/library"
                 className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
               >
-                Open My Wifus
+                My Heroes
               </Link>
               <Link
                 href="/tavern"
                 className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950"
               >
-                🍺 Open Tavern
+                🍺 Enter the Tavern
               </Link>
             </div>
           </div>
