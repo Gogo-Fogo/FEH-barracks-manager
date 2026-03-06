@@ -1,6 +1,6 @@
 # FEH Barracks App - TODO Roadmap
 
-Last updated: 2026-02-20
+Last updated: 2026-03-06
 
 ## Goal
 Build a shared FEH Barracks app that is accessible to you and your friend, with safe data boundaries between Game8 unit data and Fandom assets.
@@ -123,3 +123,51 @@ Build a shared FEH Barracks app that is accessible to you and your friend, with 
   - switched saved teams to table-style slot rows with headshots + editable hero IDs
   - validated with `npm --prefix app run build`
   - verified local serve on `http://localhost:3022`
+
+---
+
+## Urgent Follow-Up After v0.3.4 (2026-03-06)
+
+### My Heroes UX Cleanup
+- [ ] Fix `Edit merges / dupes / notes` summary row cursor so it uses a pointer/pressable affordance instead of text-selection cursor.
+- [ ] Make the entire My Heroes hero card press target behave consistently as one clickable wrapper, while preserving working favorite/remove/expand controls above it.
+- [ ] Make the expand affordance more obvious than the current tiny chevron-only treatment.
+
+### Barracks Entry Editor Rescope
+- [ ] Move freeform `Notes` to the bottom of the expanded editor and keep it as the only general text-entry field.
+- [ ] Remove `Other resources / tags` from the barracks entry editor and from serialized barracks metadata.
+- [ ] Replace free-text `skills` / `fodder` entry with structured searchable selectors, not raw textareas.
+- [ ] Replace blessing checkbox block with searchable dropdown/tag selection if it produces a cleaner mobile/desktop UX than the current checkbox grid.
+- [ ] Reuse the shared typeahead/select pattern already used elsewhere in Barracks instead of introducing separate slider-like/manual-entry controls.
+
+### Skill / Inheritance Data Project
+- [ ] Define a real canonical FEH skill catalog instead of relying only on hero-level parsed skill names embedded inside `db/units/*.json`.
+- [ ] Support the core FEH editable categories:
+  - Weapon skills
+  - Assist skills
+  - Special skills
+  - Passive A / B / C
+  - Sacred Seals
+  - Attuned skills
+  - Emblems
+  - Blessings
+- [ ] Decide primary source per category:
+  - Game8 skill index/pages for strong structured coverage and cross-links from hero pages
+  - Fandom as fallback/augmentation when coverage or naming is better
+- [ ] Scrape and normalize skill identity into a dedicated database/file set instead of storing only loose strings inside hero notes metadata.
+- [ ] Include alias/name normalization for punctuation variants and Game8/Fandom naming mismatches before wiring the selector UI.
+
+### AI Export / Planner Follow-Up
+- [ ] Upgrade AI export to emit structured tracked inheritance/build inventory from the future skill catalog, not just freeform strings.
+- [ ] Ensure export distinguishes:
+  - equipped/current skills
+  - owned fodder/manuals available for inheritance
+  - blessings assigned/available
+  - emblem/attuned availability
+- [ ] Revisit export prompt wording once structured skill/fodder data exists so AI build advice can trust it.
+
+### Data Reality Check
+- [ ] Audit current repo support for skill data and document the gap clearly:
+  - we already parse hero-page equipped/default skills from Game8 into `db/units/*.json`
+  - we do **not** yet have a standalone normalized skills database covering all inheritable skills/seals/emblems/blessings
+  - current barracks tracked inventory is serialized inside `notes` metadata and is only partially structured
