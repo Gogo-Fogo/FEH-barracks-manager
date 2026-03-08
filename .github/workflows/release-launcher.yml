@@ -40,6 +40,9 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
+      - name: Install Wine for Windows Electron packaging
+        run: sudo apt-get install -y wine64
+
       - name: Convert launcher icon to ICO
         run: convert launcher/assets/launcher_icon.webp -define icon:auto-resize=256,128,64,48,32,16 launcher/assets/launcher_icon.ico
 
