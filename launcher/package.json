@@ -1,13 +1,13 @@
 {
   "name": "feh-launcher",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "private": true,
   "description": "GUI launcher/updater for FEH Barracks Manager",
   "type": "commonjs",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win portable --x64"
+    "build": "electron-builder --win portable --x64 --publish never"
   },
   "dependencies": {},
   "devDependencies": {

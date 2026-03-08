@@ -41,13 +41,16 @@ jobs:
         run: sudo apt-get install -y imagemagick
 
       - name: Install Wine for Windows Electron packaging
-        run: sudo apt-get install -y wine64
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine64 wine32 xvfb
 
       - name: Convert launcher icon to ICO
         run: convert launcher/assets/launcher_icon.webp -define icon:auto-resize=256,128,64,48,32,16 launcher/assets/launcher_icon.ico
 
       - name: Build launcher executable (Electron portable)
-        run: npm run build --prefix launcher
+        run: xvfb-run --auto-servernum npm run build --prefix launcher
         env:
           ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
