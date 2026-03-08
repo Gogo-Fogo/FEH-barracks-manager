@@ -19,6 +19,7 @@ import {
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type UnitFile = {
+  artist?: string;
   name?: string;
   ivs?: string;
   raw_text_data?: string;
@@ -31,6 +32,8 @@ type UnitDataResponse = {
   poses: string[];
   backgroundOptions: string[];
 };
+
+const UNIT_DATA_REV = "20260308a";
 
 type BuildEntry = {
   key: string;
@@ -141,7 +144,7 @@ function GuideHighlightsSection({ highlights }: { highlights: GuideHighlights })
 
 function deriveData(unitFile: UnitFile | null, quoteText: string | null, sourceUrl: string | null) {
   const raw         = unitFile?.raw_text_data;
-  const artistName  = extractIllustratorFromRawText(raw);
+  const artistName  = unitFile?.artist?.trim() || extractIllustratorFromRawText(raw);
   const quotes      = extractQuoteCandidates(quoteText ?? undefined);
   const highlights  = buildGuideHighlights(raw);
 
@@ -195,7 +198,7 @@ export function HeroUnitDataClient({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/unit-data/${encodeURIComponent(heroSlug)}`)
+    fetch(`/api/unit-data/${encodeURIComponent(heroSlug)}?rev=${UNIT_DATA_REV}`)
       .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((d: UnitDataResponse) => { if (!cancelled) { setData(d); setLoading(false); } })
       .catch(() => { if (!cancelled) setLoading(false); });
@@ -284,7 +287,7 @@ export function HeroUnitDataClient({
             <div className="grid gap-2 md:grid-cols-2">
               {derived.buildEntries.map((entry) => (
                 <div key={entry.key} className="rounded-md border border-zinc-800 bg-zinc-900/45 p-2">
-                  <p>
+                  <p className="flex flex-col gap-1 sm:block">
                     <span className="text-zinc-400">{buildKeyLabel(entry.key)}:</span>{" "}
                     <SkillValueWithTooltip
                       skillName={entry.value}

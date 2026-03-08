@@ -1,0 +1,206 @@
+{
+  "tiki___everlasting_voice": {
+    "name": "Tiki - Everlasting Voice",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/583501",
+    "ivs": "+Res / -Spd",
+    "artist": "teffish",
+    "recommended_build": {
+      "weapon": "Awakening Voice",
+      "assist": "Swap",
+      "special": "Armored Ice Cap",
+      "emblem": "-",
+      "passive_a": "Diluvial Boost",
+      "passive_b": "Heired Divinity",
+      "passive_c": "Higher Ground",
+      "sacred_seal": "Deflect Missile 3",
+      "attuned": "-"
+    }
+  },
+  "eirika___spring_company": {
+    "name": "Eirika - Spring Company",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/585316",
+    "ivs": "+Spd / -Def",
+    "artist": "Kippu",
+    "recommended_build": {
+      "weapon": "Spring Dawning",
+      "assist": "Reposition",
+      "special": "Logic",
+      "emblem": "-",
+      "passive_a": "Atk/Spd Aria",
+      "passive_b": "Stellar Brace",
+      "passive_c": "Atk/Spd Liberate",
+      "sacred_seal": "Hardy Bearing 3",
+      "attuned": "-"
+    }
+  },
+  "th_rr___spring_war_god": {
+    "name": "Thórr - Spring War God",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/585313",
+    "ivs": "+Def / -Spd",
+    "artist": "Hitowa",
+    "recommended_build": {
+      "weapon": "Spring Thorn",
+      "assist": "Reposition",
+      "special": "Archrival",
+      "emblem": "-",
+      "passive_a": "Divine Specter",
+      "passive_b": "Heavenly Soar",
+      "passive_c": "World Destroyer",
+      "sacred_seal": "Atk/Def Clash 3",
+      "attuned": "-"
+    }
+  },
+  "sothe___in_the_breeze": {
+    "name": "Sothe - In the Breeze",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/585315",
+    "ivs": "+Spd / -Res",
+    "artist": "Tsunakawa",
+    "recommended_build": {
+      "weapon": "Arcane Slicer",
+      "assist": "Reposition Gait",
+      "special": "True Bane",
+      "emblem": "-",
+      "passive_a": "Atk/Spd Waylay",
+      "passive_b": "Disarm Rumor",
+      "passive_c": "Lookout Smog",
+      "sacred_seal": "Atk/Spd Clash 3",
+      "attuned": "-"
+    }
+  },
+  "dorothea___rosy_songstress": {
+    "name": "Dorothea - Rosy Songstress",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/585314",
+    "ivs": "+Res / -Def",
+    "artist": "Yoshiro Ambe",
+    "recommended_build": {
+      "weapon": "Spring Hare Egg+",
+      "assist": "Reposition",
+      "special": "Glacies",
+      "emblem": "-",
+      "passive_a": "Crystalline Water",
+      "passive_b": "A/R Far Resound",
+      "passive_c": "Shadow Shift 3",
+      "sacred_seal": "Still Water 3",
+      "attuned": "-"
+    }
+  },
+  "byleth___of_the_academy": {
+    "name": "Byleth - Of the Academy",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/577060",
+    "ivs": "+Spd / -Res",
+    "artist": "Fujisaka Kimihiko",
+    "recommended_build": {
+      "weapon": "Instructor's Opus",
+      "assist": "Reposition Gait",
+      "special": "Goddess Dance",
+      "emblem": "-",
+      "passive_a": "Perfect Atk/Spd",
+      "passive_b": "Atk/Spd Favor",
+      "passive_c": "Instruct 4",
+      "sacred_seal": "Atk/Spd Finish 3",
+      "attuned": "-"
+    }
+  },
+  "elise___sincere_sister": {
+    "name": "Elise - Sincere Sister",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/577059",
+    "ivs": "+Spd / -Def",
+    "artist": "Michi Masaki",
+    "recommended_build": {
+      "weapon": "Budding Staff",
+      "assist": "Ice Lock+",
+      "special": "Windfire Charm",
+      "emblem": "-",
+      "passive_a": "Atk/Spd Aria",
+      "passive_b": "Spd/Res Shackle",
+      "passive_c": "Budding Flower",
+      "sacred_seal": "Atk/Spd Catch 3",
+      "attuned": "-"
+    }
+  },
+  "fjorm___icy_miracle": {
+    "name": "Fjorm - Icy Miracle",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/580794",
+    "ivs": "+Spd / -HP",
+    "artist": "Maeshima Shigeki",
+    "recommended_build": {
+      "weapon": "Chosen Lance",
+      "assist": "Reposition",
+      "special": "Frozen Mirror",
+      "emblem": "-",
+      "passive_a": "Duelist's Blow",
+      "passive_b": "Pair Up 4",
+      "passive_c": "Spd/Res Faith",
+      "sacred_seal": "Hardy Bearing 3",
+      "attuned": "-"
+    }
+  },
+  "celica___with_grace": {
+    "name": "Celica - With Grace",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/580793",
+    "ivs": "+Spd / -Res",
+    "artist": "azu-taro",
+    "recommended_build": {
+      "weapon": "Sisters' Blade",
+      "assist": "Reposition",
+      "special": "Archrival",
+      "emblem": "-",
+      "passive_a": "Swift Specter",
+      "passive_b": "Wild at Heart",
+      "passive_c": "Endless Tempest",
+      "sacred_seal": "Atk/Spd Prime 3",
+      "attuned": "-"
+    }
+  },
+  "hector___into_the_fray": {
+    "name": "Hector - Into the Fray",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/580792",
+    "ivs": "+Def / -Spd",
+    "artist": "kuren",
+    "recommended_build": {
+      "weapon": "Heroic Maltet",
+      "assist": "Swap",
+      "special": "Armored Flare",
+      "emblem": "-",
+      "passive_a": "Ostian Backbone",
+      "passive_b": "Patience",
+      "passive_c": "A/D Briar F Save",
+      "sacred_seal": "Slick Fighter 3",
+      "attuned": "-"
+    }
+  },
+  "veyle___sister_dragons": {
+    "name": "Veyle - Sister Dragons",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/579477",
+    "ivs": "+Atk / -Def",
+    "artist": "ichikawa Halu",
+    "recommended_build": {
+      "weapon": "Draconic Bond",
+      "assist": "Reposition",
+      "special": "Logic",
+      "emblem": "-",
+      "passive_a": "Sly Mirror",
+      "passive_b": "A/R Detect Aerial",
+      "passive_c": "Fell Refuge",
+      "sacred_seal": "Still Water 3",
+      "attuned": "-"
+    }
+  },
+  "hortensia___cutesplosion": {
+    "name": "Hortensia - Cutesplosion",
+    "url": "https://game8.co/games/fire-emblem-heroes/archives/579475",
+    "ivs": "+Spd / -Def",
+    "artist": "T-Yama",
+    "recommended_build": {
+      "weapon": "Sweet Staff",
+      "assist": "Guardian+",
+      "special": "Deluge Charm",
+      "emblem": "-",
+      "passive_a": "Torrential Boost",
+      "passive_b": "Pair Up 4",
+      "passive_c": "Huge Personality",
+      "sacred_seal": "Hardy Bearing 3",
+      "attuned": "-"
+    }
+  }
+}

@@ -268,6 +268,42 @@ async function fetchFandomJson(url: string) {
   return (await response.json()) as Record<string, unknown>;
 }
 
+function fandomPageTitleToBase(title: string) {
+  return String(title || "")
+    .replace(/_/g, " ")
+    .replace(/\s*:\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fandomFileBaseCandidates(baseName: string) {
+  const values = new Set<string>();
+  const push = (value: string) => {
+    const normalized = String(value || "").trim();
+    if (normalized) values.add(normalized);
+  };
+
+  push(baseName);
+  push(
+    String(baseName || "")
+      .replace(/[ðÐ]/g, "d")
+      .replace(/[þÞ]/g, "th")
+      .replace(/[æÆ]/g, "ae")
+      .replace(/[œŒ]/g, "oe")
+      .replace(/[øØ]/g, "o")
+      .replace(/[łŁ]/g, "l")
+      .replace(/[óòôöõÓÒÔÖÕ]/g, "o")
+      .replace(/[áàâäãÁÀÂÄÃ]/g, "a")
+      .replace(/[éèêëÉÈÊË]/g, "e")
+      .replace(/[íìîïÍÌÎÏ]/g, "i")
+      .replace(/[úùûüÚÙÛÜ]/g, "u")
+      .replace(/[ýÿÝ]/g, "y")
+      .replace(/[’'`]/g, "")
+  );
+
+  return [...values];
+}
+
 async function loadFandomBaseIndex() {
   if (fandomBaseIndexPromise) return fandomBaseIndexPromise;
 
@@ -309,6 +345,38 @@ async function loadFandomBaseIndex() {
       if (!imcontinue) break;
     }
 
+    let cmcontinue = "";
+    while (true) {
+      const url =
+        "https://feheroes.fandom.com/api.php?action=query&format=json&list=categorymembers&cmtitle=" +
+        encodeURIComponent("Category:Heroes") +
+        "&cmlimit=500" +
+        (cmcontinue ? `&cmcontinue=${encodeURIComponent(cmcontinue)}` : "");
+
+      const json = await fetchFandomJson(url);
+      const query = (json.query || {}) as Record<string, unknown>;
+      const rows = Array.isArray(query.categorymembers)
+        ? (query.categorymembers as Array<Record<string, unknown>>)
+        : [];
+
+      for (const row of rows) {
+        if (Number(row?.ns || 0) !== 0) continue;
+        const baseName = fandomPageTitleToBase(String(row?.title || ""));
+        const normalizedKey = normalizeLookupText(baseName);
+        if (!normalizedKey || byKey.has(normalizedKey)) continue;
+
+        byKey.set(normalizedKey, {
+          baseName,
+          normalizedKey,
+          tokens: tokenizeLookupKey(baseName),
+        });
+      }
+
+      const continuation = (json.continue || {}) as Record<string, unknown>;
+      cmcontinue = String(continuation.cmcontinue || "");
+      if (!cmcontinue) break;
+    }
+
     return Array.from(byKey.values());
   })();
 
@@ -344,6 +412,16 @@ function candidateScore(candidateTokens: string[], entryTokens: string[]) {
 }
 
 async function resolveFandomBaseBySlug(heroSlug: string) {
+  // Prefer the committed slug→Fandom map before fuzzy matching.
+  // This is the only stable source on Vercel where db/units/ is not deployed,
+  // and it prevents recent heroes like Tiki - Everlasting Voice from falling
+  // back to the wrong seasonal Tiki art when the live Fandom index is incomplete.
+  const mappedBase =
+    FANDOM_NAME_MAP[heroSlug] ??
+    FANDOM_NAME_MAP[normalizeSlug(heroSlug)] ??
+    null;
+  if (mappedBase) return mappedBase;
+
   const [unit, indexName] = await Promise.all([
     loadUnitRecordBySlug(heroSlug),
     loadHeroNameBySlug(heroSlug),
@@ -392,13 +470,7 @@ async function resolveFandomBaseBySlug(heroSlug: string) {
     }
   }
 
-  // Fallback: static map built from raw_text_data Fandom-style names.
-  // Only consulted when fuzzy matching fails — prevents garbled map entries
-  // (e.g. heroes with non-ASCII chars stored incorrectly in raw_text_data)
-  // from overriding a working fuzzy match.
-  // Fixes heroes like "summer_tiki__adult_" whose Game8 slug doesn't
-  // fuzzy-match the Fandom name without the unit JSON on Vercel.
-  return FANDOM_NAME_MAP[heroSlug] ?? FANDOM_NAME_MAP[normalizeSlug(heroSlug)] ?? null;
+  return null;
 }
 
 async function loadFandomImageUrlByTitle(fileTitle: string) {
@@ -458,20 +530,24 @@ async function resolveFandomImageUrl(
     const extensions = ["webp", "png", "jpg", "jpeg"];
 
     if (kind === "headshot") {
-      for (const ext of extensions) {
-        const title = `File:${baseName} Face FC.${ext}`;
-        const sourceUrl = await loadFandomImageUrlByTitle(title);
-        if (sourceUrl) return sourceUrl;
+      for (const baseCandidate of fandomFileBaseCandidates(baseName)) {
+        for (const ext of extensions) {
+          const title = `File:${baseCandidate} Face FC.${ext}`;
+          const sourceUrl = await loadFandomImageUrlByTitle(title);
+          if (sourceUrl) return sourceUrl;
+        }
       }
       return null;
     }
 
     const stateCandidates = fullbodyStateCandidatesByPose(pose);
-    for (const stateName of stateCandidates) {
-      for (const ext of extensions) {
-        const title = `File:${baseName} ${stateName}.${ext}`;
-        const sourceUrl = await loadFandomImageUrlByTitle(title);
-        if (sourceUrl) return sourceUrl;
+    for (const baseCandidate of fandomFileBaseCandidates(baseName)) {
+      for (const stateName of stateCandidates) {
+        for (const ext of extensions) {
+          const title = `File:${baseCandidate} ${stateName}.${ext}`;
+          const sourceUrl = await loadFandomImageUrlByTitle(title);
+          if (sourceUrl) return sourceUrl;
+        }
       }
     }
 

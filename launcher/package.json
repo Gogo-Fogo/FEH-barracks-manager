@@ -1,6 +1,6 @@
 {
   "name": "feh-launcher",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "description": "GUI launcher/updater for FEH Barracks Manager",
   "type": "commonjs",

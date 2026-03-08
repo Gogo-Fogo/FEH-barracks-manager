@@ -12,6 +12,8 @@ type FullbodyCarouselProps = {
   persistBackgroundPreference?: boolean;
 };
 
+const FULLBODY_REV = "20260308a";
+
 function poseLabel(pose: string) {
   return pose.charAt(0).toUpperCase() + pose.slice(1);
 }
@@ -120,18 +122,18 @@ export function FullbodyCarousel({
               <button
                 type="button"
                 onClick={prevQuote}
-                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-800"
+                className="shrink-0 rounded-md border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
                 aria-label="Previous quote"
               >
                 ←
               </button>
-              <p className="text-xs text-zinc-400">
+              <p className="min-w-0 flex-1 px-2 text-center text-xs text-zinc-400">
                 Quote {normalizedQuoteIndex + 1}/{safeQuotes.length}
               </p>
               <button
                 type="button"
                 onClick={nextQuote}
-                className="rounded-md border border-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-800"
+                className="shrink-0 rounded-md border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
                 aria-label="Next quote"
               >
                 →
@@ -162,7 +164,7 @@ export function FullbodyCarousel({
         ) : null}
 
         <img
-          src={`/api/fullbody/${heroSlug}?pose=${encodeURIComponent(currentPose)}`}
+          src={`/api/fullbody/${heroSlug}?pose=${encodeURIComponent(currentPose)}&rev=${FULLBODY_REV}`}
           alt={`${heroName} ${currentPose} art`}
           className="relative block h-auto w-full max-h-[76vh] object-contain"
         />
@@ -172,20 +174,20 @@ export function FullbodyCarousel({
         <button
           type="button"
           onClick={prev}
-          className="rounded-md border border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-800"
+          className="shrink-0 rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
           aria-label="Previous pose"
         >
           ←
         </button>
 
-        <p className="text-xs text-zinc-300">
+        <p className="min-w-0 flex-1 text-center text-xs text-zinc-300">
           {poseLabel(currentPose)} ({index + 1}/{safePoses.length})
         </p>
 
         <button
           type="button"
           onClick={next}
-          className="rounded-md border border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-800"
+          className="shrink-0 rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800"
           aria-label="Next pose"
         >
           →
@@ -196,21 +198,21 @@ export function FullbodyCarousel({
         <button
           type="button"
           onClick={prevBackground}
-          className="rounded-md border border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Previous background"
           disabled={safeBackgrounds.length <= 1}
         >
           ←
         </button>
 
-        <p className="text-xs text-zinc-300">
+        <p className="min-w-0 flex-1 text-center text-xs text-zinc-300">
           Background ({safeBackgrounds.length ? backgroundIndex + 1 : 0}/{safeBackgrounds.length})
         </p>
 
         <button
           type="button"
           onClick={nextBackground}
-          className="rounded-md border border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-md border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Next background"
           disabled={safeBackgrounds.length <= 1}
         >
@@ -227,7 +229,7 @@ export function FullbodyCarousel({
         >
           <button
             type="button"
-            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md border border-zinc-500 bg-zinc-900/80 px-3 py-2 text-lg text-zinc-100 hover:bg-zinc-800"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-500 bg-zinc-900/80 px-2 py-1.5 text-base text-zinc-100 hover:bg-zinc-800 sm:left-4 sm:px-3 sm:py-2 sm:text-lg"
             onClick={(event) => {
               event.stopPropagation();
               prev();
@@ -239,7 +241,7 @@ export function FullbodyCarousel({
 
           <button
             type="button"
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md border border-zinc-500 bg-zinc-900/80 px-3 py-2 text-lg text-zinc-100 hover:bg-zinc-800"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-500 bg-zinc-900/80 px-2 py-1.5 text-base text-zinc-100 hover:bg-zinc-800 sm:right-4 sm:px-3 sm:py-2 sm:text-lg"
             onClick={(event) => {
               event.stopPropagation();
               next();
@@ -251,7 +253,7 @@ export function FullbodyCarousel({
 
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-md border border-zinc-500 bg-zinc-900/80 px-3 py-1 text-sm text-zinc-100 hover:bg-zinc-800"
+            className="absolute right-2 top-2 rounded-md border border-zinc-500 bg-zinc-900/80 px-3 py-1 text-sm text-zinc-100 hover:bg-zinc-800 sm:right-4 sm:top-4"
             onClick={(event) => {
               event.stopPropagation();
               setIsExpanded(false);
@@ -266,7 +268,7 @@ export function FullbodyCarousel({
             onClick={(event) => event.stopPropagation()}
           >
             <img
-              src={`/api/fullbody/${heroSlug}?pose=${encodeURIComponent(currentPose)}`}
+              src={`/api/fullbody/${heroSlug}?pose=${encodeURIComponent(currentPose)}&rev=${FULLBODY_REV}`}
               alt={`${heroName} ${currentPose} art expanded`}
               className="max-h-[86vh] max-w-[92vw] rounded-lg border border-zinc-600 object-contain"
             />

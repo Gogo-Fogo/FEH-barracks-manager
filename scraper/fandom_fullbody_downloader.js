@@ -31,6 +31,14 @@ function safeSlug(name) {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 }
 
+function fandomPageTitleToBase(title) {
+  return String(title || '')
+    .replace(/_/g, ' ')
+    .replace(/\s*:\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function toDbRelativePath(absPath) {
   const rel = path.relative(DB_ROOT, absPath).replace(/\\/g, '/');
   return `db/${rel}`;
@@ -55,6 +63,34 @@ function normalizeKey(text) {
     .trim()
     .replace(/\s+/g, ' ')
     : '';
+}
+
+function fandomFileBaseCandidates(base) {
+  const values = new Set();
+  const push = (value) => {
+    const normalized = String(value || '').trim();
+    if (normalized) values.add(normalized);
+  };
+
+  push(base);
+  push(
+    String(base || '')
+      .replace(/[ðÐ]/g, 'd')
+      .replace(/[þÞ]/g, 'th')
+      .replace(/[æÆ]/g, 'ae')
+      .replace(/[œŒ]/g, 'oe')
+      .replace(/[øØ]/g, 'o')
+      .replace(/[łŁ]/g, 'l')
+      .replace(/[óòôöõÓÒÔÖÕ]/g, 'o')
+      .replace(/[áàâäãÁÀÂÄÃ]/g, 'a')
+      .replace(/[éèêëÉÈÊË]/g, 'e')
+      .replace(/[íìîïÍÌÎÏ]/g, 'i')
+      .replace(/[úùûüÚÙÛÜ]/g, 'u')
+      .replace(/[ýÿÝ]/g, 'y')
+      .replace(/[’'`]/g, '')
+  );
+
+  return [...values];
 }
 
 function buildLookupKeys(text) {
@@ -174,6 +210,27 @@ async function getAllFaceFcBases() {
     if (!imcontinue) break;
   }
 
+  let cmcontinue = '';
+  while (true) {
+    const url =
+      'https://feheroes.fandom.com/api.php?action=query&format=json&list=categorymembers&cmtitle=' +
+      encodeURIComponent('Category:Heroes') +
+      '&cmlimit=500' +
+      (cmcontinue ? `&cmcontinue=${encodeURIComponent(cmcontinue)}` : '');
+
+    const json = await apiGetJson(url);
+    const rows = (json.query && json.query.categorymembers) || [];
+
+    for (const row of rows) {
+      if (Number(row && row.ns) !== 0) continue;
+      const base = fandomPageTitleToBase(row && row.title);
+      if (base) seen.add(base);
+    }
+
+    cmcontinue = json.continue && json.continue.cmcontinue ? json.continue.cmcontinue : '';
+    if (!cmcontinue) break;
+  }
+
   return [...seen];
 }
 
@@ -187,10 +244,12 @@ async function getImageInfo(fileTitle) {
 }
 
 async function resolveStateInfo(fandomBase, stateName) {
-  for (const ext of ['webp', 'png', 'jpg', 'jpeg']) {
-    const title = `File:${fandomBase} ${stateName}.${ext}`;
-    const info = await getImageInfo(title);
-    if (info && info.url) return { info, title, ext };
+  for (const baseCandidate of fandomFileBaseCandidates(fandomBase)) {
+    for (const ext of ['webp', 'png', 'jpg', 'jpeg']) {
+      const title = `File:${baseCandidate} ${stateName}.${ext}`;
+      const info = await getImageInfo(title);
+      if (info && info.url) return { info, title, ext };
+    }
   }
   return null;
 }

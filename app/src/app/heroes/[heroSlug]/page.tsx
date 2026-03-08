@@ -129,12 +129,12 @@ export default async function HeroDetailPage({ params }: HeroDetailPageProps) {
   const moveIcon   = moveIconName(hero.move);
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
-      <main className="mx-auto w-full max-w-6xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+    <div className="min-h-screen bg-zinc-950 px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
+      <main className="mx-auto w-full max-w-6xl rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 md:p-8">
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold">{hero.name}</h1>
-          <div className="flex gap-2">
+          <h1 className="text-xl font-semibold sm:text-2xl">{hero.name}</h1>
+          <div className="flex flex-wrap justify-end gap-2">
             <form action={toggleFavorite}>
               <input type="hidden" name="hero_slug"   value={hero.hero_slug} readOnly />
               <input type="hidden" name="redirect_to" value={`/heroes/${hero.hero_slug}`} readOnly />

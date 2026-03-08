@@ -8,6 +8,7 @@ import {
 import { dbRoot } from "@/lib/db-root";
 
 const DEFAULT_POSE_ORDER = ["portrait", "attack", "special", "damage"];
+const IMAGE_CACHE_CONTROL = "no-store, max-age=0, must-revalidate";
 
 async function proxyRemoteImage(url: string) {
   try {
@@ -32,7 +33,7 @@ async function proxyRemoteImage(url: string) {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": IMAGE_CACHE_CONTROL,
       },
     });
   } catch {
@@ -133,21 +134,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ hero
     if (fandomFullbody) {
       const proxied = await proxyRemoteImage(fandomFullbody);
       if (proxied) return proxied;
-      return NextResponse.redirect(fandomFullbody, 302);
+      const redirect = NextResponse.redirect(fandomFullbody, 302);
+      redirect.headers.set("Cache-Control", IMAGE_CACHE_CONTROL);
+      return redirect;
     }
 
     const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
     if (remoteImage) {
       const proxied = await proxyRemoteImage(remoteImage);
       if (proxied) return proxied;
-      return NextResponse.redirect(remoteImage, 302);
+      const redirect = NextResponse.redirect(remoteImage, 302);
+      redirect.headers.set("Cache-Control", IMAGE_CACHE_CONTROL);
+      return redirect;
     }
 
     return new NextResponse(placeholderSvg(heroSlug), {
       status: 200,
       headers: {
         "Content-Type": "image/svg+xml",
-        "Cache-Control": "no-store, max-age=0, must-revalidate",
+        "Cache-Control": IMAGE_CACHE_CONTROL,
       },
     });
   }
@@ -157,7 +162,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ hero
     status: 200,
     headers: {
       "Content-Type": inferContentType(filePath),
-      "Cache-Control": "public, max-age=86400",
+      "Cache-Control": IMAGE_CACHE_CONTROL,
     },
   });
 }

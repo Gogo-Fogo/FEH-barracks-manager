@@ -89,6 +89,28 @@ async function safeExtractTierCards(page) {
   }
 }
 
+function readExistingIndex() {
+  try {
+    const data = JSON.parse(fs.readFileSync(INDEX_FILE, 'utf8'));
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeScannedHeroesIntoIndex(existingIndex, scannedHeroes) {
+  const seenUrls = new Set();
+  const mergedScanned = scannedHeroes.map((hero) => {
+    const url = hero?.url || '';
+    if (url) seenUrls.add(url);
+    const existing = existingIndex.find((row) => row?.url === url);
+    return existing ? { ...existing, ...hero } : hero;
+  });
+
+  const preserved = existingIndex.filter((row) => !seenUrls.has(row?.url || ''));
+  return [...mergedScanned, ...preserved];
+}
+
 (async () => {
   console.log('🔄 Launching VAULT MAINTENANCE UPDATER (SCOUT ONLY)...');
   let browser;
@@ -141,9 +163,12 @@ async function safeExtractTierCards(page) {
     }
 
     const heroList = Array.from(uniqueHeroes.values());
+    const existingIndex = readExistingIndex();
+    const mergedIndex = mergeScannedHeroesIntoIndex(existingIndex, heroList);
     runStats.scannedHeroes = heroList.length;
-    fs.writeFileSync(INDEX_FILE, JSON.stringify(heroList, null, 2));
-    console.log(`\n✅ Scan Complete. Found ${heroList.length} heroes total.`);
+    fs.writeFileSync(INDEX_FILE, JSON.stringify(mergedIndex, null, 2));
+    console.log(`\n✅ Scan Complete. Found ${heroList.length} heroes in current feed.`);
+    console.log(`🗃️ Preserved full catalog size: ${mergedIndex.length} rows.`);
 
     // --- PHASE 2: MAINTAIN UNIT FILE METADATA ONLY ---
     // IMPORTANT: No deep scrape here. build_parser.js owns enrichment.

@@ -49,6 +49,7 @@ const MANUAL_QUERY_OVERRIDES = {
   "linhardt hevrings heir": ["Linhardt Hevring"],
   "lonqu solitary blade": ["Lon'qu Solitary Blade"],
   "tanya dagdars kid": ["Tanya Dagdar"],
+  "thorr spring war god": ["Spring Thórr"],
 };
 
 const TITLE_MATCH_SYNONYM_GROUPS = [
@@ -113,6 +114,14 @@ function readJson(filePath, fallback) {
 function writeJson(filePath, data) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+function fandomPageTitleToBase(title) {
+  return String(title || "")
+    .replace(/_/g, " ")
+    .replace(/\s*:\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeKey(text) {
@@ -245,6 +254,28 @@ async function getFandomHeadshotBases() {
     imcontinue =
       json.continue && json.continue.imcontinue ? json.continue.imcontinue : "";
     if (!imcontinue) break;
+  }
+
+  let cmcontinue = "";
+  while (true) {
+    const url =
+      "https://feheroes.fandom.com/api.php?action=query&format=json&list=categorymembers&cmtitle=" +
+      encodeURIComponent("Category:Heroes") +
+      "&cmlimit=500" +
+      (cmcontinue ? `&cmcontinue=${encodeURIComponent(cmcontinue)}` : "");
+
+    const json = await apiGetJson(url);
+    const rows = (json.query && json.query.categorymembers) || [];
+
+    for (const row of rows) {
+      if (Number(row && row.ns) !== 0) continue;
+      const base = fandomPageTitleToBase(row && row.title);
+      if (base) seen.add(base);
+    }
+
+    cmcontinue =
+      json.continue && json.continue.cmcontinue ? json.continue.cmcontinue : "";
+    if (!cmcontinue) break;
   }
 
   return [...seen].sort((a, b) => a.localeCompare(b));
@@ -635,6 +666,12 @@ async function main() {
   if (!runCommand(nodeCommand, ["scripts/generate-fandom-name-map.js"])) {
     report.command_failures.push({
       stage: "generate-fandom-name-map",
+    });
+  }
+
+  if (!runCommand(nodeCommand, ["scripts/generate-bundled-unit-data.js"])) {
+    report.command_failures.push({
+      stage: "generate-bundled-unit-data",
     });
   }
 

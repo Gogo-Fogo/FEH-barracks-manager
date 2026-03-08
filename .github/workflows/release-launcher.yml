@@ -142,7 +142,7 @@ jobs:
       - name: Create release body with banner
         run: |
           cat > RELEASE_BODY.md << 'EOF'
-          <img src="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner.webp" width="380" alt="feh-barracks-manager-banner" />
+          <img src="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner-${{ github.ref_name }}.webp" width="380" alt="feh-barracks-manager-banner" />
 
           EOF
 

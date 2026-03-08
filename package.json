@@ -8,6 +8,7 @@
     "download:game8-mini": "node scraper/game8_mini_sprite_downloader.js",
     "scrape:banner-guides": "node scraper/game8_banner_pull_scraper.js",
     "scrape:fandom-rarities": "node scraper/fandom_rarity_updater.js",
+    "backfill:fandom-list": "node scripts/backfill-heroes-from-fandom-list.js",
     "reconcile:index": "node scripts/reconcile-index-from-units.js",
     "build:skill-catalog": "node scripts/build-skill-catalog.js",
     "build:local-assets-bundle": "node scripts/build-local-assets-bundle.js",
@@ -16,7 +17,8 @@
     "release:data-bundle": "node scripts/release-data-bundle.js",
     "release:launcher": "node scripts/release-launcher.js",
     "validate:hero-aliases": "node scripts/validate-hero-aliases.js",
-    "generate:fandom-name-map": "node scripts/generate-fandom-name-map.js"
+    "generate:fandom-name-map": "node scripts/generate-fandom-name-map.js",
+    "generate:bundled-unit-data": "node scripts/generate-bundled-unit-data.js"
   },
   "keywords": [],
   "author": "",

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { dbRoot } from "@/lib/db-root";
+import bundledUnitDataJson from "@/lib/bundled-unit-data.json";
 import game8IndexJson from "@/lib/game8-index.json";
 import {
   loadFandomFullbodyPosesBySlug,
@@ -24,6 +25,7 @@ const REQUIRED_BUILD_KEYS = [
 type BuildKey = (typeof REQUIRED_BUILD_KEYS)[number];
 
 type UnitFileShape = {
+  artist?: string | null;
   name?: string;
   url?: string | null;
   ivs?: string | null;
@@ -37,6 +39,8 @@ type IndexEntry = {
 };
 
 const BUNDLED_GAME8_INDEX: Array<IndexEntry> = game8IndexJson as Array<IndexEntry>;
+const BUNDLED_UNIT_DATA: Record<string, UnitFileShape> =
+  bundledUnitDataJson as Record<string, UnitFileShape>;
 
 let indexBySlugPromise: Promise<Map<string, IndexEntry>> | null = null;
 const unitFallbackCache = new Map<string, Promise<UnitFileShape | null>>();
@@ -180,6 +184,14 @@ function normalizeRecommendedBuild(build: Partial<Record<BuildKey, string>>) {
   }
 
   return out;
+}
+
+function loadBundledUnitFile(heroSlug: string) {
+  const direct = BUNDLED_UNIT_DATA[heroSlug];
+  if (direct) return direct;
+
+  const normalized = toSlug(heroSlug);
+  return normalized ? BUNDLED_UNIT_DATA[normalized] ?? null : null;
 }
 
 async function loadIndexBySlug() {
@@ -367,6 +379,9 @@ export async function GET(
   let unitFile = await readJsonSafe(
     path.join(dbRoot(), "units", `${heroSlug}.json`)
   );
+  if (!unitFile) {
+    unitFile = loadBundledUnitFile(heroSlug);
+  }
   if (!unitFile) {
     unitFile = await loadGame8FallbackUnit(heroSlug);
   }

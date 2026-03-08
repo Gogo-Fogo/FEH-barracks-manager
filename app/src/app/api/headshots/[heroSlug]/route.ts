@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { loadFandomHeadshotUrlBySlug, loadUnitImageUrlBySlug } from "@/lib/local-unit-data";
 import { dbRoot } from "@/lib/db-root";
+const IMAGE_CACHE_CONTROL = "no-store, max-age=0, must-revalidate";
 
 async function proxyRemoteImage(url: string) {
   try {
@@ -27,7 +28,7 @@ async function proxyRemoteImage(url: string) {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": IMAGE_CACHE_CONTROL,
       },
     });
   } catch {
@@ -60,7 +61,6 @@ async function findHeadshotFile(heroSlug: string) {
   ];
 
   const candidateDirs = new Set<string>();
-  const baseToken = heroSlug.split("___")[0]?.toLowerCase() || "";
   const normalizedTarget = normalizeSlug(heroSlug);
 
   for (const root of roots) {
@@ -74,13 +74,6 @@ async function findHeadshotFile(heroSlug: string) {
       const normalizedMatch = dirs.find((dirName) => normalizeSlug(dirName) === normalizedTarget);
       if (normalizedMatch) {
         candidateDirs.add(path.join(root, normalizedMatch));
-      }
-
-      if (baseToken) {
-        const basePrefixMatches = dirs.filter((dirName) => dirName.toLowerCase().startsWith(`${baseToken}___`));
-        for (const match of basePrefixMatches) {
-          candidateDirs.add(path.join(root, match));
-        }
       }
     } catch {
       // continue
@@ -146,21 +139,25 @@ export async function GET(
       if (fandomHeadshot) {
         const proxied = await proxyRemoteImage(fandomHeadshot);
         if (proxied) return proxied;
-        return NextResponse.redirect(fandomHeadshot, 302);
+        const redirect = NextResponse.redirect(fandomHeadshot, 302);
+        redirect.headers.set("Cache-Control", IMAGE_CACHE_CONTROL);
+        return redirect;
       }
 
       const remoteImage = await loadUnitImageUrlBySlug(heroSlug);
       if (remoteImage) {
         const proxied = await proxyRemoteImage(remoteImage);
         if (proxied) return proxied;
-        return NextResponse.redirect(remoteImage, 302);
+        const redirect = NextResponse.redirect(remoteImage, 302);
+        redirect.headers.set("Cache-Control", IMAGE_CACHE_CONTROL);
+        return redirect;
       }
 
       return new NextResponse(placeholderSvg(heroSlug), {
         status: 200,
         headers: {
           "Content-Type": "image/svg+xml",
-          "Cache-Control": "no-store, max-age=0, must-revalidate",
+          "Cache-Control": IMAGE_CACHE_CONTROL,
         },
       });
     }
@@ -170,7 +167,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": inferContentType(filePath),
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": IMAGE_CACHE_CONTROL,
       },
     });
   } catch {

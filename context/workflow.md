@@ -80,6 +80,49 @@ Notes:
 - This protocol updates shared hero/catalog data; it does not modify user-owned profile/barracks data.
 - Keep Game8 identity canonical; never rename unit identity from Fandom labels.
 
+## Full-Catalog Backfill via Fandom List_of_Heroes
+- Problem:
+  - The Game8 FEH tier-list page (`https://game8.co/games/fire-emblem-heroes/archives/242267`) is lazy-loaded.
+  - The page can show `Showing: <N> items`, but scrolling the hero tab and snapshotting cards still does **not** reliably materialize every hero in the DOM.
+  - Result: Scout can finish successfully while older or otherwise hidden heroes never enter `db/index.json`.
+- Authoritative coverage source for gap audits:
+  - `https://feheroes.fandom.com/wiki/List_of_Heroes`
+- Why this source is used:
+  - Fandom exposes a fuller enumerated hero list than the Game8 tier-list DOM.
+  - Fandom hero pages are also the preferred fallback source for headshots plus portrait / attack / special / damaged art variants for heroes missing from current local assets.
+- Canonical identity rule:
+  - Use Fandom for coverage discovery and asset harvesting.
+  - Use Game8 archive URL/name/slug as canonical identity in `db/index.json`, `db/units/`, aliases, and app import.
+  - Never overwrite canonical Game8 identity with Fandom wording.
+- Name mismatch handling:
+  - Expect inconsistent naming between Fandom and Game8, especially for seasonals / legacy variants / punctuation differences.
+  - Resolve mismatches through `db/hero_aliases.json`, `app/src/lib/fandom-name-map.json`, and the curated/manual query overrides in `scripts/backfill-heroes-from-fandom-list.js`.
+  - If Fandom and Game8 labels disagree, treat it as a mapping problem first, not proof that the hero does not exist on Game8.
+- Preferred automation:
+  - Report-only audit:
+    - `npm run backfill:fandom-list -- --report-only`
+  - Full backfill + enrichment + assets + import:
+    - `npm run backfill:fandom-list`
+  - Narrow batch during triage:
+    - `npm run backfill:fandom-list -- --limit=25`
+    - `npm run backfill:fandom-list -- --only=\"Abel The Panther,Aelfric Custodian Monk\"`
+  - Output report:
+    - `release_local/fandom-backfill/backfill-report-<timestamp>.json`
+- What the automation does:
+  1. Enumerates Fandom `List_of_Heroes`.
+  2. Compares that list against local Game8-backed coverage.
+  3. Searches/resolves missing heroes to Game8 archive URLs.
+  4. Runs `npm run reconcile:index -- --archive-url=<url>` for resolved gaps.
+  5. Runs `node scraper/build_parser.js --only=<slug>.json`.
+  6. Regenerates the Fandom name map.
+  7. Pulls Fandom fullbody/headshot/quotes assets for the recovered set.
+  8. Re-imports heroes into Supabase via `npm --prefix app run import:heroes`.
+- Manual fallback if only one archive URL is known:
+  1. `npm run reconcile:index -- --archive-url=<url>`
+  2. `node scraper/build_parser.js --only=<slug>.json`
+  3. `npm --prefix app run import:heroes`
+  4. If needed, run targeted Fandom asset downloaders for that slug.
+
 ## P0 Stability Rule (Command Execution)
 - **Do not use long `node -e` one-liners for maintenance/audit tasks in this repo.**
 - Prefer committed scripts in `scripts/` for repeatable checks.
@@ -228,6 +271,7 @@ Implementation notes (current repo):
   1. Run the index-to-unit coverage sanity check during maintenance (see protocol step 2).
   2. Treat non-zero `missing_from_index` as data drift that must be reviewed before release/import validation.
   3. Keep Scout as primary canonical source, but do not let temporary index drift hide valid unit files from app catalog import.
+  4. If the missing set looks larger than expected, do **not** trust the Game8 tier-list card DOM alone; use the Fandom `List_of_Heroes` backfill workflow above to audit coverage.
 
 ### Incident Note (2026-02-20): Hero Art Missing Even When Fandom URL Exists
 - Symptom:

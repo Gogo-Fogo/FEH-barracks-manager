@@ -58,6 +58,7 @@ Other scripts: asset downloaders (fullbody art, headshots, quotes, shared icons,
 - Use container `scrollTop` scrolling, not window scroll or keyboard
 - Always mask user agent as standard Windows Chrome
 - `protocolTimeout` ≥ 180000ms for deep scrapes
+- Do **not** assume Game8 tier-list card rendering is exhaustive just because the page shows `Showing: <N> items`; use Fandom `List_of_Heroes` for full-catalog backfill/audits
 
 ---
 
@@ -100,6 +101,7 @@ Full protocol in `context/workflow.md`. Summary:
 - **Banner image**: release notes must use a version-specific raw asset URL under `assets/release/` (for example `banner-v0.3.4.webp`) and pin that URL to the release tag or commit SHA, not `main`. Reusing one moving banner URL will retroactively change older release pages.
 
 **Missing unit recovery:** `npm run reconcile:index [-- --archive-url=<url>]` then `build_parser.js --only=<slug>.json`
+**Full-catalog backfill:** `npm run backfill:fandom-list [-- --report-only|--limit=<n>|--only=\"Name One,Name Two\"]`
 
 ---
 

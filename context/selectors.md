@@ -34,6 +34,23 @@ Last updated: 2026-02-13
 - These are CSS-module substring selectors and may change after site deploys.
 - If scraping breaks, re-validate this file first, then update both scripts.
 - Tier list scrolling should prioritize **container `scrollTop`** on `cardView`.
+- The tier-list page can display `Showing: <N> items` while the lazy-loaded DOM still fails to materialize every hero card.
+- Do **not** treat card snapshots from `archives/242267` as exhaustive catalog discovery, even after long scroll loops.
+- Use Game8 tier-list scrolling for current-feed discovery only; use Fandom `List_of_Heroes` for full-catalog coverage audits/backfill.
+
+## Full-Catalog Discovery Guardrail
+- Canonical discovery gap:
+  - `https://game8.co/games/fire-emblem-heroes/archives/242267`
+  - Even when the page advertises a large total item count, lazy loading can miss historical heroes in the rendered card list.
+- Coverage/backfill source:
+  - `https://feheroes.fandom.com/wiki/List_of_Heroes`
+- Recovery pattern:
+  1. Enumerate the full Fandom hero list.
+  2. Resolve each Fandom name to the corresponding Game8 hero archive page.
+  3. Keep Game8 URL/name/slug as canonical identity.
+  4. Use alias/name-map handling for Fandom-vs-Game8 naming mismatches.
+- Asset note:
+  - Fandom hero pages are also the preferred fallback source for headshots plus portrait / attack / special / damaged art variants when Game8 discovery missed the hero.
 
 ## Asset Storage Layout (AI-efficient)
 - Keep unit text data and image binaries separated to reduce AI retrieval token usage.
