@@ -12,6 +12,7 @@ This release rolls up the intended `v0.3.6` and `v0.3.7` changes after the GitHu
 
 - `FEH-Barracks-Launcher.exe`
 - `feh-app-bundle.zip`
+- `feh-assets-full-bundle.zip`
 - `feh-node-runtime.zip`
 - `feh-assets-bundle.zip`
 - `feh-runtime-config.json`
