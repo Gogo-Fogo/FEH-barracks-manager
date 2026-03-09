@@ -696,8 +696,10 @@ export function isLikelyHeroRecommendation(recommendation: BannerPullGuideRecomm
   if (!heroName) return false;
 
   const text = heroName.toLowerCase();
+  const notes = sanitizeText(recommendation.notes || "");
+  const notesLower = notes.toLowerCase();
   if (
-    /^(hero|heroes|summon categories|legendary heroes|mythic heroes|special heroes|new heroes|hero alts|dates of availability|best summons to pull from and release dates)$/i.test(
+    /^(hero|heroes|summon categories|legendary heroes|mythic heroes|special heroes|new heroes|hero alts|dates of availability|best summons to pull from and release dates|base stats?)$/i.test(
       heroName
     )
   ) {
@@ -705,8 +707,26 @@ export function isLikelyHeroRecommendation(recommendation: BannerPullGuideRecomm
   }
 
   if (
-    /(categories|release dates|availability|simulator|results board|useful skills|summon categories|best summons)/.test(
+    /(categories|release dates|availability|simulator|results board|useful skills|summon categories|best summons|summoning event|arena reward|free summon|revival summoning event)/.test(
       text
+    )
+  ) {
+    return false;
+  }
+
+  if (/^lv\.?\s*\d+$/i.test(heroName) || /^(hp|atk|spd|def|res)\d*$/i.test(heroName)) {
+    return false;
+  }
+
+  if (/[+]\s*$/.test(heroName)) {
+    return false;
+  }
+
+  if (
+    notes.startsWith("：") ||
+    (notes.match(/：/g) || []).length >= 3 ||
+    /\b(base stats?|lv\.?\s*1|lv\.?\s*40|summon simulator|summoning event|arena reward|free summon)\b/.test(
+      notesLower
     )
   ) {
     return false;

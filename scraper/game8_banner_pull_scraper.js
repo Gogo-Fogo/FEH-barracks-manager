@@ -135,6 +135,46 @@ async function scrapeBannerPage(page, url) {
 
   return page.evaluate(() => {
     const clean = (v) => (v || '').replace(/\s+/g, ' ').trim();
+    const countMatches = (value, pattern) => (String(value || '').match(pattern) || []).length;
+    const isLikelyHeroName = (name, rowText = '', headerText = '') => {
+      const normalizedName = clean(name);
+      const lowerName = normalizedName.toLowerCase();
+      const lowerRow = clean(rowText).toLowerCase();
+      const lowerHeader = clean(headerText).toLowerCase();
+
+      if (!normalizedName || normalizedName.length < 2 || normalizedName.length > 80) return false;
+      if (/^rank|name$/i.test(normalizedName)) return false;
+      if (/^(hero|heroes|summon categories|legendary heroes|mythic heroes|special heroes|new heroes|hero alts|dates of availability|best summons to pull from and release dates|base stats?)$/i.test(normalizedName)) {
+        return false;
+      }
+      if (/^lv\.?\s*\d+$/i.test(normalizedName) || /^(hp|atk|spd|def|res)\d*$/i.test(normalizedName)) {
+        return false;
+      }
+      if (/[+]\s*$/.test(normalizedName)) return false;
+      if (
+        /(summon simulator|summoning event|results board|arena reward|free summon|availability|release dates|useful skills|categories|base stats)/.test(
+          lowerName
+        )
+      ) {
+        return false;
+      }
+      if (
+        /(weapon|assist|special|passive|sacred seal|useful skills|base stats|lv\.?\s*1|lv\.?\s*40|hp|atk|spd|def|res)/.test(
+          lowerHeader
+        )
+      ) {
+        return false;
+      }
+      if (
+        clean(rowText).startsWith('：') ||
+        countMatches(rowText, /：/g) >= 3 ||
+        /\b(base stats?|lv\.?\s*1|lv\.?\s*40|summon simulator|summoning event|arena reward|free summon)\b/.test(lowerRow)
+      ) {
+        return false;
+      }
+
+      return true;
+    };
     const title = clean(document.querySelector('h1')?.textContent || document.title || 'Unknown Banner Guide');
 
     const articleRoot =
@@ -167,15 +207,27 @@ async function scrapeBannerPage(page, url) {
 
     for (const table of tables) {
       const rows = Array.from(table.querySelectorAll('tr'));
+      const headerText = clean(
+        rows
+          .slice(0, 2)
+          .map((row) =>
+            Array.from(row.querySelectorAll('th,td'))
+              .map((cell) => cell.textContent || '')
+              .join(' | ')
+          )
+          .join(' || ')
+      );
       for (const row of rows) {
         const cells = Array.from(row.querySelectorAll('th,td'));
         if (!cells.length) continue;
 
-        const link = row.querySelector('a[href*="/games/fire-emblem-heroes/archives/"]');
-        const name = clean(link?.textContent || cells[0]?.textContent || '');
-        if (!name || name.length < 2 || /^rank|name$/i.test(name)) continue;
+        const firstCell = cells[0];
+        const firstCellLink = firstCell?.querySelector('a[href*="/games/fire-emblem-heroes/archives/"]');
+        const name = clean(firstCellLink?.textContent || firstCell?.textContent || '');
+        if (!name) continue;
 
         const rowText = clean(cells.map((c) => c.textContent || '').join(' | '));
+        if (!isLikelyHeroName(name, rowText, headerText)) continue;
         const tier =
           rowText.match(/\b([SsAaBb][+\-]?)\b/)?.[1] ||
           rowText.match(/\b(\d{1,2}(?:\.\d)?)\b/)?.[1] ||
