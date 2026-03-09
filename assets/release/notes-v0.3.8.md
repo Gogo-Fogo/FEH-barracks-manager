@@ -8,6 +8,7 @@ This release rolls up the intended `v0.3.6` and `v0.3.7` changes after the GitHu
 - Upgraded the AI Context export with warnings, favorites, saved-team build planning, compact owned-guide prioritization, and a full-export mode for deeper account reviews.
 - Added bundled banner-guide fallback for hosted builds so summon-target and banner-analysis sections work outside local maintainer environments.
 - Tightened summon-target filtering to remove simulator, stat-table, and skill-table noise so banner advice stays focused on actual heroes.
+- Added explicit event-grounding rules to the AI export so models do not invent Tempest Trials or other live bonus units when the export does not contain verified event data.
 - Improved the hero detail experience on mobile with tighter spacing, wrapping action buttons, larger carousel tap targets, and less overflow in build sections.
 - Stabilized launcher packaging and GitHub release automation on Linux CI with the required Wine/Xvfb setup and a safer Electron build command.
 

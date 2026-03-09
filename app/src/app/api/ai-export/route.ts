@@ -271,6 +271,8 @@ export async function GET(request: Request) {
   lines.push("- Use favorites, saved teams, tracked fodder, and player notes together when suggesting builds or replacements.");
   lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, availability, and inheritance realism matter.");
   lines.push("- `account:` skill coverage only reflects tracked skills, fodder, and equipped builds in this export.");
+  lines.push("- For live events like Tempest Trials, Arena seasons, and current bonus-unit lineups: only claim event-specific bonus units if this export explicitly names them.");
+  lines.push("- If live event bonus data is not explicitly present in this export, do not infer it from memory. Give a roster-based team instead and say the bonus lineup still needs verification.");
   lines.push("- Saved Team Build Planning is the highest-signal section for improving existing teams.");
   lines.push("- Summon Targets and Build Planning is the highest-signal section for banner advice and wishlist recommendations.");
   lines.push("- Keep advice concise: top upgrades, why they matter, and what they cost in fodder or summons.");
@@ -279,6 +281,7 @@ export async function GET(request: Request) {
   lines.push("## Limitations");
   lines.push("- Full guide text is truncated in compact mode to keep token cost manageable.");
   lines.push("- Banner guidance depends on local banner guide snapshots, not a live scrape at export time.");
+  lines.push("- Banner guidance is not the same thing as live Tempest Trials / Arena / event bonus-unit data unless this export explicitly says so.");
   lines.push("- `account: not tracked on-account` means the skill is not currently represented elsewhere in this export, not that it is impossible to obtain.");
   lines.push("");
 
