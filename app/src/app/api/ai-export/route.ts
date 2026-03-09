@@ -1,103 +1,28 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { dbRoot } from "@/lib/db-root";
 import {
-  countEquippedSkills,
-  EQUIPPED_SKILL_SLOTS,
+  appendRecommendedBuildLines,
+  appendTrackedInventoryLines,
+  buildSkillOwnershipIndex,
+  collectSummonTargets,
+  DEFAULT_RAW_TEXT_LIMIT as IMPROVED_RAW_TEXT_LIMIT,
+  DEFAULT_SUMMON_TARGET_LIMIT,
+  loadBannerPullGuides,
+  loadExportUnitFile,
+  loadGame8IndexBySlug,
+  loadSkillCatalogByName,
+  normalizeTeamLabels,
+  normalizeSlug,
+  normalizeTeamSlots,
+  resolveOwnedHero,
+  sanitizeText,
+  trimForExport,
+} from "@/lib/ai-export-support";
+import {
   hasTrackedInventory,
   parseBarracksEntryNotes,
-  type BarracksTrackedSkill,
 } from "@/lib/barracks-entry-metadata";
-
-type UnitFile = {
-  name?: string;
-  ivs?: string;
-  raw_text_data?: string;
-  recommended_build?: Record<string, string>;
-};
-
-type BannerPullGuide = {
-  id?: string;
-  url?: string;
-  title?: string;
-  scraped_at?: string;
-  guide_sections?: Array<{ heading?: string; content?: string }>;
-  recommendations?: Array<{
-    hero_name?: string;
-    hero_slug_guess?: string;
-    tier?: string;
-    pull_recommendation?: string;
-    notes?: string;
-  }>;
-};
-
-type BannerPullGuidesFile = {
-  items?: BannerPullGuide[];
-};
-
-const DEFAULT_RAW_TEXT_LIMIT = 6000;
-
-function sanitizeText(value: string | null | undefined) {
-  return (value || "").replace(/\s+/g, " ").trim();
-}
-
-function describeTrackedSkill(skill: BarracksTrackedSkill | null | undefined) {
-  if (!skill) return null;
-  const suffix = skill.subcategory || skill.category_label || skill.category || "Skill";
-  return `${skill.name} [${suffix}]`;
-}
-
-async function readUnitFile(heroSlug: string): Promise<UnitFile | null> {
-  const candidates = [
-    path.join(dbRoot(), "units", `${heroSlug}.json`),
-  ];
-
-  for (const filePath of candidates) {
-    try {
-      const raw = await fs.readFile(filePath, "utf8");
-      return JSON.parse(raw) as UnitFile;
-    } catch {
-      // continue
-    }
-  }
-
-  return null;
-}
-
-function trimForExport(text: string, limit: number) {
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit)} …[truncated]`;
-}
-
-function normalizeSlug(value: string) {
-  return String(value || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .toLowerCase()
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-}
-
-async function loadBannerPullGuides(): Promise<BannerPullGuide[]> {
-  const candidates = [
-    path.join(dbRoot(), "banner_pull_guides.json"),
-  ];
-
-  for (const filePath of candidates) {
-    try {
-      const raw = await fs.readFile(filePath, "utf8");
-      const parsed = JSON.parse(raw) as BannerPullGuidesFile;
-      return Array.isArray(parsed.items) ? parsed.items : [];
-    } catch {
-      // continue
-    }
-  }
-
-  return [];
-}
+import { normalizeSkillSearchText } from "@/lib/skill-catalog";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -111,8 +36,14 @@ export async function GET(request: Request) {
 
   const mode = new URL(request.url).searchParams.get("mode") || "compact";
   const includeFullRawText = mode === "full";
+  const warnings: string[] = [];
 
-  const [{ data: barracks }, { data: teams }, { data: notes }] = await Promise.all([
+  const [
+    { data: barracks, error: barracksError },
+    { data: teams, error: teamsError },
+    { data: notes, error: notesError },
+    { data: favorites, error: favoritesError },
+  ] = await Promise.all([
     supabase
       .from("user_barracks")
       .select("hero_slug,hero_name,merges,copies_owned,notes,updated_at")
@@ -120,7 +51,7 @@ export async function GET(request: Request) {
       .order("hero_name", { ascending: true }),
     supabase
       .from("user_teams")
-      .select("name,description,slots,updated_at")
+      .select("name,description,slots,slot_labels,updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
     supabase
@@ -129,7 +60,19 @@ export async function GET(request: Request) {
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(30),
+    supabase
+      .from("user_favorites")
+      .select("hero_slug, heroes(name)")
+      .eq("user_id", user.id),
   ]);
+
+  if (barracksError) warnings.push(`Barracks query warning: ${barracksError.message}`);
+  if (teamsError) warnings.push(`Teams query warning: ${teamsError.message}`);
+  if (notesError) warnings.push(`Notes query warning: ${notesError.message}`);
+  if (favoritesError) warnings.push(`Favorites query warning: ${favoritesError.message}`);
+  if ((notes || []).length === 30) {
+    warnings.push("User notes export is capped at the 30 most recent notes.");
+  }
 
   const heroSlugs = (barracks || []).map((b) => b.hero_slug).filter(Boolean);
   const heroMetaBySlug = new Map<
@@ -138,10 +81,14 @@ export async function GET(request: Request) {
   >();
 
   if (heroSlugs.length) {
-    const { data: heroMetaRows } = await supabase
+    const { data: heroMetaRows, error: heroMetaError } = await supabase
       .from("heroes")
       .select("hero_slug,tier,weapon,move,tag")
       .in("hero_slug", heroSlugs);
+
+    if (heroMetaError) {
+      warnings.push(`Hero metadata query warning: ${heroMetaError.message}`);
+    }
 
     for (const row of heroMetaRows || []) {
       heroMetaBySlug.set(row.hero_slug, {
@@ -155,12 +102,82 @@ export async function GET(request: Request) {
 
   const lines: string[] = [];
   const now = new Date().toISOString();
-  const bannerGuides = await loadBannerPullGuides();
+  const [bannerGuides, game8IndexBySlug, skillCatalogByName] = await Promise.all([
+    loadBannerPullGuides(),
+    loadGame8IndexBySlug(),
+    loadSkillCatalogByName(),
+  ]);
+  if (!bannerGuides.length) {
+    warnings.push("No banner pull-guide data was available in db/banner_pull_guides.json.");
+  }
+  if (!skillCatalogByName.size) {
+    warnings.push("Skill catalog was unavailable, so recommended build effect lookups were skipped.");
+  }
 
   const barracksBySlug = new Map<string, { hero_slug: string; hero_name: string }>();
-  for (const b of barracks || []) {
-    barracksBySlug.set(normalizeSlug(b.hero_slug), { hero_slug: b.hero_slug, hero_name: b.hero_name });
+  const barracksByName = new Map<string, { hero_slug: string; hero_name: string }>();
+  const parsedBarracksEntries = (barracks || []).map((entry) => ({
+    entry,
+    parsed: parseBarracksEntryNotes(entry.notes),
+    meta: heroMetaBySlug.get(entry.hero_slug) ?? null,
+  }));
+  const barracksByExactSlug = new Map(
+    parsedBarracksEntries.map((item) => [item.entry.hero_slug, item] as const)
+  );
+
+  for (const item of parsedBarracksEntries) {
+    barracksBySlug.set(normalizeSlug(item.entry.hero_slug), {
+      hero_slug: item.entry.hero_slug,
+      hero_name: item.entry.hero_name,
+    });
+    barracksByName.set(normalizeSkillSearchText(item.entry.hero_name), {
+      hero_slug: item.entry.hero_slug,
+      hero_name: item.entry.hero_name,
+    });
   }
+
+  const favoriteRows = (favorites || []) as Array<{
+    hero_slug?: string | null;
+    heroes?: { name?: string | null } | Array<{ name?: string | null }> | null;
+  }>;
+  const favoriteSlugs = new Set(
+    favoriteRows.map((item) => String(item.hero_slug || "").trim()).filter(Boolean)
+  );
+  const trackedInventoryCount = parsedBarracksEntries.filter((item) =>
+    hasTrackedInventory(item.parsed.inventory)
+  ).length;
+  const ownershipIndex = buildSkillOwnershipIndex(
+    parsedBarracksEntries.map((item) => ({
+      heroName: item.entry.hero_name,
+      inventory: item.parsed.inventory,
+    }))
+  );
+  const teamRows = (teams || []) as Array<{
+    name?: string | null;
+    description?: string | null;
+    slots?: unknown;
+    slot_labels?: unknown;
+    updated_at?: string | null;
+  }>;
+  const teamHeroSlugs = new Set<string>();
+  for (const team of teamRows) {
+    for (const slot of normalizeTeamSlots(team.slots)) {
+      if (slot) teamHeroSlugs.add(slot);
+    }
+  }
+
+  const summonTargets = collectSummonTargets(
+    bannerGuides,
+    barracksBySlug,
+    barracksByName,
+    game8IndexBySlug
+  ).slice(0, DEFAULT_SUMMON_TARGET_LIMIT);
+  const priorityHeroSlugs = new Set<string>([
+    ...Array.from(teamHeroSlugs),
+    ...Array.from(favoriteSlugs),
+    ...summonTargets.map((target) => String(target.heroSlug || "").trim()).filter(Boolean),
+  ]);
+  let missingOwnedGuideCount = 0;
 
   lines.push("# FEH Barracks AI Context Export");
   lines.push(`Generated: ${now}`);
@@ -172,94 +189,101 @@ export async function GET(request: Request) {
   lines.push("1. Summary");
   lines.push("2. AI Assistant Instructions");
   lines.push("3. Limitations");
-  lines.push("4. Teams");
-  lines.push("5. Barracks");
-  lines.push("6. User Notes");
-  lines.push("7. Character Guide Context (owned heroes only)");
-  lines.push("8. Banner Pull Guidance (Game8)");
+  lines.push("4. Warnings");
+  lines.push("5. Favorites");
+  lines.push("6. Teams");
+  lines.push("7. Barracks");
+  lines.push("8. User Notes");
+  lines.push("9. Character Guide Context (owned heroes only)");
+  lines.push("10. Saved Team Build Planning");
+  lines.push("11. Summon Targets and Build Planning");
+  lines.push("12. Banner Pull Guidance (Game8)");
   lines.push("");
 
   lines.push("## Summary");
-  lines.push(`- Barracks heroes: ${(barracks || []).length}`);
-  lines.push(
-    `- Heroes with tracked inventory: ${(barracks || []).filter((entry) => hasTrackedInventory(parseBarracksEntryNotes(entry.notes).inventory)).length}`
-  );
-  lines.push(`- Team presets: ${(teams || []).length}`);
+  lines.push(`- Barracks heroes: ${parsedBarracksEntries.length}`);
+  lines.push(`- Heroes with tracked inventory: ${trackedInventoryCount}`);
+  lines.push(`- Favorite heroes: ${favoriteRows.length}`);
+  lines.push(`- Team presets: ${teamRows.length}`);
   lines.push(`- Notes included: ${(notes || []).length}`);
   lines.push(`- Banner pull guides loaded: ${bannerGuides.length}`);
+  lines.push(`- Summon targets surfaced: ${summonTargets.length}`);
   lines.push("");
 
   lines.push("## AI Assistant Instructions");
   lines.push("- This file is an account-context export for FEH planning.");
-  lines.push("- Prioritize recommendations using ONLY heroes owned in this file unless user explicitly asks for wishlist/summon targets.");
-  lines.push("- Use team presets + barracks + notes together to infer playstyle and gaps.");
-  lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, and available merges matter.");
-  lines.push("- Use tracked blessings and any saved inherited-skill or fodder data from barracks entries when recommending builds or inheritance.");
-  lines.push("- If user asks summon advice for a specific banner, first identify banner units from user input (or ask for banner roster) and compare against owned roster + roles.");
-  lines.push("- If banner roster is not provided in this export, ask follow-up for banner unit list before final recommendation.");
-  lines.push("- Keep advice concise: top 1-3 summon priorities, why, and what role gap each fills.");
+  lines.push("- Prioritize owned heroes first, but use summon-target sections when the account has clear role gaps or banner opportunities.");
+  lines.push("- Use favorites, saved teams, tracked fodder, and player notes together when suggesting builds or replacements.");
+  lines.push("- Treat tier as a signal, not the only rule: synergy, role coverage, availability, and inheritance realism matter.");
+  lines.push("- `account:` skill coverage only reflects tracked skills, fodder, and equipped builds in this export.");
+  lines.push("- Saved Team Build Planning is the highest-signal section for improving existing teams.");
+  lines.push("- Summon Targets and Build Planning is the highest-signal section for banner advice and wishlist recommendations.");
+  lines.push("- Keep advice concise: top upgrades, why they matter, and what they cost in fodder or summons.");
   lines.push("");
 
   lines.push("## Limitations");
-  lines.push("- This export does NOT include all live Game8 banner pages by default.");
-  lines.push("- It includes owned-hero guide context and account state for token-efficient analysis.");
+  lines.push("- Full guide text is truncated in compact mode to keep token cost manageable.");
+  lines.push("- Banner guidance depends on local banner guide snapshots, not a live scrape at export time.");
+  lines.push("- `account: not tracked on-account` means the skill is not currently represented elsewhere in this export, not that it is impossible to obtain.");
+  lines.push("");
+
+  lines.push("## Warnings");
+  if (!warnings.length) {
+    lines.push("- None");
+  } else {
+    for (const warning of warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
+  lines.push("");
+
+  lines.push("## Favorites");
+  if (!favoriteRows.length) {
+    lines.push("- None");
+  } else {
+    for (const favorite of favoriteRows) {
+      const relation = Array.isArray(favorite.heroes) ? favorite.heroes[0] : favorite.heroes;
+      const label = sanitizeText(relation?.name) || sanitizeText(favorite.hero_slug || "") || "Unknown";
+      lines.push(`- ${label} (${sanitizeText(favorite.hero_slug || "-")})`);
+    }
+  }
   lines.push("");
 
   lines.push("## Teams");
-  if (!(teams || []).length) {
+  if (!teamRows.length) {
     lines.push("- None");
   } else {
-    for (const team of teams || []) {
-      const slots = Array.isArray(team.slots) ? team.slots.map((s) => String(s)) : [];
-      lines.push(`- ${team.name}`);
+    for (const team of teamRows) {
+      const slots = normalizeTeamSlots(team.slots);
+      const labels = normalizeTeamLabels(team.slot_labels);
+      lines.push(`- ${sanitizeText(team.name || "Untitled Team")}`);
       if (team.description) lines.push(`  - Description: ${sanitizeText(team.description)}`);
-      lines.push(`  - Slots: ${slots.length ? slots.join(", ") : "(empty)"}`);
-      lines.push(`  - Updated: ${team.updated_at || "-"}`);
+      for (let i = 0; i < Math.max(slots.length, labels.length); i += 1) {
+        const slotSlug = slots[i] || "";
+        const slotLabel = labels[i] || `Slot ${i + 1}`;
+        const resolvedName = slotSlug ? barracksByExactSlug.get(slotSlug)?.entry.hero_name || slotSlug : "(empty)";
+        lines.push(`  - ${slotLabel}: ${resolvedName}`);
+      }
+      lines.push(`  - Updated: ${sanitizeText(team.updated_at || "-")}`);
     }
   }
   lines.push("");
 
   lines.push("## Barracks");
-  if (!(barracks || []).length) {
+  if (!parsedBarracksEntries.length) {
     lines.push("- None");
   } else {
-    for (const entry of barracks || []) {
-      const parsedEntry = parseBarracksEntryNotes(entry.notes);
-      lines.push(`- ${entry.hero_name} (${entry.hero_slug})`);
-      const meta = heroMetaBySlug.get(entry.hero_slug);
-      lines.push(`  - Tier: ${meta?.tier ?? "-"}`);
-      lines.push(`  - Class: ${meta?.weapon || "-"} / ${meta?.move || "-"}`);
-      lines.push(`  - Tag: ${meta?.tag || "-"}`);
-      lines.push(`  - Merges: ${entry.merges ?? 0}`);
-      lines.push(`  - Dupes on hand: ${entry.copies_owned ?? 0}`);
-      if (parsedEntry.inventory.blessings.length) {
-        lines.push(`  - Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
-      }
-      if (countEquippedSkills(parsedEntry.inventory)) {
-        lines.push("  - Build Slots:");
-        for (const slot of EQUIPPED_SKILL_SLOTS) {
-          const value = describeTrackedSkill(parsedEntry.inventory.equipped[slot.key]);
-          if (!value) continue;
-          lines.push(`    - ${slot.label}: ${value}`);
-        }
-      }
-      if (parsedEntry.inventory.fodder.length) {
-        lines.push(
-          `  - Fodder / Manuals: ${parsedEntry.inventory.fodder
-            .map((skill) => describeTrackedSkill(skill))
-            .filter(Boolean)
-            .join(", ")}`
-        );
-      }
-      if (parsedEntry.inventory.legacy_skills.length) {
-        lines.push(
-          `  - Legacy Tracked Skills: ${parsedEntry.inventory.legacy_skills
-            .map((skill) => skill.name)
-            .join(", ")}`
-        );
-      }
-      if (parsedEntry.notes) lines.push(`  - Player Notes: ${sanitizeText(parsedEntry.notes)}`);
-      lines.push(`  - Updated: ${entry.updated_at || "-"}`);
+    for (const item of parsedBarracksEntries) {
+      lines.push(`- ${item.entry.hero_name} (${item.entry.hero_slug})`);
+      lines.push(`  - Tier: ${item.meta?.tier ?? "-"}`);
+      lines.push(`  - Class: ${item.meta?.weapon || "-"} / ${item.meta?.move || "-"}`);
+      lines.push(`  - Tag: ${item.meta?.tag || "-"}`);
+      lines.push(`  - Favorite: ${favoriteSlugs.has(item.entry.hero_slug) ? "yes" : "no"}`);
+      lines.push(`  - Merges: ${item.entry.merges ?? 0}`);
+      lines.push(`  - Dupes on hand: ${item.entry.copies_owned ?? 0}`);
+      appendTrackedInventoryLines(lines, item.parsed.inventory, "  ");
+      if (item.parsed.notes) lines.push(`  - Player Notes: ${sanitizeText(item.parsed.notes)}`);
+      lines.push(`  - Updated: ${sanitizeText(item.entry.updated_at || "-")}`);
     }
   }
   lines.push("");
@@ -278,60 +302,25 @@ export async function GET(request: Request) {
   lines.push("");
 
   lines.push("## Character Guide Context (owned heroes only)");
-  if (!(barracks || []).length) {
+  if (!parsedBarracksEntries.length) {
     lines.push("- None");
   } else {
-    for (const entry of barracks || []) {
-      const unit = await readUnitFile(entry.hero_slug);
-      const parsedEntry = parseBarracksEntryNotes(entry.notes);
-      lines.push(`### ${entry.hero_name} (${entry.hero_slug})`);
-      if (parsedEntry.inventory.blessings.length) {
-        lines.push(`- Blessings: ${parsedEntry.inventory.blessings.join(", ")}`);
-      }
-      if (countEquippedSkills(parsedEntry.inventory)) {
-        lines.push("- Build Slots:");
-        for (const slot of EQUIPPED_SKILL_SLOTS) {
-          const value = describeTrackedSkill(parsedEntry.inventory.equipped[slot.key]);
-          if (!value) continue;
-          lines.push(`  - ${slot.label}: ${value}`);
-        }
-      }
-      if (parsedEntry.inventory.fodder.length) {
-        lines.push(
-          `- Fodder / Manuals: ${parsedEntry.inventory.fodder
-            .map((skill) => describeTrackedSkill(skill))
-            .filter(Boolean)
-            .join(", ")}`
-        );
-      }
-      if (parsedEntry.inventory.legacy_skills.length) {
-        lines.push(
-          `- Legacy Tracked Skills: ${parsedEntry.inventory.legacy_skills
-            .map((skill) => skill.name)
-            .join(", ")}`
-        );
-      }
-      if (parsedEntry.notes) {
-        lines.push(`- Player Notes: ${sanitizeText(parsedEntry.notes)}`);
-      }
+    for (const item of parsedBarracksEntries) {
+      const unit = await loadExportUnitFile(item.entry.hero_slug, priorityHeroSlugs.has(item.entry.hero_slug));
+      lines.push(`### ${item.entry.hero_name} (${item.entry.hero_slug})`);
+      if (item.parsed.notes) lines.push(`- Player Notes: ${sanitizeText(item.parsed.notes)}`);
+      appendTrackedInventoryLines(lines, item.parsed.inventory);
 
       if (!unit) {
-        lines.push("- Guide source file not found locally.");
+        missingOwnedGuideCount += 1;
+        lines.push("- Guide/build data was not found locally, in bundled export data, or via fallback for this hero.");
         lines.push("");
         continue;
       }
 
-      if (unit.ivs) {
-        lines.push(`- IV Recommendation: ${sanitizeText(unit.ivs)}`);
-      }
-
-      const buildEntries = Object.entries(unit.recommended_build || {}).filter(([, value]) => sanitizeText(value));
-      if (buildEntries.length) {
-        lines.push("- Recommended Build:");
-        for (const [key, value] of buildEntries) {
-          lines.push(`  - ${key}: ${sanitizeText(value)}`);
-        }
-      }
+      if (unit.ivs) lines.push(`- IV Recommendation: ${sanitizeText(unit.ivs)}`);
+      if (unit.artist) lines.push(`- Artist: ${sanitizeText(unit.artist)}`);
+      appendRecommendedBuildLines(lines, unit, skillCatalogByName, ownershipIndex, item.parsed.inventory);
 
       const rawText = sanitizeText(unit.raw_text_data);
       if (rawText) {
@@ -339,7 +328,7 @@ export async function GET(request: Request) {
         lines.push(
           includeFullRawText
             ? `  ${rawText}`
-            : `  ${trimForExport(rawText, DEFAULT_RAW_TEXT_LIMIT)}`
+            : `  ${trimForExport(rawText, IMPROVED_RAW_TEXT_LIMIT)}`
         );
       } else {
         lines.push("- Raw Guide Text: (missing)");
@@ -348,12 +337,102 @@ export async function GET(request: Request) {
       lines.push("");
     }
   }
+  if (missingOwnedGuideCount) {
+    lines.push(
+      `> Missing guide/build data for ${missingOwnedGuideCount} owned hero(es). Team, favorite, and summon-target heroes were prioritized for fallback resolution.`
+    );
+    lines.push("");
+  }
+
+  lines.push("## Saved Team Build Planning");
+  if (!teamRows.length) {
+    lines.push("- None");
+  } else {
+    for (const team of teamRows) {
+      const slots = normalizeTeamSlots(team.slots);
+      const labels = normalizeTeamLabels(team.slot_labels);
+      lines.push(`### ${sanitizeText(team.name || "Untitled Team")}`);
+      if (team.description) lines.push(`- Description: ${sanitizeText(team.description)}`);
+      lines.push(`- Updated: ${sanitizeText(team.updated_at || "-")}`);
+
+      if (!slots.some(Boolean)) {
+        lines.push("- Slots: (empty)");
+        lines.push("");
+        continue;
+      }
+
+      for (let i = 0; i < slots.length; i += 1) {
+        const heroSlug = slots[i] || "";
+        const slotLabel = labels[i] || `Slot ${i + 1}`;
+        if (!heroSlug) {
+          lines.push(`- ${slotLabel}: (empty)`);
+          continue;
+        }
+
+        const barracksEntry = barracksByExactSlug.get(heroSlug);
+        const unit = await loadExportUnitFile(heroSlug, true);
+        lines.push(`- ${slotLabel}: ${barracksEntry?.entry.hero_name || heroSlug} (${heroSlug})`);
+        if (barracksEntry?.parsed.notes) {
+          lines.push(`  - Player Notes: ${sanitizeText(barracksEntry.parsed.notes)}`);
+        }
+        if (!unit) {
+          lines.push("  - Build planning data unavailable.");
+          continue;
+        }
+
+        if (unit.ivs) lines.push(`  - IV Recommendation: ${sanitizeText(unit.ivs)}`);
+        appendRecommendedBuildLines(
+          lines,
+          unit,
+          skillCatalogByName,
+          ownershipIndex,
+          barracksEntry?.parsed.inventory ?? null,
+          "  "
+        );
+      }
+
+      lines.push("");
+    }
+  }
+
+  lines.push("## Summon Targets and Build Planning");
+  if (!summonTargets.length) {
+    lines.push("- None");
+  } else {
+    for (const target of summonTargets) {
+      const unit = target.heroSlug ? await loadExportUnitFile(target.heroSlug, true) : null;
+      lines.push(`### ${target.heroName}${target.heroSlug ? ` (${target.heroSlug})` : ""}`);
+      lines.push(`- Source banner: ${target.bannerTitle}`);
+      if (target.bannerUrl) lines.push(`- Banner URL: ${target.bannerUrl}`);
+      if (target.scrapedAt) lines.push(`- Banner scraped: ${target.scrapedAt}`);
+      lines.push(`- Banner tier: ${target.tier || "-"}`);
+      lines.push(`- Pull recommendation: ${target.pullRecommendation || "-"}`);
+      if (target.notes) lines.push(`- Banner notes: ${target.notes}`);
+
+      if (!unit) {
+        lines.push("- Build planning data unavailable for this target.");
+        lines.push("");
+        continue;
+      }
+
+      if (unit.ivs) lines.push(`- IV Recommendation: ${sanitizeText(unit.ivs)}`);
+      if (unit.artist) lines.push(`- Artist: ${sanitizeText(unit.artist)}`);
+      appendRecommendedBuildLines(lines, unit, skillCatalogByName, ownershipIndex, null);
+      lines.push("");
+    }
+  }
 
   lines.push("## Banner Pull Guidance (Game8)");
   if (!bannerGuides.length) {
     lines.push("- No banner pull-guide data found. Run `node scraper/game8_banner_pull_scraper.js` first.");
   } else {
-    for (const guide of bannerGuides) {
+    const sortedGuides = [...bannerGuides].sort((a, b) => {
+      const at = a.scraped_at ? Date.parse(a.scraped_at) : 0;
+      const bt = b.scraped_at ? Date.parse(b.scraped_at) : 0;
+      return bt - at;
+    });
+
+    for (const guide of sortedGuides) {
       lines.push(`### ${guide.title || guide.id || "Banner Guide"}`);
       if (guide.url) lines.push(`- URL: ${guide.url}`);
       if (guide.scraped_at) lines.push(`- Scraped: ${guide.scraped_at}`);
@@ -367,57 +446,32 @@ export async function GET(request: Request) {
       }
 
       const recs = guide.recommendations || [];
-      if (!recs.length) {
-        lines.push("- Recommendations: none parsed.");
-        lines.push("");
-        continue;
-      }
-
-      const matchedOwned: Array<{ rec: NonNullable<BannerPullGuide["recommendations"]>[number]; owned: { hero_slug: string; hero_name: string } }> = [];
-      const others = [];
-
-      for (const rec of recs) {
-        const recSlug = normalizeSlug(rec.hero_slug_guess || "");
-        const recName = sanitizeText(rec.hero_name).toLowerCase();
-        const direct = recSlug ? barracksBySlug.get(recSlug) : null;
-
-        let owned = direct;
-        if (!owned && recSlug.includes("_")) {
-          const base = recSlug.split("_")[0];
-          owned = Array.from(barracksBySlug.entries())
-            .find(([slug]) => slug.startsWith(`${base}_`))
-            ?.[1];
-        }
-        if (!owned && recName) {
-          const nameMatch = Array.from(barracksBySlug.values()).find((b) =>
-            sanitizeText(b.hero_name).toLowerCase().includes(recName) || recName.includes(sanitizeText(b.hero_name).toLowerCase())
-          );
-          owned = nameMatch || undefined;
-        }
-
-        if (owned) {
-          matchedOwned.push({ rec, owned });
-        } else {
-          others.push(rec);
-        }
-      }
-
       lines.push(`- Featured units parsed: ${recs.length}`);
-      lines.push(`- Owned featured units: ${matchedOwned.length}`);
-
-      if (matchedOwned.length) {
-        lines.push("- Owned banner targets:");
-        for (const item of matchedOwned.slice(0, 12)) {
-          lines.push(
-            `  - ${item.owned.hero_name} (${item.owned.hero_slug}) | Banner Tier: ${item.rec.tier || "-"} | Pull: ${item.rec.pull_recommendation || "-"}`
-          );
+      const ownedTargets: string[] = [];
+      const unownedTargets: string[] = [];
+      for (const rec of recs) {
+        const owned = resolveOwnedHero(rec, barracksBySlug, barracksByName);
+        const heroLabel = sanitizeText(rec.hero_name || rec.hero_slug_guess || "Unknown");
+        const suffix = ` | Banner Tier: ${sanitizeText(rec.tier) || "-"} | Pull: ${sanitizeText(rec.pull_recommendation) || "-"}`;
+        if (owned) {
+          ownedTargets.push(`${owned.hero_name} (${owned.hero_slug})${suffix}`);
+        } else {
+          unownedTargets.push(`${heroLabel}${suffix}`);
         }
       }
 
-      if (others.length) {
+      lines.push(`- Owned featured units: ${ownedTargets.length}`);
+      if (ownedTargets.length) {
+        lines.push("- Owned banner targets:");
+        for (const item of ownedTargets.slice(0, 12)) {
+          lines.push(`  - ${item}`);
+        }
+      }
+
+      if (unownedTargets.length) {
         lines.push("- Not owned (top parsed):");
-        for (const rec of others.slice(0, 10)) {
-          lines.push(`  - ${rec.hero_name || rec.hero_slug_guess || "Unknown"} | Banner Tier: ${rec.tier || "-"} | Pull: ${rec.pull_recommendation || "-"}`);
+        for (const item of unownedTargets.slice(0, 10)) {
+          lines.push(`  - ${item}`);
         }
       }
 

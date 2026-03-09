@@ -282,7 +282,13 @@ export default async function BarracksPage({ searchParams }: BarracksPageProps) 
                 href="/api/ai-export"
                 className="rounded-md border border-emerald-700 px-3 py-1.5 text-sm text-emerald-300 hover:bg-emerald-950"
               >
-                Export AI Context (.md)
+                Export AI Context
+              </a>
+              <a
+                href="/api/ai-export?mode=full"
+                className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Full AI Export
               </a>
               <Link
                 href="/aether-resort"
