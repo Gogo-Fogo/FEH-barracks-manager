@@ -7,6 +7,7 @@ import {
   collectSummonTargets,
   DEFAULT_RAW_TEXT_LIMIT as IMPROVED_RAW_TEXT_LIMIT,
   DEFAULT_SUMMON_TARGET_LIMIT,
+  isLikelyHeroRecommendation,
   loadBannerPullGuides,
   loadExportUnitFile,
   loadGame8IndexBySlug,
@@ -23,6 +24,45 @@ import {
   parseBarracksEntryNotes,
 } from "@/lib/barracks-entry-metadata";
 import { normalizeSkillSearchText } from "@/lib/skill-catalog";
+
+const DEFAULT_COMPACT_OWNED_GUIDE_LIMIT = 18;
+const DEFAULT_COMPACT_BANNER_GUIDE_LIMIT = 8;
+const DEFAULT_FULL_BANNER_GUIDE_LIMIT = 20;
+
+function heroDetailPriorityScore(
+  item: {
+    entry: {
+      hero_slug: string;
+      merges?: number | null;
+      copies_owned?: number | null;
+      updated_at?: string | null;
+    };
+    parsed: ReturnType<typeof parseBarracksEntryNotes>;
+    meta: { tier: number | null; tag: string | null } | null;
+  },
+  favoriteSlugs: Set<string>,
+  teamHeroSlugs: Set<string>
+) {
+  let score = 0;
+  if (teamHeroSlugs.has(item.entry.hero_slug)) score += 10000;
+  if (favoriteSlugs.has(item.entry.hero_slug)) score += 8000;
+  if (hasTrackedInventory(item.parsed.inventory)) score += 6000;
+
+  score += Math.max(0, item.entry.merges ?? 0) * 120;
+  score += Math.max(0, item.entry.copies_owned ?? 0) * 60;
+  score += Math.round((item.meta?.tier ?? 0) * 10);
+
+  if ((item.meta?.tag || "").toLowerCase().includes("new hero")) {
+    score += 400;
+  }
+
+  const updatedAt = item.entry.updated_at ? Date.parse(item.entry.updated_at) : 0;
+  if (Number.isFinite(updatedAt)) {
+    score += Math.floor(updatedAt / 1000000000);
+  }
+
+  return score;
+}
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -177,11 +217,25 @@ export async function GET(request: Request) {
     ...Array.from(favoriteSlugs),
     ...summonTargets.map((target) => String(target.heroSlug || "").trim()).filter(Boolean),
   ]);
+  const detailedGuideItems = includeFullRawText
+    ? parsedBarracksEntries
+    : [...parsedBarracksEntries]
+        .sort(
+          (a, b) =>
+            heroDetailPriorityScore(b, favoriteSlugs, teamHeroSlugs) -
+            heroDetailPriorityScore(a, favoriteSlugs, teamHeroSlugs)
+        )
+        .slice(0, DEFAULT_COMPACT_OWNED_GUIDE_LIMIT);
+  const detailedGuideSlugs = new Set(detailedGuideItems.map((item) => item.entry.hero_slug));
+  const remoteFallbackHeroSlugs = new Set<string>([
+    ...Array.from(priorityHeroSlugs),
+    ...Array.from(detailedGuideSlugs),
+  ]);
   let missingOwnedGuideCount = 0;
+  let omittedOwnedGuideCount = Math.max(0, parsedBarracksEntries.length - detailedGuideItems.length);
 
   lines.push("# FEH Barracks AI Context Export");
   lines.push(`Generated: ${now}`);
-  lines.push(`User ID: ${user.id}`);
   lines.push(`Mode: ${includeFullRawText ? "full" : "compact"}`);
   lines.push("");
 
@@ -208,6 +262,7 @@ export async function GET(request: Request) {
   lines.push(`- Notes included: ${(notes || []).length}`);
   lines.push(`- Banner pull guides loaded: ${bannerGuides.length}`);
   lines.push(`- Summon targets surfaced: ${summonTargets.length}`);
+  lines.push(`- Owned guide packets included: ${detailedGuideItems.length}`);
   lines.push("");
 
   lines.push("## AI Assistant Instructions");
@@ -302,11 +357,14 @@ export async function GET(request: Request) {
   lines.push("");
 
   lines.push("## Character Guide Context (owned heroes only)");
-  if (!parsedBarracksEntries.length) {
+  if (!detailedGuideItems.length) {
     lines.push("- None");
   } else {
-    for (const item of parsedBarracksEntries) {
-      const unit = await loadExportUnitFile(item.entry.hero_slug, priorityHeroSlugs.has(item.entry.hero_slug));
+    for (const item of detailedGuideItems) {
+      const unit = await loadExportUnitFile(
+        item.entry.hero_slug,
+        remoteFallbackHeroSlugs.has(item.entry.hero_slug)
+      );
       lines.push(`### ${item.entry.hero_name} (${item.entry.hero_slug})`);
       if (item.parsed.notes) lines.push(`- Player Notes: ${sanitizeText(item.parsed.notes)}`);
       appendTrackedInventoryLines(lines, item.parsed.inventory);
@@ -337,9 +395,15 @@ export async function GET(request: Request) {
       lines.push("");
     }
   }
+  if (!includeFullRawText && omittedOwnedGuideCount) {
+    lines.push(
+      `> Compact mode omitted ${omittedOwnedGuideCount} lower-priority owned hero guide packet(s). Use \`/api/ai-export?mode=full\` for exhaustive owned-hero detail.`
+    );
+    lines.push("");
+  }
   if (missingOwnedGuideCount) {
     lines.push(
-      `> Missing guide/build data for ${missingOwnedGuideCount} owned hero(es). Team, favorite, and summon-target heroes were prioritized for fallback resolution.`
+      `> Missing guide/build data for ${missingOwnedGuideCount} included hero guide packet(s). Team, favorite, summon-target, and top-priority owned heroes were prioritized for fallback resolution.`
     );
     lines.push("");
   }
@@ -424,15 +488,14 @@ export async function GET(request: Request) {
 
   lines.push("## Banner Pull Guidance (Game8)");
   if (!bannerGuides.length) {
-    lines.push("- No banner pull-guide data found. Run `node scraper/game8_banner_pull_scraper.js` first.");
+    lines.push("- No banner pull-guide data found in local or bundled export data.");
   } else {
-    const sortedGuides = [...bannerGuides].sort((a, b) => {
-      const at = a.scraped_at ? Date.parse(a.scraped_at) : 0;
-      const bt = b.scraped_at ? Date.parse(b.scraped_at) : 0;
-      return bt - at;
-    });
+    const visibleBannerGuides = bannerGuides.slice(
+      0,
+      includeFullRawText ? DEFAULT_FULL_BANNER_GUIDE_LIMIT : DEFAULT_COMPACT_BANNER_GUIDE_LIMIT
+    );
 
-    for (const guide of sortedGuides) {
+    for (const guide of visibleBannerGuides) {
       lines.push(`### ${guide.title || guide.id || "Banner Guide"}`);
       if (guide.url) lines.push(`- URL: ${guide.url}`);
       if (guide.scraped_at) lines.push(`- Scraped: ${guide.scraped_at}`);
@@ -445,7 +508,7 @@ export async function GET(request: Request) {
         }
       }
 
-      const recs = guide.recommendations || [];
+      const recs = (guide.recommendations || []).filter((rec) => isLikelyHeroRecommendation(rec));
       lines.push(`- Featured units parsed: ${recs.length}`);
       const ownedTargets: string[] = [];
       const unownedTargets: string[] = [];
@@ -475,6 +538,13 @@ export async function GET(request: Request) {
         }
       }
 
+      lines.push("");
+    }
+
+    if (bannerGuides.length > visibleBannerGuides.length) {
+      lines.push(
+        `> Showing ${visibleBannerGuides.length} of ${bannerGuides.length} parsed banner guide snapshot(s) in this export mode.`
+      );
       lines.push("");
     }
   }

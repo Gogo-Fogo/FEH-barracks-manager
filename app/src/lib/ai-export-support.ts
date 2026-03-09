@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import bundledBannerPullGuidesJson from "@/lib/bundled-banner-guides.json";
 import bundledUnitDataJson from "@/lib/bundled-unit-data.json";
 import {
   type BarracksEntryInventory,
@@ -92,6 +93,11 @@ export const BUILD_SLOT_LABELS = new Map<BuildKey, string>(
 
 const BUNDLED_UNIT_DATA: Record<string, UnitFile> = bundledUnitDataJson as Record<string, UnitFile>;
 const BUNDLED_GAME8_INDEX: Array<IndexEntry> = game8IndexJson as Array<IndexEntry>;
+const BUNDLED_BANNER_PULL_GUIDES: BannerPullGuide[] = Array.isArray(
+  (bundledBannerPullGuidesJson as BannerPullGuidesFile | null | undefined)?.items
+)
+  ? ((bundledBannerPullGuidesJson as BannerPullGuidesFile).items as BannerPullGuide[])
+  : [];
 
 let indexBySlugPromise: Promise<Map<string, IndexEntry>> | null = null;
 let skillCatalogByNamePromise: Promise<Map<string, SkillCatalogEntry>> | null = null;
@@ -429,7 +435,12 @@ export async function loadExportUnitFile(
 
 export async function loadBannerPullGuides() {
   const parsed = await readJsonSafe<BannerPullGuidesFile>(path.join(dbRoot(), "banner_pull_guides.json"));
-  return Array.isArray(parsed?.items) ? parsed.items : [];
+  const localItems = Array.isArray(parsed?.items) ? parsed.items : [];
+  if (localItems.length) {
+    return normalizeBannerGuides(localItems);
+  }
+
+  return normalizeBannerGuides(BUNDLED_BANNER_PULL_GUIDES);
 }
 
 export async function loadSkillCatalogByName() {
@@ -638,6 +649,76 @@ function parsePullPriority(value: string) {
   return 2;
 }
 
+function hasMeaningfulSummonSignal(recommendation: BannerPullGuideRecommendation) {
+  const tier = sanitizeText(recommendation.tier);
+  const numericTier = Number.parseFloat(tier);
+  if (Number.isFinite(numericTier) && numericTier >= 7) {
+    return true;
+  }
+
+  if (/^[sab]$/i.test(tier)) {
+    return true;
+  }
+
+  const pull = sanitizeText(recommendation.pull_recommendation).toLowerCase();
+  return /must|high|strong|consider|medium/.test(pull);
+}
+
+function isLikelySummonGuide(guide: BannerPullGuide) {
+  const title = sanitizeText(guide.title || guide.id || "").toLowerCase();
+  if (!title) return false;
+
+  if (/who should you pull|should you summon|best banners?\s+to summon|banner rankings?/.test(title)) {
+    return true;
+  }
+
+  if (
+    /summoner support|summoner duels|summon simulators?|summon results board|active summon simulators/.test(title)
+  ) {
+    return false;
+  }
+
+  return title.includes(" banner");
+}
+
+function normalizeBannerGuides(guides: BannerPullGuide[]) {
+  return guides
+    .filter((guide) => isLikelySummonGuide(guide))
+    .sort((a, b) => {
+      const at = a.scraped_at ? Date.parse(a.scraped_at) : 0;
+      const bt = b.scraped_at ? Date.parse(b.scraped_at) : 0;
+      return bt - at;
+    });
+}
+
+export function isLikelyHeroRecommendation(recommendation: BannerPullGuideRecommendation) {
+  const heroName = sanitizeText(recommendation.hero_name || recommendation.hero_slug_guess || "");
+  if (!heroName) return false;
+
+  const text = heroName.toLowerCase();
+  if (
+    /^(hero|heroes|summon categories|legendary heroes|mythic heroes|special heroes|new heroes|hero alts|dates of availability|best summons to pull from and release dates)$/i.test(
+      heroName
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /(categories|release dates|availability|simulator|results board|useful skills|summon categories|best summons)/.test(
+      text
+    )
+  ) {
+    return false;
+  }
+
+  if (!/[a-z]/i.test(heroName) || heroName.length > 80) {
+    return false;
+  }
+
+  return true;
+}
+
 export function normalizeTeamSlots(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value.map((slot) => sanitizeText(String(slot || "")));
@@ -645,7 +726,16 @@ export function normalizeTeamSlots(value: unknown) {
 
 export function normalizeTeamLabels(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return value.map((label) => sanitizeText(String(label || "")));
+  const seen = new Map<string, number>();
+  return value.map((label) => {
+    const cleaned = sanitizeText(String(label || ""));
+    if (!cleaned) return "";
+
+    const key = cleaned.toLowerCase();
+    const count = (seen.get(key) || 0) + 1;
+    seen.set(key, count);
+    return count === 1 ? cleaned : `${cleaned} ${count}`;
+  });
 }
 
 export function resolveOwnedHero(
@@ -716,6 +806,8 @@ export function collectSummonTargets(
     for (const recommendation of guide.recommendations || []) {
       const heroName = sanitizeText(recommendation.hero_name || recommendation.hero_slug_guess || "");
       if (!heroName) continue;
+      if (!isLikelyHeroRecommendation(recommendation)) continue;
+      if (!hasMeaningfulSummonSignal(recommendation)) continue;
 
       if (resolveOwnedHero(recommendation, barracksBySlug, barracksByName)) continue;
 

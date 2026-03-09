@@ -18,7 +18,8 @@
     "release:launcher": "node scripts/release-launcher.js",
     "validate:hero-aliases": "node scripts/validate-hero-aliases.js",
     "generate:fandom-name-map": "node scripts/generate-fandom-name-map.js",
-    "generate:bundled-unit-data": "node scripts/generate-bundled-unit-data.js"
+    "generate:bundled-unit-data": "node scripts/generate-bundled-unit-data.js",
+    "generate:bundled-banner-guides": "node scripts/generate-bundled-banner-guides.js"
   },
   "keywords": [],
   "author": "",
