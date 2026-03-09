@@ -142,15 +142,30 @@ jobs:
 
       - name: Release note for local full assets bundle
         run: |
-          echo "Built feh-assets-bundle.zip from repo-tracked data only." >> RELEASE_NOTES.txt
-          echo "For full local art assets, run: npm run build:local-assets-bundle on maintainer machine and upload replacement asset zip." >> RELEASE_NOTES.txt
+          cat > RELEASE_NOTES.txt << 'EOF'
+          ## Bundle Notes
+
+          - `feh-assets-bundle.zip` is built from repo-tracked data only.
+          - For the full local art asset bundle, run `npm run build:local-assets-bundle` on the maintainer machine and upload the replacement zip.
+          EOF
 
       - name: Create release body with banner
         run: |
+          VERSION_NOTES="assets/release/notes-${{ github.ref_name }}.md"
           cat > RELEASE_BODY.md << 'EOF'
           <img src="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/assets/release/banner-${{ github.ref_name }}.webp" width="380" alt="feh-barracks-manager-banner" />
 
           EOF
+
+          if [ -f "$VERSION_NOTES" ]; then
+            cat "$VERSION_NOTES" >> RELEASE_BODY.md
+            printf '\n' >> RELEASE_BODY.md
+          fi
+
+          if [ -f RELEASE_NOTES.txt ]; then
+            cat RELEASE_NOTES.txt >> RELEASE_BODY.md
+            printf '\n' >> RELEASE_BODY.md
+          fi
 
       - name: Validate release target token requirements
         if: env.DISTRO_REPO != '' && env.DISTRO_REPO != github.repository && env.DISTRO_REPO_TOKEN == ''
